@@ -15,20 +15,24 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 ## `/api/wishlists/[id]`
 **Method:** PATCH. **Auth:** required, must own wishlist. **Purpose:** updates wishlist title.
 **Request:** `{ title: string }` (1-100 chars). **Response:** `{ wishlist }`.
+**Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/wishlists/[id]/items`
 **Methods:** GET, POST. **Auth:** required, must own wishlist. **Purpose:** lists or creates wishlist items.
 **GET response:** `{ items }` from `wishlist_items_with_status`, excluding archived items in the page-level helper.
 **POST request:** external item only for this feature: `{ origin: "external", title, product_url, image_url?, price?, description?, scraped_currency? }`.
 **Behavior:** builds `affiliate_url`, inserts `wishlist_items`, and mirrors evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
+**Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/wishlists/[id]/items/[itemId]`
 **Methods:** PATCH, DELETE. **Auth:** required, must own wishlist. **Purpose:** edit an item or soft-delete it.
 **PATCH request:** partial `{ title?, image_url?, price?, description? }`. **DELETE behavior:** sets `wishlist_items.status = 'archived'`; never hard-deletes.
+**Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/wishlists/[id]/items/reorder`
 **Method:** PATCH. **Auth:** required, must own wishlist. **Purpose:** persists item order.
 **Request:** `{ ordered_ids: string[] }`. **Dependency:** requires `gifvtme_migration_003.sql` to be applied so `wishlist_items.sort_order` exists.
+**Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/reminders`
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to be called by a scheduled job (Vercel Cron or external scheduler), not the frontend.

@@ -28,7 +28,7 @@ This file should be updated frequently — at minimum every time a feature moves
 ### In progress / partially done
 - Reminder system — scheduling logic exists (`lib/email/reminders.ts`, creates `reminders` rows), but `/api/reminders` marks reminders sent without actually sending email via Resend yet
 - Context file system (this folder) — being built out
-- Supabase Storage setup — `wishlist-images` bucket must be created with public read access, 5MB max size, and JPEG/PNG/WebP MIME limits before manual wishlist image uploads work
+- Supabase project setup — migrations 003, 004 and the private `wishlist-images` bucket with owner-folder storage policies must be applied/created before wishlist reorder, auto-creation, and manual image uploads fully work
 
 ### Not started
 - Reviews table/migration (referenced in `DATABASE_SCHEMA.md` as not yet in the migrations)

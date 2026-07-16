@@ -469,21 +469,35 @@ await supabase
 ### Image upload for manual items
 
 Upload to Supabase Storage:
-- Bucket: `wishlist-images` (create this bucket in Supabase Storage with public read access)
+- Bucket: `wishlist-images` (private bucket; public access disabled)
 - Path: `[userId]/[uuid].[ext]`
-- After upload, get the public URL and use it as `image_url`
+- Store the object path in `image_url`; do not store permanent public URLs.
+- When rendering for an authorized wishlist viewer, create a short-lived signed URL server-side and pass that signed URL to the UI. Do not persist signed URLs back to `wishlist_items` or `master_items`.
+- Externally accessible image URLs for giver-facing shared wishlists are deferred until wishlist sharing is implemented.
 
 ```typescript
-const { data } = await supabase.storage
+let imagePath: string | null = null
+
+const { data, error } = await supabase.storage
   .from('wishlist-images')
   .upload(`${userId}/${crypto.randomUUID()}.${ext}`, file, {
     contentType: file.type,
     upsert: false
   })
 
-const { data: { publicUrl } } = supabase.storage
-  .from('wishlist-images')
-  .getPublicUrl(data.path)
+if (error || !data?.path) {
+  toast({ title: "Couldn't upload photo. Try again.", variant: "danger" })
+} else {
+  imagePath = data.path
+}
+
+// Continue saving the item either way. Persist imagePath when present.
+// Later, after authorizing the viewer and only when imagePath exists:
+const { data: signed } = imagePath
+  ? await supabase.storage
+      .from('wishlist-images')
+      .createSignedUrl(imagePath, 60 * 60)
+  : { data: null }
 ```
 
 ---
@@ -518,9 +532,10 @@ The agent must also run this migration in Supabase before the reorder feature wi
 ### Supabase Storage bucket
 
 Create a bucket named `wishlist-images` with:
-- Public access: enabled (images are shown on shared wishlists)
+- Public access: disabled
 - File size limit: 5MB
 - Allowed MIME types: `image/jpeg`, `image/png`, `image/webp`
+- Storage policies must allow authenticated users to upload/read only their own `[userId]/*` folder. Giver-facing signed image access should be added with the wishlist sharing access checks, not before.
 
 The agent should note in a comment that this bucket must be created manually in the Supabase dashboard under Storage, or via the Supabase CLI.
 
@@ -541,7 +556,7 @@ The agent should note in a comment that this bucket must be created manually in 
 
 All routes must:
 1. Check authentication first — return 401 if no session
-2. Verify the wishlist belongs to the current user — return 403 if not
+2. Verify the wishlist belongs to the current user — return 404 if missing or not owned, so the API does not disclose whether another user's wishlist exists
 3. Return `{ error: string }` with an appropriate status code on failure
 
 ---
@@ -655,7 +670,7 @@ const ExternalItemSchema = z.object({
 ```
 
 ### Add item — manual entry path
-Same schema but `product_url` is optional (the user may not have a URL for a manually entered item).
+Use the same required `product_url` constraint as the external URL path for v1. The current Supabase invariant requires `product_url` whenever `origin = 'external'`, and the API builds `affiliate_url` from it before inserting. A true URL-less manual-entry schema is deferred until the data model explicitly supports wishlist ideas without an affiliate/source URL; that change must update `BUSINESS_RULES.md`, the database check constraints, the add-item API branch, and giver-facing purchase behavior together.
 
 ### Edit item
 All fields optional — only validate fields that are provided.
@@ -672,7 +687,7 @@ z.object({ title: z.string().min(1, 'Title cannot be empty').max(100) })
 | Scenario | Handling |
 |---|---|
 | Scrape call fails (Microlink 422) | Switch to manual form, show info banner: "Couldn't read that page automatically. Fill in the details below." |
-| Scrape call times out (> 5 seconds) | Same as failure — switch to manual form immediately |
+| Scrape call times out (3.5 seconds, always under 4 seconds) | Same as failure — switch to manual form immediately |
 | Image upload fails | Toast error: "Couldn't upload photo. Try again." — do not block item save |
 | Add item fails (API error) | Toast error: "Couldn't save item. Try again." |
 | Edit item fails | Toast error: "Couldn't save changes. Try again." |
@@ -680,6 +695,7 @@ z.object({ title: z.string().min(1, 'Title cannot be empty').max(100) })
 | Reorder fails | Revert to previous order in the UI, toast: "Couldn't save new order." |
 | Wishlist not found | `notFound()` → 404 page |
 | User tries to access another user's wishlist | `notFound()` → 404 (do not expose "that exists but isn't yours") |
+| API request references another user's wishlist | `{ error: "Wishlist not found." }` → 404 |
 | Title empty on save | Inline field error: "Title cannot be empty" |
 | URL is not a valid URL | Inline field error: "Enter a valid URL (e.g. https://jumia.com/...)" |
 
@@ -755,6 +771,7 @@ Track these events using a thin wrapper. If no analytics library is set up yet, 
 
 - All wishlist routes require authentication.
 - A user can only read, write, and delete items on wishlists they own.
+- Non-owned wishlist reads and mutations must return 404, not 403, to avoid disclosing resource existence.
 - This is enforced at two levels: application code (check `user_id` on every query) AND Supabase RLS (the DB-level policy). Both must be in place.
 - Never use the service-role client for customer-facing wishlist operations — always use the regular server client so RLS applies.
 
@@ -766,7 +783,7 @@ The implementation is complete when all of the following pass:
 
 - [ ] A user who logs in for the first time and visits `/dashboard/wishlists` automatically has an evergreen wishlist created — exactly one, never two
 - [ ] The wishlist title is editable inline and the change persists on refresh
-- [ ] Adding an item via URL scrape: a valid Jumia or Konga URL populates the title, image, and price in the preview within 4 seconds
+- [ ] Adding an item via URL scrape: a valid Jumia or Konga URL populates the title, image, and price in the preview within 4 seconds; any scrape that reaches the 3.5-second timeout falls back to manual entry before the 4-second mark
 - [ ] Adding an item via URL scrape: an Amazon URL or any failed scrape immediately switches to the manual form without blocking
 - [ ] Adding an item manually: all fields save correctly, image upload stores to Supabase Storage and appears in the list
 - [ ] Items appear in the list sorted by `sort_order`, with purchased items in a separate section below
@@ -776,7 +793,7 @@ The implementation is complete when all of the following pass:
 - [ ] Reordering items saves the new sort order and persists on refresh
 - [ ] All error states (scrape failure, save failure, delete failure) show appropriate toast messages
 - [ ] The empty state shows when the wishlist has no available items
-- [ ] No other user can access or modify the wishlist via the API (returns 403 or 404)
+- [ ] No other user can access or modify the wishlist via the API (returns 404 with `{ error: string }`)
 - [ ] The `master_items` row is created alongside the `wishlist_items` row for every item added to an evergreen wishlist
 
 ---
