@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #c50404;
+  --color-brand-dark: #a80303;
+  --color-brand-light: #fef2f2;
+  --color-ink: #000000;
+  --color-muted: #4a4a4a;
+  --color-surface: #f7f7f7;
+
+  --font-sans: var(--font-inter);
+}
+
+body {
+  @apply bg-white text-ink font-sans;
+}
