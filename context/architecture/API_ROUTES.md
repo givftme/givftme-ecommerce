@@ -34,6 +34,15 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Request:** `{ ordered_ids: string[] }`. **Dependency:** requires `gifvtme_migration_003.sql` to be applied so `wishlist_items.sort_order` exists.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
+## `/api/occasions`
+**Methods:** GET, POST. **Auth:** required. **Purpose:** lists the current user's occasions and creates occasion wishlists.
+**POST request:** `{ title, occasion_type, occasion_date, pulled_item_ids?, exclusive_items? }`. Creation writes the occasion, linked wishlist, pulled wishlist items, and exclusive wishlist items through a single database transaction before non-blocking reminder scheduling.
+
+## `/api/occasions/[id]`
+**Methods:** GET, PATCH, DELETE. **Auth:** required, must own occasion. **Purpose:** loads, edits, or archives an occasion.
+**PATCH request:** partial `{ title?, occasion_type?, occasion_date? }`. Title edits update the linked occasion wishlist title in the same database transaction as the occasion row.
+**DELETE behavior:** soft-archives the occasion and deletes that occasion's unsent owner reminders.
+
 ## `/api/reminders`
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to be called by a scheduled job (Vercel Cron or external scheduler), not the frontend.
 **Purpose:** queries `reminders` where `sent = false` and `scheduled_at <= now()`, and processes them.
