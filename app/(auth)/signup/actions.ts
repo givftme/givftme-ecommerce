@@ -25,8 +25,8 @@ export async function signupAction(
 
   const supabase = await createClient();
   const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`;
-  const redirectTo = getSafeRedirect(values.redirectTo, "/dashboard/wishlists");
-  const emailRedirectTo = new URL("/auth/callback", getAppUrl());
+  const redirectTo = getSafeRedirect(values.redirectTo, "/login");
+  const emailRedirectTo = new URL("/callback", getAppUrl());
   emailRedirectTo.searchParams.set("redirect", redirectTo);
 
   const { error } = await supabase.auth.signUp({

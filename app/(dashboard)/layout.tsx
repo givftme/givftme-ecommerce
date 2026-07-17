@@ -2,6 +2,8 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ensureEvergreenWishlist, requireDashboardUser } from "@/lib/wishlist/server";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {

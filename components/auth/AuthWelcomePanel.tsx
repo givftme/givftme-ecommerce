@@ -50,13 +50,13 @@ export function AuthWelcomePanel({
 
         <div className="space-y-3">
           <Link
-            href={withRedirect("/auth/login", redirectTo)}
+            href={withRedirect("/login", redirectTo)}
             className={cn(buttonVariants({ fullWidth: true, size: "lg" }), "h-12")}
           >
             Login
           </Link>
           <Link
-            href={withRedirect("/auth/signup", redirectTo)}
+            href={withRedirect("/signup", redirectTo)}
             className={cn(
               buttonVariants({ variant: "ghost", fullWidth: true, size: "lg" }),
               "h-12"

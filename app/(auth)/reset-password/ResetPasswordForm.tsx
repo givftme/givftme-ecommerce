@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { resetPasswordAction } from "@/app/auth/reset-password/actions";
+import { resetPasswordAction } from "@/app/(auth)/reset-password/actions";
 import { AuthAlert } from "@/components/auth/AuthAlert";
 import { AuthFormPasswordInput } from "@/components/auth/AuthFormInput";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
@@ -43,13 +43,13 @@ export function ResetPasswordForm() {
 
       if (!result.success) {
         setGlobalError(
-          result.error ?? "Couldn't update your password. Try again."
+          result.error ?? "Couldn't update your password. Try again.",
         );
         return;
       }
 
       window.sessionStorage.removeItem("reset_email");
-      router.push("/auth/success");
+      router.push("/success");
     });
   };
 
@@ -57,7 +57,7 @@ export function ResetPasswordForm() {
     <AuthPageShell
       title="Reset Password"
       subtitle="Enter your new password below."
-      backHref="/auth/verify-otp"
+      backHref="/verify-otp"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">

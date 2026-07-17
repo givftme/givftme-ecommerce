@@ -68,19 +68,19 @@ Props: `products` (array of `ProductCardData`), `onToggleWishlist`, `wishlistedI
 Animated full-screen mobile-first auth wrapper. Handles the red back arrow, title/subtitle spacing, centered success layout, and GSAP screen entrance.
 
 ### `OnboardingSlider`
-Two-slide onboarding experience for `/auth/onboarding`. Uses `/images/onboarding-1.jpg` and `/images/onboarding-2.jpg`, localStorage `onboarded`, GSAP horizontal transitions, dots, and mobile swipe gestures.
+Two-slide onboarding experience for `/onboarding`. Uses `/images/onboarding-1.jpg` and `/images/onboarding-2.jpg`, localStorage `onboarded`, GSAP horizontal transitions, dots, and mobile swipe gestures.
 
 ### `AuthWelcomePanel`
-Reusable welcome/login/signup choice panel used by `/auth/welcome` and visually matched to onboarding slide 2.
+Reusable welcome/login/signup choice panel used by `/welcome` and visually matched to onboarding slide 2.
 
 ### `AuthFormInput` / `AuthFormPasswordInput`
 Form-aware wrappers around `Input` and the password visibility toggle. Use inside `FormField` so labels, inputs, and messages share accessible IDs.
 
 ### `GoogleOAuthButton`
-Client-side Supabase Google OAuth trigger. Preserves the `redirect` query param through `/auth/callback`.
+Client-side Supabase Google OAuth trigger. Preserves the `redirect` query param through `/callback`.
 
 ### `OtpDisplay` / `OtpKeypad`
-Six-box OTP display and custom numeric keypad for `/auth/verify-otp`. `OtpDisplay` owns the GSAP digit-entry and error-shake animations; `OtpKeypad` owns press feedback.
+Six-box OTP display and custom numeric keypad for `/verify-otp`. `OtpDisplay` owns the GSAP digit-entry and error-shake animations; `OtpKeypad` owns press feedback.
 
 ### `AuthPromptSheet`
 Bottom sheet for unauthenticated protected actions. Shows "You need an account" with Login/Create account CTAs and preserves the current path in `redirect`.

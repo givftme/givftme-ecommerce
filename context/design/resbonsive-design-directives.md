@@ -246,7 +246,7 @@ This is already set in `ProductGrid.tsx` — do not change it.
 </div>
 ```
 
-### Dashboard (`/dashboard/wishlists`)
+### Dashboard (`/wishlists`)
 - **Mobile:** Single column, stacked cards, bottom tab nav
 - **Desktop:** Left sidebar (64px icon-only OR 240px expanded) with nav links, content area on the right
 

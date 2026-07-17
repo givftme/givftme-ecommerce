@@ -41,7 +41,7 @@ export function WishlistCard({ wishlist }: { wishlist: WishlistSummary }) {
 
       <div className="mt-5 grid grid-cols-2 gap-3">
         <Link
-          href={`/dashboard/wishlists/${wishlist.id}`}
+          href={`/wishlists/${wishlist.id}`}
           className={cn(buttonVariants({ variant: "filled" }), "h-11")}
         >
           View wishlist

@@ -29,7 +29,7 @@ Gifvtme is a gifting platform. Users arrive at the homepage and can browse freel
 
 The auth flow consists of eight screens implemented as a multi-step mobile-first experience. The flow handles: onboarding introduction, sign up, login, Google OAuth, forgot password, OTP verification, password reset, and success confirmation.
 
-All auth screens live under the `/auth` route group. The flow is modal-aware on desktop (can slide in over the page) and full-screen on mobile.
+All auth screens live under the `app/(auth)` route group. The route group does not add a URL prefix, so auth URLs are top-level paths such as `/login` and `/signup`. The flow is modal-aware on desktop (can slide in over the page) and full-screen on mobile.
 
 ---
 
@@ -37,15 +37,15 @@ All auth screens live under the `/auth` route group. The flow is modal-aware on 
 
 | Screen | Route | Description |
 |---|---|---|
-| Onboarding slide 1 | `/auth/onboarding` | First-time visitors only — two slides with brand imagery |
-| Onboarding slide 2 | `/auth/onboarding` (slide 2) | Auto-advances or tap to proceed |
-| Welcome | `/auth/welcome` | Split screen — Login or Sign up choice |
-| Sign up | `/auth/signup` | First name, last name, email, password |
-| Login | `/auth/login` | Email, password |
-| Forgot password | `/auth/forgot-password` | Email input to trigger OTP |
-| OTP verification | `/auth/verify-otp` | 6-digit numeric keypad, resend countdown |
-| Reset password | `/auth/reset-password` | New password + confirm password |
-| Success | `/auth/success` | "Password updated" confirmation |
+| Onboarding slide 1 | `/onboarding` | First-time visitors only — two slides with brand imagery |
+| Onboarding slide 2 | `/onboarding` (slide 2) | Auto-advances or tap to proceed |
+| Welcome | `/welcome` | Split screen — Login or Sign up choice |
+| Sign up | `/signup` | First name, last name, email, password |
+| Login | `/login` | Email, password |
+| Forgot password | `/forgot-password` | Email input to trigger OTP |
+| OTP verification | `/verify-otp` | 6-digit numeric keypad, resend countdown |
+| Reset password | `/reset-password` | New password + confirm password |
+| Success | `/success` | "Password updated" confirmation |
 
 ---
 
@@ -53,38 +53,38 @@ All auth screens live under the `/auth` route group. The flow is modal-aware on 
 
 ### New user flow
 ```
-Homepage → attempts action → redirected to /auth/login
-→ taps "Sign up" → /auth/signup
+Homepage → attempts action → redirected to /login
+→ taps "Sign up" → /signup
 → fills form → submits
 → Supabase sends verification email
 → user verifies email → session established
-→ redirected back to original intended page (or /dashboard/wishlists)
+→ redirected back to original intended page (or /wishlists)
 ```
 
 ### Returning user flow
 ```
-Homepage → attempts action → redirected to /auth/login
+Homepage → attempts action → redirected to /login
 → fills email + password → submits
 → session established → redirected back to original intended page
 ```
 
 ### Google OAuth flow
 ```
-/auth/login or /auth/signup → taps "Continue with Google"
+/login or /signup → taps "Continue with Google"
 → Google OAuth consent screen
-→ /auth/callback → session established
-→ redirected to /dashboard/wishlists
+→ /callback → session established
+→ redirected to /wishlists
 ```
 
 ### Forgot password flow
 ```
-/auth/login → taps "Forgot Password?"
-→ /auth/forgot-password → enters email → submits
+/login → taps "Forgot Password?"
+→ /forgot-password → enters email → submits
 → Supabase sends OTP to email
-→ /auth/verify-otp → enters 6-digit OTP
-→ /auth/reset-password → enters new password + confirm
-→ submits → /auth/success
-→ taps "Done" → /auth/login
+→ /verify-otp → enters 6-digit OTP
+→ /reset-password → enters new password + confirm
+→ submits → /success
+→ taps "Done" → /login
 ```
 
 ### Action-gated prompt flow (unauthenticated user on homepage)
@@ -111,7 +111,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 - Subtext: "for Birthday, Weddings, Anniversaries, and Festivities"
 - Pagination dots: 3 dots, first active (brand red pill, others grey circles)
 - CTA button: "Get Started" (brand red, pill-shaped, full width)
-- Below CTA: "Already have an account? **Login here**" (Login here is a link to `/auth/login`)
+- Below CTA: "Already have an account? **Login here**" (Login here is a link to `/login`)
 
 **Slide 2:**
 - Full-bleed image: warm Nigerian family photo (use `/public/images/onboarding-2.jpg`)
@@ -129,7 +129,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 ### Screen 3 — Welcome Screen
 
-**Route:** `/auth/welcome`
+**Route:** `/welcome`
 
 **Layout:** Full screen, centered content, white background.
 
@@ -146,7 +146,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 ### Screen 4 — Sign Up
 
-**Route:** `/auth/signup`
+**Route:** `/signup`
 
 **Layout:** Full screen. Single column. Scrollable.
 
@@ -168,12 +168,12 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 **OAuth:**
 - "Signup with Google" button — Google logo icon + text, outlined/ghost style, full width
 
-**Footer:** "Already have an account? **Login**" — Login links to `/auth/login`
+**Footer:** "Already have an account? **Login**" — Login links to `/login`
 
 **On submit (valid form):**
 1. Call Supabase `signUp({ email, password, options: { data: { full_name: firstName + ' ' + lastName } } })`
 2. Supabase sends a confirmation email automatically
-3. Show a success message: "Check your email to verify your account" — then redirect to `/auth/login`
+3. Show a success message: "Check your email to verify your account" — then redirect to `/login`
 4. The `handle_new_user` DB trigger auto-creates the `public.users` profile row
 
 **Validation errors:** Show inline below each field. Do not show all errors at once — show on blur or on submit attempt.
@@ -182,7 +182,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 ### Screen 5 — Login
 
-**Route:** `/auth/login`
+**Route:** `/login`
 
 **Layout:** Full screen. Single column.
 
@@ -194,7 +194,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 **Form fields:**
 1. Email address — email input, placeholder "Enter your email address", required
 2. Password — password input, placeholder "Enter your email address" (note: placeholder in the Figma says this — keep it, but the field is for password), show/hide toggle, required
-3. "Forgot Password?" — text link, right-aligned below the password field, links to `/auth/forgot-password`
+3. "Forgot Password?" — text link, right-aligned below the password field, links to `/forgot-password`
 
 **Primary CTA:** "Login" button (brand red, pill, full width)
 
@@ -203,23 +203,23 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 **OAuth:**
 - "Continue with Google" button — Google icon + text, outlined style, full width
 
-**Footer:** "Already have an account? **Signup**" — Signup links to `/auth/signup`
+**Footer:** "Already have an account? **Signup**" — Signup links to `/signup`
 
 **On submit (valid form):**
 1. Call Supabase `signInWithPassword({ email, password })`
-2. On success: redirect to the validated safe `redirect` URL param if present, otherwise `/dashboard/wishlists`
+2. On success: redirect to the validated safe `redirect` URL param if present, otherwise `/wishlists`
 3. On error: show global error banner above the form — "Incorrect email or password."
 
 ---
 
 ### Screen 6 — Forgot Password
 
-**Route:** `/auth/forgot-password`
+**Route:** `/forgot-password`
 
 **Layout:** Full screen. Single column.
 
 **Header:**
-- Back arrow (top left) — returns to `/auth/login`
+- Back arrow (top left) — returns to `/login`
 - Page title: "Forget Password"
 - Subtext: "Enter the necessary details"
 
@@ -228,12 +228,12 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 **Primary CTA:** "Continue" button (brand red, pill, full width)
 
-**Footer:** "Already have an account? **Signup**" — links to `/auth/signup`
+**Footer:** "Already have an account? **Signup**" — links to `/signup`
 
 **On submit:**
 1. Call Supabase `signInWithOtp({ email, options: { shouldCreateUser: false } })` — this sends a 6-digit OTP to the email
 2. Store the email in `sessionStorage` (key: `reset_email`) for use on the OTP screen
-3. Navigate to `/auth/verify-otp`
+3. Navigate to `/verify-otp`
 4. If email not found in Supabase: show error "No account found with this email address."
 
 **Note on OTP approach:** Supabase's `signInWithOtp` sends a 6-digit OTP by default when the "Email OTP" option is enabled in the Supabase dashboard (Authentication → Email → Enable OTP). The agent must note in a code comment that the Supabase project needs "Email OTP" enabled, not just magic link, for this flow to work.
@@ -242,12 +242,12 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 ### Screen 7 — OTP Verification
 
-**Route:** `/auth/verify-otp`
+**Route:** `/verify-otp`
 
 **Layout:** Full screen. Single column.
 
 **Header:**
-- Back arrow (top left) — returns to `/auth/forgot-password`
+- Back arrow (top left) — returns to `/forgot-password`
 - Page title: "Verification"
 - Subtext: "Please input the OTP sent to your Email address [email] to complete the registration process." — email is pulled from `sessionStorage.getItem('reset_email')`
 
@@ -283,7 +283,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 **On 6 digits entered / Continue tapped:**
 1. Call Supabase `verifyOtp({ email, token: otp, type: 'email' })`
-2. On success: session is established (user is now logged in for the reset flow). Navigate to `/auth/reset-password`
+2. On success: session is established (user is now logged in for the reset flow). Navigate to `/reset-password`
 3. On error (wrong OTP): shake animation on the OTP boxes (GSAP), show error below: "That code is incorrect. Try again or resend."
 4. On expired OTP: show error: "That code has expired. Request a new one."
 
@@ -291,14 +291,14 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 ### Screen 8 — Reset Password
 
-**Route:** `/auth/reset-password`
+**Route:** `/reset-password`
 
-**Guard:** This page requires the user to have a valid session from the OTP verification step. If accessed directly without a session, redirect to `/auth/forgot-password`.
+**Guard:** This page requires the user to have a valid session from the OTP verification step. If accessed directly without a session, redirect to `/forgot-password`.
 
 **Layout:** Full screen. Single column.
 
 **Header:**
-- Back arrow (top left) — returns to `/auth/verify-otp`
+- Back arrow (top left) — returns to `/verify-otp`
 - Page title: "Reset Password"
 - Subtext: "Enter your new password below."
 
@@ -310,14 +310,14 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 **On submit (valid form, passwords match):**
 1. Call Supabase `updateUser({ password: newPassword })`
-2. On success: clear `sessionStorage.reset_email`, navigate to `/auth/success`
+2. On success: clear `sessionStorage.reset_email`, navigate to `/success`
 3. On error: show global error banner — "Couldn't update your password. Try again."
 
 ---
 
 ### Screen 9 — Success
 
-**Route:** `/auth/success`
+**Route:** `/success`
 
 **Layout:** Full screen. Single column. Centered vertically.
 
@@ -328,7 +328,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 **CTA:** "Done" button (brand red, pill, full width)
 
-**On "Done" tap:** Navigate to `/auth/login`
+**On "Done" tap:** Navigate to `/login`
 
 ---
 
@@ -339,10 +339,10 @@ When an unauthenticated user attempts a protected action anywhere on the site:
 **Trigger examples:**
 - Tapping "Add to wishlist" on a product card
 - Tapping "Buy this gift" on a shared wishlist item
-- Navigating to `/dashboard/*` directly
+- Navigating to dashboard route-group pages such as `/wishlists` or `/occasions/[id]` directly
 
 **Behavior:**
-- For direct URL navigation to `/dashboard/*`: middleware redirects to `/auth/login?redirect=[original-path]`
+- For direct URL navigation to protected dashboard pages: proxy redirects to `/login?redirect=[original-path]`
 - For in-page actions (button taps): show a bottom sheet or modal with:
   - Title: "You need an account"
   - Body: "Sign in to add gifts to your wishlist, buy for others, and more."
@@ -350,24 +350,30 @@ When an unauthenticated user attempts a protected action anywhere on the site:
   - "Create account" button (ghost, pill, full width)
   - Both buttons navigate to their respective auth routes with `?redirect=[current-path]`
 
-**After successful auth:** redirect to the `redirect` param only after validating it as a same-origin relative path. Accept paths like `/dashboard/wishlists`; reject absolute URLs, protocol-relative paths beginning with `//`, and raw or encoded backslash variants, falling back to `/dashboard/wishlists`.
+**After successful auth:** redirect to the `redirect` param only after validating it as a same-origin relative path. Accept paths like `/wishlists`; reject absolute URLs, protocol-relative paths beginning with `//`, and raw or encoded backslash variants, falling back to `/wishlists`.
 
 ---
 
-## Middleware Requirements
+## Proxy Requirements
 
-File: `src/middleware.ts`
+File: `proxy.ts`
 
-**Protected routes** (redirect to `/auth/login?redirect=[path]` if no session):
-- `/dashboard/*`
+**Protected routes** (redirect to `/login?redirect=[path]` if no session):
+- `/wishlists`
+- `/wishlists/*`
+- `/occasions`
+- `/occasions/*`
+- `/dates`
+- `/orders/*`
+- `/settings`
 - `/checkout`
 - `/account/*`
 
-**Auth-only routes** (redirect to `/dashboard/wishlists` if session exists):
-- `/auth/login`
-- `/auth/signup`
-- `/auth/welcome`
-- `/auth/onboarding`
+**Auth-only routes** (redirect to `/wishlists` if session exists):
+- `/login`
+- `/signup`
+- `/welcome`
+- `/onboarding`
 
 **Public routes** (always accessible — no redirect):
 - `/`
@@ -376,11 +382,11 @@ File: `src/middleware.ts`
 - `/occasions/*`
 - `/collections/*`
 - `/w/*`
-- `/auth/callback`
-- `/auth/forgot-password`
-- `/auth/verify-otp`
-- `/auth/reset-password`
-- `/auth/success`
+- `/callback`
+- `/forgot-password`
+- `/verify-otp`
+- `/reset-password`
+- `/success`
 
 ---
 
@@ -453,7 +459,7 @@ The agent should create or modify the following files:
 ```
 src/
   app/
-    auth/
+    (auth)/
       layout.tsx              ← Auth layout wrapper (no navbar/footer)
       onboarding/
         page.tsx              ← Onboarding slides 1 & 2
@@ -478,7 +484,7 @@ src/
         page.tsx              ← Success screen
       callback/
         route.ts              ← OAuth + email confirmation callback (already exists)
-  middleware.ts               ← Route protection (already exists, extend it)
+  proxy.ts                    ← Route protection (already exists, extend it)
   components/
     auth/
       OtpKeypad.tsx           ← Custom numeric keypad component
@@ -549,9 +555,9 @@ Use `@gsap/react` `useGSAP` hook. All animations must be subtle — this is a pr
 The agent's implementation is complete when all of the following pass:
 
 - [ ] A new user can sign up with first name, last name, email, and password and receive a verification email
-- [ ] A returning user can log in with email and password and reach `/dashboard/wishlists`
+- [ ] A returning user can log in with email and password and reach `/wishlists`
 - [ ] Google OAuth completes the full flow and creates a `public.users` profile row
-- [ ] An unauthenticated user accessing `/dashboard/*` is redirected to `/auth/login?redirect=[path]` and returned after login
+- [ ] An unauthenticated user accessing protected dashboard pages is redirected to `/login?redirect=[path]` and returned after login
 - [ ] The forgot password flow sends an OTP to the user's email
 - [ ] The OTP screen accepts 6 digits via the custom keypad and verifies correctly
 - [ ] An incorrect OTP shows a shake animation and an error message
@@ -572,7 +578,7 @@ The agent's implementation is complete when all of the following pass:
 
 2. **Session after OTP:** After `verifyOtp` succeeds, Supabase establishes a session automatically. The reset password screen uses `updateUser` on this session. The middleware must NOT redirect the reset-password page to login — it needs to remain accessible with the OTP-established session.
 
-3. **`redirect` param handling:** The `redirect` query param must be preserved through the entire auth flow. If a user lands on login with `?redirect=/dashboard/wishlists`, after successful login they must end up at `/dashboard/wishlists`, not the default.
+3. **`redirect` param handling:** The `redirect` query param must be preserved through the entire auth flow. If a user lands on login with `?redirect=/wishlists`, after successful login they must end up at `/wishlists`, not the default.
 
 4. **Server Actions vs client calls:** Use Server Actions (files named `actions.ts`) for signup and login form submissions. Use direct Supabase client calls from client components for the OTP keypad (since it's entirely client-side interaction) and Google OAuth.
 

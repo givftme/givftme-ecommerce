@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { signupAction } from "@/app/auth/signup/actions";
+import { loginAction } from "@/app/(auth)/login/actions";
 import { AuthAlert } from "@/components/auth/AuthAlert";
 import { AuthDivider } from "@/components/auth/AuthDivider";
 import {
@@ -24,80 +24,52 @@ import {
   FormMessage,
 } from "@/components/ui/Form";
 import { withRedirect } from "@/lib/auth/redirect";
-import {
-  type SignupValues,
-  signupSchema,
-} from "@/lib/auth/validation";
+import { type LoginValues, loginSchema } from "@/lib/auth/validation";
 
-export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
+export function LoginForm({
+  redirectTo,
+  initialError,
+}: {
+  redirectTo?: string | null;
+  initialError?: string;
+}) {
   const router = useRouter();
-  const [globalError, setGlobalError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [globalError, setGlobalError] = useState(initialError ?? "");
   const [isPending, startTransition] = useTransition();
-  const form = useForm<SignupValues>({
-    resolver: zodResolver(signupSchema),
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
     mode: "onBlur",
     defaultValues: {
-      firstName: "",
-      lastName: "",
       email: "",
       password: "",
     },
   });
 
-  const onSubmit = (values: SignupValues) => {
+  const onSubmit = (values: LoginValues) => {
     setGlobalError("");
-    setSuccessMessage("");
 
     startTransition(async () => {
-      const result = await signupAction({ ...values, redirectTo });
+      const result = await loginAction({ ...values, redirectTo });
 
       if (!result.success) {
-        setGlobalError(result.error ?? "Something went wrong. Please try again.");
+        setGlobalError(result.error ?? "Incorrect email or password.");
         return;
       }
 
-      setSuccessMessage(result.message ?? "Check your email to verify your account");
-      window.setTimeout(() => {
-        router.push(withRedirect("/auth/login", redirectTo));
-      }, 1000);
+      router.push(result.redirectTo ?? "/wishlists");
+      router.refresh();
     });
   };
 
   return (
     <AuthPageShell
-      title="Let's get you started"
-      subtitle="Tell us more about you, please use your name as it appears on your ID."
-      backHref={withRedirect("/auth/welcome", redirectTo)}
+      title="Welcome back home"
+      subtitle="Enter the necessary details"
+      backHref={withRedirect("/welcome", redirectTo)}
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <AuthAlert message={globalError} />
-          <AuthAlert message={successMessage} tone="success" />
-
-          <FormField
-            control={form.control}
-            name="firstName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>First name</FormLabel>
-                <AuthFormInput placeholder="Enter your first name" {...field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="lastName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Last name</FormLabel>
-                <AuthFormInput placeholder="Enter your last name" {...field} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
@@ -107,7 +79,7 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
                 <FormLabel>Email address</FormLabel>
                 <AuthFormInput
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email address"
                   autoComplete="email"
                   {...field}
                 />
@@ -123,8 +95,8 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <AuthFormPasswordInput
-                  placeholder="Enter your password"
-                  autoComplete="new-password"
+                  placeholder="Enter your email address"
+                  autoComplete="current-password"
                   {...field}
                 />
                 <FormMessage />
@@ -132,15 +104,24 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
             )}
           />
 
+          <div className="-mt-2 flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-brand"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
           <Button type="submit" fullWidth disabled={isPending} className="h-12">
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Signup
+            Login
           </Button>
 
           <AuthDivider />
 
           <GoogleOAuthButton
-            label="Signup with Google"
+            label="Continue with Google"
             redirectTo={redirectTo}
             onError={setGlobalError}
           />
@@ -150,10 +131,10 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
       <p className="mt-auto pt-10 text-center text-sm text-muted">
         Already have an account?{" "}
         <Link
-          href={withRedirect("/auth/login", redirectTo)}
+          href={withRedirect("/signup", redirectTo)}
           className="font-semibold text-ink"
         >
-          Login
+          Signup
         </Link>
       </p>
     </AuthPageShell>

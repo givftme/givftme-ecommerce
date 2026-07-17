@@ -48,7 +48,7 @@ export function SuccessScreen() {
           <Button
             type="button"
             fullWidth
-            onClick={() => router.push("/auth/login")}
+            onClick={() => router.push("/login")}
             className="h-12"
           >
             Done

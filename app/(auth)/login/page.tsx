@@ -1,4 +1,4 @@
-import { LoginForm } from "@/app/auth/login/LoginForm";
+import { LoginForm } from "@/app/(auth)/login/LoginForm";
 
 const authErrors: Record<string, string> = {
   oauth: "Couldn't connect to Google. Please try again.",

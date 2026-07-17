@@ -12,7 +12,7 @@ export function WelcomeScreen({ redirectTo }: { redirectTo?: string | null }) {
     <AuthPageShell showBack={false}>
       <AuthWelcomePanel
         redirectTo={redirectTo}
-        onBack={() => router.push(withRedirect("/auth/onboarding", redirectTo))}
+        onBack={() => router.push(withRedirect("/onboarding", redirectTo))}
       />
     </AuthPageShell>
   );

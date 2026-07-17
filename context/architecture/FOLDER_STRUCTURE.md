@@ -29,8 +29,8 @@ app/
   page.tsx                      home page (public)
   layout.tsx                    root layout
 
-  auth/                         public — sign in/up, not yet authenticated
-    login/, signup/, verify/, callback/
+  (auth)/                       public — sign in/up, not yet authenticated
+    login/, signup/, verify-otp/, callback/
 
   shop/[slug]/                  public — e-commerce category browsing
   occasions/[slug]/              public — gift museum, occasion level
@@ -44,7 +44,7 @@ app/
     item/[itemId]/                item detail from a giver's perspective
     confirm/[itemId]/             "did you complete your purchase" (external flow only)
 
-  dashboard/                     requires auth — RECEIVER-FACING
+  (dashboard)/                   requires auth — RECEIVER-FACING
     wishlists/, wishlists/new/, wishlists/[id]/edit/
     occasions/, occasions/new/, occasions/[id]/
     dates/                        important dates (Flow 1 reminders)
@@ -61,7 +61,7 @@ app/
 
 ## `components` — shared component library
 
-Organized by domain, not by page. **Do not create page-specific component folders** (e.g. no `components/dashboard-wishlists/`) — if a component is only used in one place, it can live colocated with that route, but anything reused goes in one of these domain folders.
+Organized by domain, not by page. **Do not create page-specific component folders** (e.g. no `components/wishlist-page/`) — if a component is only used in one place, it can live colocated with that route, but anything reused goes in one of these domain folders.
 
 ```
 components/

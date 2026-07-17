@@ -40,7 +40,7 @@ export function VerifyOtpScreen() {
     const storedEmail = window.sessionStorage.getItem("reset_email");
 
     if (!storedEmail) {
-      router.replace("/auth/forgot-password");
+      router.replace("/forgot-password");
       return;
     }
 
@@ -87,7 +87,7 @@ export function VerifyOtpScreen() {
         return;
       }
 
-      router.push("/auth/reset-password");
+      router.push("/reset-password");
     },
     [email, isVerifying, router]
   );
@@ -154,7 +154,7 @@ export function VerifyOtpScreen() {
           complete the registration process.
         </>
       }
-      backHref="/auth/forgot-password"
+      backHref="/forgot-password"
     >
       <div className="space-y-7">
         <AuthAlert message={error} />

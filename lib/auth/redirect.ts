@@ -1,4 +1,4 @@
-const DEFAULT_AUTH_REDIRECT = "/dashboard/wishlists";
+const DEFAULT_AUTH_REDIRECT = "/wishlists";
 const SAFE_REDIRECT_ORIGIN = "https://gifvtme.local";
 
 function hasUnsafeSlashVariant(path: string) {

@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { sendPasswordOtpAction } from "@/app/auth/forgot-password/actions";
+import { sendPasswordOtpAction } from "@/app/(auth)/forgot-password/actions";
 import { AuthAlert } from "@/components/auth/AuthAlert";
 import { AuthFormInput } from "@/components/auth/AuthFormInput";
 import { AuthPageShell } from "@/components/auth/AuthPageShell";
@@ -43,13 +43,13 @@ export function ForgotPasswordForm() {
 
       if (!result.success) {
         setGlobalError(
-          result.error ?? "No account found with this email address."
+          result.error ?? "No account found with this email address.",
         );
         return;
       }
 
       window.sessionStorage.setItem("reset_email", values.email);
-      router.push("/auth/verify-otp");
+      router.push("/verify-otp");
     });
   };
 
@@ -57,7 +57,7 @@ export function ForgotPasswordForm() {
     <AuthPageShell
       title="Forget Password"
       subtitle="Enter the necessary details"
-      backHref="/auth/login"
+      backHref="/login"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -89,7 +89,7 @@ export function ForgotPasswordForm() {
 
       <p className="mt-auto pt-10 text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/auth/signup" className="font-semibold text-ink">
+        <Link href="/signup" className="font-semibold text-ink">
           Signup
         </Link>
       </p>

@@ -42,8 +42,8 @@ This feature covers:
 
 | Screen | Route | Description |
 |---|---|---|
-| Dashboard home | `/dashboard/wishlists` | Lists the evergreen wishlist card plus occasion wishlists |
-| Wishlist detail | `/dashboard/wishlists/[id]` | Full item list with edit/delete/reorder |
+| Dashboard home | `/wishlists` | Lists the evergreen wishlist card plus occasion wishlists |
+| Wishlist detail | `/wishlists/[id]` | Full item list with edit/delete/reorder |
 | Add item (sheet) | Opens as a bottom sheet over the detail page | URL entry or manual form |
 | Edit item (sheet) | Opens as a bottom sheet over the detail page | Edit existing item fields |
 
@@ -53,10 +53,10 @@ This feature covers:
 
 ### First visit
 ```
-User logs in → navigates to /dashboard/wishlists
+User logs in → navigates to /wishlists
 → System checks: does this user have an evergreen wishlist?
 → No → auto-create one (title: "My Wishlist", visibility: "private")
-→ Redirect to /dashboard/wishlists/[new-id]
+→ Redirect to /wishlists/[new-id]
 → Show empty state with "Add your first wish" CTA
 ```
 
@@ -102,13 +102,13 @@ User long-presses an item (mobile) or drags the handle (desktop)
 
 ## Detailed Screen Requirements
 
-### Screen 1 — Dashboard Wishlists (`/dashboard/wishlists`)
+### Screen 1 — Dashboard Wishlists (`/wishlists`)
 
 **Layout:** Full screen with dashboard navigation. Single column on mobile, can be wider on desktop.
 
 **Header:**
 - Page title: "My Wishlists"
-- "Create occasion" button (top right, ghost style) — links to `/dashboard/occasions/new` (stub — just the link for now, that feature comes later)
+- "Create occasion" button (top right, ghost style) — links to `/occasions/new` (stub — just the link for now, that feature comes later)
 
 **Evergreen wishlist card:**
 - Large card taking the full width
@@ -116,7 +116,7 @@ User long-presses an item (mobile) or drags the handle (desktop)
 - Title: "My Wishlist" (editable — tapping the title opens an inline edit)
 - Item count: "X items" below the title
 - Two CTAs side by side:
-  - "View wishlist" (filled, brand red) → navigates to `/dashboard/wishlists/[id]`
+  - "View wishlist" (filled, brand red) → navigates to `/wishlists/[id]`
   - "Share" (ghost) → opens the share sheet (stub for now — the sharing feature comes later; just show a toast "Sharing coming soon")
 - If 0 items: show a soft prompt inside the card "Add things you'd love to receive"
 
@@ -130,12 +130,12 @@ User long-presses an item (mobile) or drags the handle (desktop)
 
 ---
 
-### Screen 2 — Wishlist Detail (`/dashboard/wishlists/[id]`)
+### Screen 2 — Wishlist Detail (`/wishlists/[id]`)
 
 **Layout:** Full screen. Single column on mobile.
 
 **Header:**
-- Back arrow → `/dashboard/wishlists`
+- Back arrow → `/wishlists`
 - Wishlist title (center, editable inline on tap)
 - Three-dot menu (top right) with options:
   - "Share wishlist" (stub — toast for now)
@@ -252,7 +252,7 @@ Each item card:
 
 ### Auto-creation of evergreen wishlist
 
-In the dashboard layout server component (`app/dashboard/layout.tsx`):
+In the dashboard layout server component (`app/(dashboard)/layout.tsx`):
 
 ```typescript
 // After confirming the user is authenticated:
@@ -285,7 +285,7 @@ This must run on every dashboard load — it is idempotent (the `one_evergreen_p
 ### Fetching the wishlist and items
 
 ```typescript
-// In /dashboard/wishlists/[id]/page.tsx (server component)
+// In /wishlists/[id]/page.tsx (server component)
 const { data: wishlist } = await supabase
   .from('wishlists')
   .select(`
@@ -562,7 +562,7 @@ All routes must:
 ```
 src/
   app/
-    dashboard/
+    (dashboard)/
       layout.tsx                    ← Dashboard layout with auto-creation logic + MobileBottomNav
       wishlists/
         page.tsx                    ← Wishlist list page (shows evergreen card + empty occasions)
@@ -777,7 +777,7 @@ Track these events using a thin wrapper. If no analytics library is set up yet, 
 
 The implementation is complete when all of the following pass:
 
-- [ ] A user who logs in for the first time and visits `/dashboard/wishlists` automatically has an evergreen wishlist created — exactly one, never two
+- [ ] A user who logs in for the first time and visits `/wishlists` automatically has an evergreen wishlist created — exactly one, never two
 - [ ] The wishlist title is editable inline and the change persists on refresh
 - [ ] Adding an item via URL scrape: a valid Jumia or Konga URL populates the title, image, and price in the preview within 4 seconds; any scrape that reaches the 3.5-second timeout falls back to manual entry before the 4-second mark
 - [ ] Adding an item via URL scrape: an Amazon URL or any failed scrape immediately switches to the manual form without blocking

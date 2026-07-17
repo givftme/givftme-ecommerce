@@ -13,7 +13,7 @@ export function AuthPageShell({
   title,
   subtitle,
   children,
-  backHref = "/auth/welcome",
+  backHref = "/welcome",
   showBack = true,
   centered = false,
   className,

@@ -25,7 +25,7 @@ export function OnboardingSlider({
 
   useEffect(() => {
     if (window.localStorage.getItem("onboarded") === "true") {
-      router.replace(withRedirect("/auth/welcome", redirectTo));
+      router.replace(withRedirect("/welcome", redirectTo));
     }
   }, [redirectTo, router]);
 
@@ -133,7 +133,7 @@ export function OnboardingSlider({
               <p className="mt-5 text-sm text-muted">
                 Already have an account?{" "}
                 <Link
-                  href={withRedirect("/auth/login", redirectTo)}
+                  href={withRedirect("/login", redirectTo)}
                   className="font-semibold text-ink"
                 >
                   Login here
@@ -173,7 +173,7 @@ export function OnboardingSlider({
 
               <div className="space-y-3">
                 <Link
-                  href={withRedirect("/auth/login", redirectTo)}
+                  href={withRedirect("/login", redirectTo)}
                   className={cn(
                     buttonVariants({ fullWidth: true, size: "lg" }),
                     "h-12"
@@ -182,7 +182,7 @@ export function OnboardingSlider({
                   Login
                 </Link>
                 <Link
-                  href={withRedirect("/auth/signup", redirectTo)}
+                  href={withRedirect("/signup", redirectTo)}
                   className={cn(
                     buttonVariants({
                       variant: "ghost",

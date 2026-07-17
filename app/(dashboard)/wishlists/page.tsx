@@ -27,7 +27,7 @@ export default async function DashboardWishlistsPage() {
             <p className="mt-1 text-sm text-muted">Manage what you would love to receive.</p>
           </div>
           <Link
-            href="/dashboard/occasions/new"
+            href="/occasions/new"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-10")}
           >
             <Plus className="h-4 w-4" />
@@ -41,7 +41,7 @@ export default async function DashboardWishlistsPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-ink">Occasions</h2>
             <Link
-              href="/dashboard/occasions/new"
+              href="/occasions/new"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 px-3")}
             >
               <Plus className="h-4 w-4" />
@@ -58,7 +58,7 @@ export default async function DashboardWishlistsPage() {
                 No occasions yet - create one for your next big moment
               </p>
               <Link
-                href="/dashboard/occasions/new"
+                href="/occasions/new"
                 className={cn(buttonVariants({ variant: "filled", size: "md" }), "mt-5")}
               >
                 <Plus className="h-4 w-4" />

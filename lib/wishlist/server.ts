@@ -44,7 +44,7 @@ export async function requireDashboardUser() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login?redirect=/dashboard/wishlists");
+    redirect("/login?redirect=/wishlists");
   }
 
   return { supabase, user };

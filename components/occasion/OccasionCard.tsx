@@ -92,7 +92,7 @@ export function OccasionCard({
         <div className="flex shrink-0 flex-col items-end gap-2">
           <DaysPill occasion={occasion} />
           <Link
-            href={`/dashboard/occasions/${occasion.id}`}
+            href={`/occasions/${occasion.id}`}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-8 px-3")}
           >
             <Eye className="h-4 w-4" />
