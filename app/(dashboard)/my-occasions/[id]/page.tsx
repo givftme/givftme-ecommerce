@@ -24,7 +24,7 @@ export default async function OccasionDetailPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const { supabase, user } = await requireDashboardUser();
+  const { supabase, user } = await requireDashboardUser(`/my-occasions/${id}`);
   const detail = await getOwnedOccasionDetail(supabase, user.id, id);
 
   if (!detail) {

@@ -40,10 +40,11 @@ Browsing the public shop, viewing a shared wishlist (if `public` or with a valid
 | `/w/[id]` (shared wishlist view) | No — but depends on wishlist visibility |
 | `/w/[id]/item/[itemId]`, `/w/[id]/confirm/[itemId]` | Yes, to mark purchased |
 | `/cart`, `/checkout` | Yes, to complete checkout |
-| `/wishlists`, `/wishlists/*`, `/occasions`, `/occasions/*`, `/dates`, `/orders/*`, `/settings` | Yes |
+| `/wishlists`, `/wishlists/*`, `/my-occasions`, `/my-occasions/*`, `/dates`, `/orders/*`, `/settings` | Yes |
 | `/account/*` | Yes |
 | `/login`, `/signup`, `/welcome`, `/onboarding` | No (redirects away if already authenticated) |
-| `/callback`, `/forgot-password`, `/verify-otp`, `/reset-password`, `/success` | No |
+| `/callback`, `/forgot-password`, `/verify-otp`, `/success` | No |
+| `/reset-password` | No proxy auth-only redirect; requires a valid OTP-established session enforced by the route-level session guard |
 | `/api/scrape` | Yes |
 | `/api/occasions`, `/api/occasions/[id]`, `/api/occasions/[id]/items`, `/api/occasions/[id]/reactivate` | Yes |
 | `/api/occasions/archive` | No user auth — protected by `Authorization: Bearer ${CRON_SECRET}` |

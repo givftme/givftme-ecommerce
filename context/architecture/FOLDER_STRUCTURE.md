@@ -46,7 +46,7 @@ app/
 
   (dashboard)/                   requires auth — RECEIVER-FACING
     wishlists/, wishlists/new/, wishlists/[id]/edit/
-    occasions/, occasions/new/, occasions/[id]/
+    my-occasions/, my-occasions/new/, my-occasions/[id]/
     dates/                        important dates (Flow 1 reminders)
     orders/[id]/                  receiver's own order history
     settings/

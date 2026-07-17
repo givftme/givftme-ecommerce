@@ -52,7 +52,7 @@ All auth screens live under the `app/(auth)` route group. The route group does n
 ## User Flows
 
 ### New user flow
-```
+```text
 Homepage → attempts action → redirected to /login
 → taps "Sign up" → /signup
 → fills form → submits
@@ -62,14 +62,14 @@ Homepage → attempts action → redirected to /login
 ```
 
 ### Returning user flow
-```
+```text
 Homepage → attempts action → redirected to /login
 → fills email + password → submits
 → session established → redirected back to original intended page
 ```
 
 ### Google OAuth flow
-```
+```text
 /login or /signup → taps "Continue with Google"
 → Google OAuth consent screen
 → /callback → session established
@@ -77,7 +77,7 @@ Homepage → attempts action → redirected to /login
 ```
 
 ### Forgot password flow
-```
+```text
 /login → taps "Forgot Password?"
 → /forgot-password → enters email → submits
 → Supabase sends OTP to email
@@ -88,7 +88,7 @@ Homepage → attempts action → redirected to /login
 ```
 
 ### Action-gated prompt flow (unauthenticated user on homepage)
-```
+```text
 User taps "Add to wishlist" / "Buy this gift" / any protected action
 → Toast or modal appears: "You need an account to do this"
 → Two CTAs: "Log in" | "Sign up"
@@ -265,7 +265,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 - Tapping resend: calls `signInWithOtp` again with the stored email, restarts countdown
 
 **Custom numeric keypad:**
-```
+```text
 [1] [2] [3]
 [4] [5] [6]
 [7] [8] [9]
@@ -339,7 +339,7 @@ When an unauthenticated user attempts a protected action anywhere on the site:
 **Trigger examples:**
 - Tapping "Add to wishlist" on a product card
 - Tapping "Buy this gift" on a shared wishlist item
-- Navigating to dashboard route-group pages such as `/wishlists` or `/occasions/[id]` directly
+- Navigating to dashboard route-group pages such as `/wishlists` or `/my-occasions/[id]` directly
 
 **Behavior:**
 - For direct URL navigation to protected dashboard pages: proxy redirects to `/login?redirect=[original-path]`
@@ -361,8 +361,8 @@ File: `proxy.ts`
 **Protected routes** (redirect to `/login?redirect=[path]` if no session):
 - `/wishlists`
 - `/wishlists/*`
-- `/occasions`
-- `/occasions/*`
+- `/my-occasions`
+- `/my-occasions/*`
 - `/dates`
 - `/orders/*`
 - `/settings`
@@ -456,41 +456,40 @@ The agent must use these exact values — no deviation:
 
 The agent should create or modify the following files:
 
-```
-src/
-  app/
-    (auth)/
-      layout.tsx              ← Auth layout wrapper (no navbar/footer)
-      onboarding/
-        page.tsx              ← Onboarding slides 1 & 2
-      welcome/
-        page.tsx              ← Welcome screen
-      signup/
-        page.tsx              ← Sign up form
-        actions.ts            ← Server action for signup
-      login/
-        page.tsx              ← Login form
-        actions.ts            ← Server action for login + Google OAuth
-      forgot-password/
-        page.tsx              ← Forgot password form
-        actions.ts            ← Server action to send OTP
-      verify-otp/
-        page.tsx              ← OTP entry with custom keypad
-        actions.ts            ← Server action to verify OTP
-      reset-password/
-        page.tsx              ← Reset password form
-        actions.ts            ← Server action to update password
-      success/
-        page.tsx              ← Success screen
-      callback/
-        route.ts              ← OAuth + email confirmation callback (already exists)
-  proxy.ts                    ← Route protection (already exists, extend it)
-  components/
-    auth/
-      OtpKeypad.tsx           ← Custom numeric keypad component
-      OtpDisplay.tsx          ← Six-box OTP display
-      OnboardingSlider.tsx    ← Swipeable slide component
-      AuthPromptSheet.tsx     ← Bottom sheet for action-gated login prompt
+```text
+app/
+  (auth)/
+    layout.tsx              ← Auth layout wrapper (no navbar/footer)
+    onboarding/
+      page.tsx              ← Onboarding slides 1 & 2
+    welcome/
+      page.tsx              ← Welcome screen
+    signup/
+      page.tsx              ← Sign up form
+      actions.ts            ← Server action for signup
+    login/
+      page.tsx              ← Login form
+      actions.ts            ← Server action for login + Google OAuth
+    forgot-password/
+      page.tsx              ← Forgot password form
+      actions.ts            ← Server action to send OTP
+    verify-otp/
+      page.tsx              ← OTP entry with custom keypad
+      actions.ts            ← Server action to verify OTP
+    reset-password/
+      page.tsx              ← Reset password form
+      actions.ts            ← Server action to update password
+    success/
+      page.tsx              ← Success screen
+    callback/
+      route.ts              ← OAuth + email confirmation callback (already exists)
+proxy.ts                    ← Route protection (already exists, extend it)
+components/
+  auth/
+    OtpKeypad.tsx           ← Custom numeric keypad component
+    OtpDisplay.tsx          ← Six-box OTP display
+    OnboardingSlider.tsx    ← Swipeable slide component
+    AuthPromptSheet.tsx     ← Bottom sheet for action-gated login prompt
 ```
 
 ---
@@ -499,7 +498,7 @@ src/
 
 The agent should check these exist in `.env.local` and throw a clear error if missing:
 
-```
+```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY

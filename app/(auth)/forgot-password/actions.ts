@@ -35,8 +35,7 @@ export async function sendPasswordOtpAction(
 
   if (error) {
     return {
-      success: false,
-      error: "No account found with this email address.",
+      success: true,
     };
   }
 

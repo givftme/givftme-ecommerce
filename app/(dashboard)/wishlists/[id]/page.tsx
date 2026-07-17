@@ -9,7 +9,7 @@ export default async function WishlistDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { supabase, user } = await requireDashboardUser();
+  const { supabase, user } = await requireDashboardUser(`/wishlists/${id}`);
   const wishlist = await getOwnedWishlistDetail(supabase, user.id, id);
 
   if (!wishlist) {

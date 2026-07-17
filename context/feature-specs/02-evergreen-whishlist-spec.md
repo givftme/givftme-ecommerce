@@ -108,7 +108,7 @@ User long-presses an item (mobile) or drags the handle (desktop)
 
 **Header:**
 - Page title: "My Wishlists"
-- "Create occasion" button (top right, ghost style) — links to `/occasions/new` (stub — just the link for now, that feature comes later)
+- "Create occasion" button (top right, ghost style) — links to `/my-occasions/new` (stub — just the link for now, that feature comes later)
 
 **Evergreen wishlist card:**
 - Large card taking the full width
@@ -560,34 +560,33 @@ All routes must:
 ## File Structure
 
 ```
-src/
-  app/
-    (dashboard)/
-      layout.tsx                    ← Dashboard layout with auto-creation logic + MobileBottomNav
-      wishlists/
-        page.tsx                    ← Wishlist list page (shows evergreen card + empty occasions)
-        [id]/
-          page.tsx                  ← Wishlist detail page (server component, fetches items)
-    api/
-      wishlists/
-        route.ts                    ← GET (list), POST (create)
-        [id]/
-          route.ts                  ← PATCH (update title)
-          items/
-            route.ts                ← GET (list items), POST (add item)
-            reorder/
-              route.ts              ← PATCH (reorder)
-            [itemId]/
-              route.ts              ← PATCH (edit), DELETE (archive)
-  components/
-    wishlist/
-      WishlistCard.tsx              ← Dashboard wishlist summary card
-      WishlistItemCard.tsx          ← Individual item row in the detail view
-      WishlistItemList.tsx          ← Full item list with sections (available, purchased)
-      AddItemSheet.tsx              ← Bottom sheet for adding items (URL + manual)
-      EditItemSheet.tsx             ← Bottom sheet for editing items
-      EmptyWishlist.tsx             ← Empty state component
-      ReorderableList.tsx           ← Drag-to-reorder wrapper
+app/
+  (dashboard)/
+    layout.tsx                    ← Dashboard layout with auto-creation logic + MobileBottomNav
+    wishlists/
+      page.tsx                    ← Wishlist list page (shows evergreen card + empty occasions)
+      [id]/
+        page.tsx                  ← Wishlist detail page (server component, fetches items)
+  api/
+    wishlists/
+      route.ts                    ← GET (list), POST (create)
+      [id]/
+        route.ts                  ← PATCH (update title)
+        items/
+          route.ts                ← GET (list items), POST (add item)
+          reorder/
+            route.ts              ← PATCH (reorder)
+          [itemId]/
+            route.ts              ← PATCH (edit), DELETE (archive)
+components/
+  wishlist/
+    WishlistCard.tsx              ← Dashboard wishlist summary card
+    WishlistItemCard.tsx          ← Individual item row in the detail view
+    WishlistItemList.tsx          ← Full item list with sections (available, purchased)
+    AddItemSheet.tsx              ← Bottom sheet for adding items (URL + manual)
+    EditItemSheet.tsx             ← Bottom sheet for editing items
+    EmptyWishlist.tsx             ← Empty state component
+    ReorderableList.tsx           ← Drag-to-reorder wrapper
 ```
 
 ---

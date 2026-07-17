@@ -3,7 +3,7 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 const protectedRoutes = [
   "/wishlists",
-  "/occasions",
+  "/my-occasions",
   "/dates",
   "/orders",
   "/settings",

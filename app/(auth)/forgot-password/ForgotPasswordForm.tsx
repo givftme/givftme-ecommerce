@@ -42,9 +42,7 @@ export function ForgotPasswordForm() {
       const result = await sendPasswordOtpAction(values);
 
       if (!result.success) {
-        setGlobalError(
-          result.error ?? "No account found with this email address.",
-        );
+        setGlobalError(result.error ?? "Something went wrong. Please try again.");
         return;
       }
 

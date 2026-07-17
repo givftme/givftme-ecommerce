@@ -1,6 +1,6 @@
 "use server";
 
-import { validateAuthEnv } from "@/lib/env";
+import { validatePublicAuthEnv } from "@/lib/env";
 import { getSafeRedirect } from "@/lib/auth/redirect";
 import {
   type AuthActionResult,
@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function loginAction(
   values: LoginValues & { redirectTo?: string | null }
 ): Promise<AuthActionResult> {
-  validateAuthEnv();
+  validatePublicAuthEnv();
 
   const parsed = loginSchema.safeParse(values);
 

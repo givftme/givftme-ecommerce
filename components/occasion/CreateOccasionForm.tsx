@@ -239,7 +239,7 @@ export function CreateOccasionForm({
         exclusive_count: exclusiveItems.length,
       });
       router.push(
-        `/occasions/${payload.occasion_id}?created=1&type=${parsed.data.occasion_type}`
+        `/my-occasions/${payload.occasion_id}?created=1&type=${parsed.data.occasion_type}`
       );
     } catch {
       toast({ title: "Couldn't create occasion. Try again.", variant: "danger" });

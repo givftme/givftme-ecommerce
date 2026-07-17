@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 import {
   getWishlistStoragePathFromImageRef,
@@ -37,14 +38,14 @@ function assertEvergreenWishlist(
   return wishlist as EvergreenWishlist;
 }
 
-export async function requireDashboardUser() {
+export async function requireDashboardUser(redirectTo = "/wishlists") {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login?redirect=/wishlists");
+    redirect(withRedirect("/login", redirectTo));
   }
 
   return { supabase, user };

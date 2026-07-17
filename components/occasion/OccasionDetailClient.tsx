@@ -207,7 +207,7 @@ export function OccasionDetailClient({
       title: `Your ${OCCASION_LABELS[createdType]} occasion is ready to share`,
       variant: "success",
     });
-    router.replace(`/occasions/${occasion.id}`);
+    router.replace(`/my-occasions/${occasion.id}`);
   }, [createdType, occasion.id, router, toast]);
 
   const fromWishlistItems = useMemo(
