@@ -23,7 +23,7 @@ shadcn-style primitive used by auth forms and future forms. Shape is `rounded-xl
 shadcn-style react-hook-form wrappers: `Form`, `FormField`, `FormItem`, `FormLabel`, `FormMessage`. Use these with Zod-backed `react-hook-form` forms rather than hand-rendering labels/errors.
 
 ### `Sheet`
-Radix Dialog-backed bottom sheet primitive. Used for the action-gated auth prompt on mobile/public pages.
+Radix Dialog-backed bottom sheet primitive. `SheetContent` accepts `showClose` (default `true`) for screens that provide their own close/back affordance. Used for the action-gated auth prompt on mobile/public pages.
 
 ### `Dialog`
 Radix Dialog-backed confirmation/modal primitive. Used by wishlist duplicate and delete confirmations.
