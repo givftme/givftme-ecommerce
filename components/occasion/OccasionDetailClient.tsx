@@ -207,7 +207,7 @@ export function OccasionDetailClient({
       title: `Your ${OCCASION_LABELS[createdType]} occasion is ready to share`,
       variant: "success",
     });
-    router.replace(`/dashboard/occasions/${occasion.id}`);
+    router.replace(`/my-occasions/${occasion.id}`);
   }, [createdType, occasion.id, router, toast]);
 
   const fromWishlistItems = useMemo(
@@ -355,7 +355,7 @@ export function OccasionDetailClient({
       <div className="mx-auto min-h-dvh max-w-4xl px-4 py-5 md:py-8">
         <header className="relative grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
           <Link
-            href="/dashboard/wishlists"
+            href="/wishlists"
             aria-label="Back to wishlists"
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-brand-light hover:text-brand"
           >

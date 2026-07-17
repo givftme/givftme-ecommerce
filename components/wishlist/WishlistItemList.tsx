@@ -185,7 +185,7 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
       <div className="mx-auto min-h-dvh max-w-4xl bg-white px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-8 md:shadow-sm">
         <header className="flex items-center justify-between gap-3">
           <Link
-            href="/dashboard/wishlists"
+            href="/wishlists"
             aria-label="Back to wishlists"
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-brand-light hover:text-brand"
           >

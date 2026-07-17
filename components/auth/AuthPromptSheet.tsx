@@ -39,13 +39,13 @@ export function AuthPromptSheet({
 
         <div className="mt-6 space-y-3">
           <Link
-            href={withRedirect("/auth/login", currentPath)}
+            href={withRedirect("/login", currentPath)}
             className={cn(buttonVariants({ fullWidth: true }), "h-12")}
           >
             Log in
           </Link>
           <Link
-            href={withRedirect("/auth/signup", currentPath)}
+            href={withRedirect("/signup", currentPath)}
             className={cn(
               buttonVariants({ variant: "ghost", fullWidth: true }),
               "h-12"

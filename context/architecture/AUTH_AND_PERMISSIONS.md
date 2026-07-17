@@ -4,7 +4,7 @@
 
 Supabase Auth handles all authentication. Two sign-in methods in v1: email/password and Google OAuth. There is no separate auth system for internal operations — the internal team works through Retool, which connects to Supabase using the service role key, bypassing RLS entirely (this is expected and intentional for that one tool only).
 
-Session handling: `lib/supabase/middleware.ts` refreshes the session on every request. `src/middleware.ts` redirects unauthenticated users away from `/dashboard/*` and redirects authenticated users away from `/auth/login` and `/auth/signup`.
+Session handling: `lib/supabase/middleware.ts` refreshes the session on every request. `proxy.ts` redirects unauthenticated users away from protected dashboard route-group pages and redirects authenticated users away from `/login` and `/signup`.
 
 A profile row in `public.users` is auto-created via the `handle_new_user` trigger whenever a new `auth.users` row appears — application code should never need to manually create a profile row after signup.
 
@@ -40,9 +40,11 @@ Browsing the public shop, viewing a shared wishlist (if `public` or with a valid
 | `/w/[id]` (shared wishlist view) | No — but depends on wishlist visibility |
 | `/w/[id]/item/[itemId]`, `/w/[id]/confirm/[itemId]` | Yes, to mark purchased |
 | `/cart`, `/checkout` | Yes, to complete checkout |
-| `/dashboard/*` | Yes |
+| `/wishlists`, `/wishlists/*`, `/my-occasions`, `/my-occasions/*`, `/dates`, `/orders/*`, `/settings` | Yes |
 | `/account/*` | Yes |
-| `/auth/*` | No (redirects away if already authenticated) |
+| `/login`, `/signup`, `/welcome`, `/onboarding` | No (redirects away if already authenticated) |
+| `/callback`, `/forgot-password`, `/verify-otp`, `/success` | No |
+| `/reset-password` | No proxy auth-only redirect; requires a valid OTP-established session enforced by the route-level session guard |
 | `/api/scrape` | Yes |
 | `/api/occasions`, `/api/occasions/[id]`, `/api/occasions/[id]/items`, `/api/occasions/[id]/reactivate` | Yes |
 | `/api/occasions/archive` | No user auth — protected by `Authorization: Bearer ${CRON_SECRET}` |

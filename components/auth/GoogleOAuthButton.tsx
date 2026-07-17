@@ -24,7 +24,7 @@ export function GoogleOAuthButton({
 
     startTransition(async () => {
       const supabase = createClient();
-      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      const callbackUrl = new URL("/callback", window.location.origin);
       const safeRedirect = getSafeRedirect(redirectTo, "");
 
       if (safeRedirect) {

@@ -26,6 +26,10 @@ export function getAppUrl() {
   );
 }
 
+export function validatePublicAuthEnv() {
+  getSupabasePublicEnv();
+}
+
 export function validateAuthEnv() {
   getSupabasePublicEnv();
   getAppUrl();

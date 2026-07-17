@@ -34,7 +34,7 @@ Use the `cn()` utility (`lib/utils.ts`, wraps `clsx` + `tailwind-merge`) wheneve
 
 ## Forms — react-hook-form + Zod
 
-All forms (wishlist creation, occasion creation, checkout/shipping, auth) use `react-hook-form` with a Zod schema passed via `@hookform/resolvers/zod`. Define the Zod schema near the form (or in a shared `lib/validation/` location if reused across a form and an API route — e.g. the shape used in `/api/scrape`'s request validation could be shared with a client-side form if one ever submits a URL directly). Prefer this pattern over the plain `useActionState` + manual Zod `safeParse` pattern used in the earlier-built `app/auth/actions.ts` — that file predates this stack decision and should be migrated to `react-hook-form` when next touched, rather than treated as the model for new forms.
+All forms (wishlist creation, occasion creation, checkout/shipping, auth) use `react-hook-form` with a Zod schema passed via `@hookform/resolvers/zod`. Define the Zod schema near the form (or in a shared `lib/validation/` location if reused across a form and an API route — e.g. the shape used in `/api/scrape`'s request validation could be shared with a client-side form if one ever submits a URL directly). Prefer this pattern over the plain `useActionState` + manual Zod `safeParse` pattern used in earlier auth actions — that pattern predates this stack decision and should be migrated to `react-hook-form` when next touched, rather than treated as the model for new forms.
 
 ## Animation — GSAP
 

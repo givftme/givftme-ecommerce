@@ -20,8 +20,8 @@ const navLinks = [
   { label: "Home", href: "/" },
   { label: "Account", href: "/account" },
   { label: "Shop", href: "/shop" },
-  { label: "Save Special Dates", href: "/dashboard/dates" },
-  { label: "Wishlist", href: "/dashboard/wishlists" },
+  { label: "Save Special Dates", href: "/dates" },
+  { label: "Wishlist", href: "/wishlists" },
   { label: "Contact Us", href: "/contact-us" },
   { label: "About Us", href: "/about-us" },
 ];
@@ -39,7 +39,7 @@ export function Navbar({
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
-  const accountHref = isAuthenticated ? "/account" : "/auth/login";
+  const accountHref = isAuthenticated ? "/account" : "/login";
   const accountPrimaryLabel = userName
     ? `Welcome, ${userName}`
     : isAuthenticated

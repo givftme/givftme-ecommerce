@@ -42,11 +42,11 @@ This feature covers:
 
 | Screen | Route | Description |
 |---|---|---|
-| Dashboard (occasions section) | `/dashboard/wishlists` | Already stubbed — replace stub with real content |
-| Create occasion step 1 | `/dashboard/occasions/new` | Title, type, date |
-| Create occasion step 2 | `/dashboard/occasions/new` (client step) | Pull from evergreen checklist |
-| Create occasion step 3 | `/dashboard/occasions/new` (client step) | Add exclusive items |
-| Occasion detail | `/dashboard/occasions/[id]` | Manage the occasion and its wishlist |
+| Dashboard (occasions section) | `/wishlists` | Already stubbed — replace stub with real content |
+| Create occasion step 1 | `/my-occasions/new` | Title, type, date |
+| Create occasion step 2 | `/my-occasions/new` (client step) | Pull from evergreen checklist |
+| Create occasion step 3 | `/my-occasions/new` (client step) | Add exclusive items |
+| Occasion detail | `/my-occasions/[id]` | Manage the occasion and its wishlist |
 
 ---
 
@@ -58,7 +58,7 @@ Dashboard → "Create occasion" button
 → Step 1: Pick occasion type, enter title, pick date → Next
 → Step 2: Select items from evergreen checklist → Next (can skip with 0 selected)
 → Step 3: Add exclusive items → "Create occasion"
-→ Redirected to /dashboard/occasions/[id]
+→ Redirected to /my-occasions/[id]
 → Success toast: "Your [type] occasion is ready to share"
 ```
 
@@ -84,7 +84,7 @@ Cron runs daily → finds active occasions where occasion_date < today - 7 days
 
 ### Dashboard Occasions Section (replacing the stub)
 
-**Occasions section on `/dashboard/wishlists`:**
+**Occasions section on `/wishlists`:**
 - Section header "Occasions" + "New occasion" button (ghost, `+` icon, top right)
 - Each occasion card:
   - Left: occasion type emoji (large, 32px)
@@ -102,10 +102,10 @@ Cron runs daily → finds active occasions where occasion_date < today - 7 days
 
 ### Create Occasion — Step 1 (Basic Info)
 
-**Route:** `/dashboard/occasions/new`
+**Route:** `/my-occasions/new`
 
 **Header:**
-- Back arrow → `/dashboard/wishlists` (confirm dialog if data entered)
+- Back arrow → `/wishlists` (confirm dialog if data entered)
 - Step indicator: three dots, step 1 active in brand red
 - Title: "Create an occasion"
 - Subtext: "What are you celebrating?"
@@ -172,10 +172,10 @@ Cron runs daily → finds active occasions where occasion_date < today - 7 days
 
 ---
 
-### Occasion Detail (`/dashboard/occasions/[id]`)
+### Occasion Detail (`/my-occasions/[id]`)
 
 **Header:**
-- Back arrow → `/dashboard/wishlists`
+- Back arrow → `/wishlists`
 - Occasion title (center, bold)
 - Three-dot menu: "Edit occasion" | "Share wishlist" (stub if sharing not built) | "Delete occasion"
 
@@ -318,34 +318,33 @@ Cron-protected (same pattern as `/api/reminders`). Finds active occasions where 
 ## File Structure
 
 ```
-src/
-  app/
-    dashboard/
-      occasions/
-        new/
-          page.tsx              ← Multi-step creation (client component)
-        [id]/
-          page.tsx              ← Occasion detail (server component)
-    api/
-      occasions/
-        route.ts                ← GET, POST
-        archive/
-          route.ts              ← POST (cron)
-        [id]/
-          route.ts              ← GET, PATCH, DELETE
-          reactivate/
-            route.ts            ← POST
-  components/
-    occasion/
-      OccasionCard.tsx          ← Dashboard card
-      OccasionHero.tsx          ← Detail page header section
-      OccasionTypeSelector.tsx  ← Step 1 grid
-      PullFromEvergreen.tsx     ← Step 2 checklist
-      ReactivationPrompt.tsx    ← Post-archive UI
-      CreateOccasionStepper.tsx ← Step progress indicator
-  lib/
-    reminders/
-      scheduleOccasionReminders.ts
+app/
+  (dashboard)/
+    my-occasions/
+      new/
+        page.tsx              ← Multi-step creation (client component)
+      [id]/
+        page.tsx              ← Occasion detail (server component)
+  api/
+    occasions/
+      route.ts                ← GET, POST
+      archive/
+        route.ts              ← POST (cron)
+      [id]/
+        route.ts              ← GET, PATCH, DELETE
+        reactivate/
+          route.ts            ← POST
+components/
+  occasion/
+    OccasionCard.tsx          ← Dashboard card
+    OccasionHero.tsx          ← Detail page header section
+    OccasionTypeSelector.tsx  ← Step 1 grid
+    PullFromEvergreen.tsx     ← Step 2 checklist
+    ReactivationPrompt.tsx    ← Post-archive UI
+    CreateOccasionStepper.tsx ← Step progress indicator
+lib/
+  reminders/
+    scheduleOccasionReminders.ts
 ```
 
 ---

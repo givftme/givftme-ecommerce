@@ -164,7 +164,7 @@ export function CreateOccasionForm({
   const handleBack = () => {
     if (step === 1) {
       if (!hasEnteredData || window.confirm("Discard this occasion draft?")) {
-        router.push("/dashboard/wishlists");
+        router.push("/wishlists");
       }
       return;
     }
@@ -239,7 +239,7 @@ export function CreateOccasionForm({
         exclusive_count: exclusiveItems.length,
       });
       router.push(
-        `/dashboard/occasions/${payload.occasion_id}?created=1&type=${parsed.data.occasion_type}`
+        `/my-occasions/${payload.occasion_id}?created=1&type=${parsed.data.occasion_type}`
       );
     } catch {
       toast({ title: "Couldn't create occasion. Try again.", variant: "danger" });
@@ -263,7 +263,7 @@ export function CreateOccasionForm({
             </button>
             <CreateOccasionStepper step={step} />
             <Link
-              href="/dashboard/wishlists"
+              href="/wishlists"
               className="text-right text-sm font-medium text-muted hover:text-ink"
             >
               Exit

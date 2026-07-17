@@ -1,12 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-const protectedRoutes = ["/dashboard", "/checkout", "/account"];
+const protectedRoutes = [
+  "/wishlists",
+  "/my-occasions",
+  "/dates",
+  "/orders",
+  "/settings",
+  "/checkout",
+  "/account",
+];
 const authOnlyRoutes = [
-  "/auth/login",
-  "/auth/signup",
-  "/auth/welcome",
-  "/auth/onboarding",
+  "/login",
+  "/signup",
+  "/welcome",
+  "/onboarding",
 ];
 
 function matchesRoute(pathname: string, routes: string[]) {
@@ -35,14 +43,14 @@ export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
 
   if (matchesRoute(pathname, protectedRoutes) && !user) {
-    const loginUrl = new URL("/auth/login", request.url);
+    const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", `${pathname}${search}`);
 
     return redirectWithSessionCookies(request, response, loginUrl.pathname + loginUrl.search);
   }
 
   if (matchesRoute(pathname, authOnlyRoutes) && user) {
-    return redirectWithSessionCookies(request, response, "/dashboard/wishlists");
+    return redirectWithSessionCookies(request, response, "/wishlists");
   }
 
   return response;

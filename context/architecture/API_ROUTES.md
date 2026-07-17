@@ -72,7 +72,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 Reserved for future webhook handlers beyond Flutterwave (e.g. if Resend or a dropshipping supplier API needs a webhook later). Currently unused — do not assume anything here is implemented.
 
 ## Auth callback (not under `/api` but functionally similar)
-`app/auth/callback/route.ts` — handles Supabase's email confirmation and OAuth redirect, exchanges the code for a session, preserves a safe `redirect` param when present, redirects to `/dashboard/wishlists` by default on success, or `/auth/login?error=confirmation_failed` on failure.
+`app/(auth)/callback/route.ts` — handles Supabase's email confirmation and OAuth redirect, exchanges the code for a session, preserves a safe `redirect` param when present, redirects to `/wishlists` by default on success, or `/login?error=confirmation_failed` on failure.
 
 ## General conventions for new routes
 
