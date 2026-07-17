@@ -71,34 +71,49 @@ allowed-tools:
 
 ## View Encapsulation Pattern
 
-```typescript
-@Component({
-  selector: 'ai-component',
-  encapsulation: ViewEncapsulation.None, // Required for Tailwind
-  template: `
-    <div class="ai-component-wrapper">
-      <!-- Scoped classes with component prefix -->
+```tsx
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+interface ComponentNameProps {
+  children: ReactNode;
+  className?: string;
+}
+
+export function ComponentName({ children, className }: ComponentNameProps) {
+  return (
+    <div className={cn("ai-component-wrapper", className)}>
+      {children}
     </div>
-  `,
-})
-export class ComponentName {}
+  );
+}
 ```
 
 ## Dynamic Classes Pattern (cn utility)
 
-```typescript
-import { cn } from '@angular-ai-kit/utils';
+```tsx
+import { cn } from "@/lib/utils";
 
-classes = computed(() => {
-  return cn(
-    'base-class another-class',
-    {
-      'conditional-class': this.condition(),
-      'active:ring-2': this.isActive(),
-    },
-    this.customClasses() // Allow class override from parent
+interface ComponentNameProps {
+  condition?: boolean;
+  isActive?: boolean;
+  className?: string;
+}
+
+export function ComponentName({
+  condition = false,
+  isActive = false,
+  className,
+}: ComponentNameProps) {
+  const classes = cn(
+    "base-class another-class",
+    condition && "conditional-class",
+    isActive && "ring-2",
+    className // Allow class override from parent
   );
-});
+
+  return <div className={classes} />;
+}
 ```
 
 ## CSS Custom Properties (Theming)

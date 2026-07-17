@@ -1,6 +1,6 @@
 # Gifvtme — Design System
 
-Source of truth: the Figma style guide screens reviewed during design (color scheme, typography, button, bottom nav exports). With shadcn/ui + Tailwind v4 in the stack, these tokens should be expressed as CSS variables in the `@theme` block of `src/styles/globals.css` (Tailwind v4's CSS-first config), which both shadcn's components and custom components reference — rather than only living in `tailwind.config.js`.
+Source of truth: the Figma style guide screens reviewed during design (color scheme, typography, button, bottom nav exports). With shadcn/ui + Tailwind v4 in the stack, these tokens should be expressed as CSS variables in the `@theme` block of `app/globals.css` (Tailwind v4's CSS-first config), which both shadcn's components and custom components reference — rather than only living in `tailwind.config.js`.
 
 ## Colors
 

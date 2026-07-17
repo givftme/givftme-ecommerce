@@ -1,13 +1,13 @@
 ---
-title: Use Existing Components from @playground-ui
+title: Use Existing Gifvtme Components
 impact: CRITICAL
 impactDescription: Prevents component duplication, ensures consistency
-tags: components, ds, design-system, playground-ui, reuse
+tags: components, ui-primitives, design-system, gifvtme, reuse
 ---
 
-## Use Existing Components from @playground-ui
+## Use Existing Gifvtme Components
 
-Always check for existing components in `@playground-ui/ds/components/` before creating new ones. Never create new components in the `ds/` folder.
+Always check `components/ui/` and the relevant `components/<domain>/` folder before creating a new component. Place reusable primitives in `components/ui/`, domain components in their matching domain folder, and one-off route-only pieces near the route.
 
 **Why this matters:**
 
@@ -21,30 +21,28 @@ Always check for existing components in `@playground-ui/ds/components/` before c
 ```tsx
 // DON'T: Creating a custom button in your feature
 function MyFeature() {
-  return <button className="bg-surface2 hover:bg-surface4 text-neutral3 px-2 py-1 rounded-md">Click me</button>;
+  return <button className="rounded-md bg-red-500 px-3 py-2 text-white">Click me</button>;
 }
 
-// DON'T: Creating a new component in ds folder
-// packages/playground-ui/src/ds/components/MyNewButton/MyNewButton.tsx
+// DON'T: Creating a duplicate primitive in a feature folder
+// components/wishlist/MyNewButton.tsx
 export function MyNewButton({ children }) {
   return <button className="...">{children}</button>;
 }
 ```
 
-**Correct (using existing DS component):**
+**Correct (using existing Gifvtme components):**
 
 ```tsx
-import { Button } from '@playground-ui/ds/components/Button';
+import { Button } from "@/components/ui/Button";
 
 function MyFeature() {
-  return <Button variant="default">Click me</Button>;
+  return <Button variant="filled">Click me</Button>;
 }
 ```
 
-**Available DS components include:**
+**Available Gifvtme components include:**
 
-- `Button`, `Badge`, `Avatar`, `Alert`, `AlertDialog`
-- `Card`, `Checkbox`, `Collapsible`, `Combobox`
-- `Dialog`, `Dropdown`, `Input`, `Popover`
-- `Select`, `Table`, `Tabs`, `Tooltip`
-- And many more in `packages/playground-ui/src/ds/components/`
+- Primitives in `components/ui/`: `Button`, `Badge`, `PriceDisplay`, `QuantityStepper`, `Input`, `Form`, `Sheet`, `Dialog`, `Textarea`, `Skeleton`, `Toast`
+- Layout components in `components/layout/`: `Navbar`, `Footer`, `MobileBottomNav`, `PageWrapper`
+- Domain components in `components/product/`, `components/wishlist/`, `components/occasion/`, and other domain folders

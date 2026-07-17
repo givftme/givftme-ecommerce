@@ -13,10 +13,12 @@ function subDays(date: Date, days: number) {
 export async function scheduleOccasionReminders({
   supabase,
   userId,
+  occasionId,
   occasionDate,
 }: {
   supabase: SupabaseClient;
   userId: string;
+  occasionId: string;
   occasionDate: string;
 }) {
   const date = parseDateOnly(occasionDate);
@@ -29,6 +31,7 @@ export async function scheduleOccasionReminders({
     .flatMap((days) =>
       channels.map((channel) => ({
         user_id: userId,
+        occasion_id: occasionId,
         reminder_type: "occasion_owner",
         channel,
         scheduled_at: subDays(date, days).toISOString(),
@@ -51,14 +54,17 @@ export async function scheduleOccasionReminders({
 export async function deleteUnsentOccasionReminders({
   supabase,
   userId,
+  occasionId,
 }: {
   supabase: SupabaseClient;
   userId: string;
+  occasionId: string;
 }) {
   await supabase
     .from("reminders")
     .delete()
     .eq("user_id", userId)
     .eq("reminder_type", "occasion_owner")
+    .eq("occasion_id", occasionId)
     .eq("sent", false);
 }

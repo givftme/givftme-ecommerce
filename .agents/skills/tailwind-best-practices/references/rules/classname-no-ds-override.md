@@ -1,22 +1,22 @@
 ---
-title: No className Override on DS Components
+title: Avoid className Overrides on Shared UI Primitives
 impact: HIGH
-impactDescription: DS component overrides break visual consistency
-tags: classname, ds-components, override, styling, forbidden
+impactDescription: Shared UI primitive overrides break Gifvtme visual consistency
+tags: classname, ui-primitives, override, styling, design-system
 ---
 
-## No className Override on DS Components
+## Avoid className Overrides on Shared UI Primitives
 
-Never pass `className` props to DS components to override their styles, except for `height` and `width` on `DialogContent` and `Popover` components.
+Prefer the variants and props exposed by `components/ui/` primitives before using `className` to override their visual styling. Use `className` for layout-level composition only when the primitive intentionally supports it.
 
 **Why this matters:**
 
-- DS components have intentional, tested styles
+- Gifvtme UI primitives encode the design-system contract from `context/design/DESIGN_SYSTEM.md`
 - Overriding breaks visual consistency
 - Makes component updates risky
 - Undermines design system integrity
 
-**Incorrect (overriding DS component styles):**
+**Incorrect (overriding shared primitive styles):**
 
 ```tsx
 // DON'T: Override Button styles
@@ -28,23 +28,17 @@ Never pass `className` props to DS components to override their styles, except f
 // DON'T: Override Badge colors
 <Badge className="bg-blue-500">Status</Badge>
 
-// DON'T: Override Card padding
-<Card className="p-10">Content</Card>
-
 // DON'T: Override Input borders
 <Input className="border-red-500" />
-
-// DON'T: Override Alert background
-<Alert className="bg-yellow-500">Warning</Alert>
 ```
 
 **Correct (use component variants):**
 
 ```tsx
 // DO: Use component variants
-<Button variant="primary">Save</Button>
+<Button variant="filled">Save</Button>
 <Button variant="ghost">Cancel</Button>
-<Button variant="outline">Edit</Button>
+<Button variant="text">Edit</Button>
 
 // DO: Use component size props
 <Button size="sm">Small</Button>
@@ -52,26 +46,22 @@ Never pass `className` props to DS components to override their styles, except f
 
 // DO: Use component props
 <Badge variant="success">Active</Badge>
-<Badge variant="error">Failed</Badge>
+<Badge variant="danger">Failed</Badge>
 
-// EXCEPTION: Height/width on DialogContent and Popover
-<DialogContent className="h-[500px] w-[600px]">
+// DO: Use className for layout constraints when the primitive supports it
+<DialogContent className="max-h-[92dvh] overflow-y-auto">
   Content
 </DialogContent>
-
-// EXCEPTION: Width on PopoverContent
-<PopoverContent className="w-[400px]">
-  Content
-</PopoverContent>
 ```
 
 **Allowed exceptions:**
 
-- `DialogContent` - `h-[value]`, `w-[value]` allowed
-- `PopoverContent` - `h-[value]`, `w-[value]` allowed
+- Layout constraints such as `w-*`, `max-w-*`, `h-*`, `max-h-*`, overflow, grid, and flex classes
+- Positional classes needed by page or domain layout
+- Intentional one-off composition using brand/design tokens, not arbitrary new colors
 
 **If you need different styles:**
 
 1. Check if a variant exists for your use case
 2. Consider if the component props support your need
-3. If not, discuss adding a new variant with the design team
+3. If not, add or extend the shared primitive in `components/ui/` and update `context/design/COMPONENT_LIBRARY.md`

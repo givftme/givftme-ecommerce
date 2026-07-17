@@ -21,7 +21,7 @@ Birthday, wedding, anniversary, etc. `status` (`active`/`archived`) plus `archiv
 `type` (`evergreen`/`occasion`), `occasion_id` (nullable — only set for occasion-type lists), `visibility` (`private`/`friends_family`/`public`), `prices_visible` (the single global price toggle — there is no item-level visibility). A user has at most one evergreen wishlist, enforced by a partial unique constraint.
 
 ### `wishlist_items`
-The core item table. Key fields: `origin`, `catalog_product_id` (Sanity `_id`, only for catalog origin), `product_url`/`affiliate_url` (only for external origin), `master_item_id` (nullable link back to `master_items` when an occasion pulls from evergreen; added by migration 005), `gifting_type` (`individual`/`group` — reserved for v2, never wired to payment in v1), `status` (`available`/`purchased`/`archived`), `is_exclusive` (true if this item belongs only to an occasion, not pulled from evergreen), and `sort_order` (added by migration 003 for manual ordering).
+The core item table. Key fields: `origin`, `catalog_product_id` (Sanity `_id`, only for catalog origin), `product_url`/`affiliate_url` (only for external origin), `master_item_id` (nullable link back to `master_items` when an occasion pulls from evergreen; added by migration 005), `gifting_type` (`individual`/`group` — reserved for v2, never wired to payment in v1), `status` (`available`/`purchased`/`archived`), `is_exclusive` (true if this item belongs only to an occasion, not pulled from evergreen), and `sort_order` (added by migration 003 for manual ordering). Migration 005 enforces one pulled item row per `(wishlist_id, master_item_id)` when `master_item_id` is set.
 
 ### `purchases`
 Records affiliate-flow purchases only. `wishlist_item_id` has a unique constraint (`one_purchase_per_item`) — this is the database-level enforcement of business rule #1. No payment data lives here; it's purely a "this was claimed" record. Migration 004 now backfills `created_at` if the original remote table is missing it, because `wishlist_items_with_status` exposes that timestamp as `affiliate_purchased_at`. The `on_purchase_created` trigger marks the item (and linked master item) as purchased automatically.
@@ -45,7 +45,7 @@ Tracks who's been invited to view a wishlist. `token` is the public sharing toke
 The receiver's personal calendar of *other* people's occasions (Flow 1 reminders). `linked_wishlist_id` is optional — set if that person also has a Gifvtme wishlist.
 
 ### `reminders`
-Generic reminder queue. `reminder_type` (`occasion_owner`/`invitee`) plus exactly one of `important_date_id` or `invite_id` set, enforced by a check constraint. `channel` (`email`/`push`), `scheduled_at`, `sent` flag.
+Generic reminder queue. `reminder_type` (`occasion_owner`/`invitee`) plus exactly one of `important_date_id`, `invite_id`, or `occasion_id` set, enforced by a check constraint. `occasion_id` links owner reminders created for a user-created occasion so rescheduling or archiving one occasion only deletes that occasion's unsent reminders. `channel` (`email`/`push`), `scheduled_at`, `sent` flag.
 
 ### `group_gift_pools`
 Reserved for v2. `wishlist_item_id` unique constraint (one pool per item). No RLS policies are defined yet — intentionally, since this table must not be queryable or writable from customer-facing code in v1 (business rule #15).
@@ -54,7 +54,7 @@ Reserved for v2. `wishlist_item_id` unique constraint (one pool per item). No RL
 Will need: `id`, `user_id`, `catalog_product_id` (Sanity reference), `order_item_id` (to enforce verified-purchase gating per business rule #13), `rating` (1–5), `body`, `created_at`. Unique constraint on `(user_id, catalog_product_id)` to enforce business rule #14 (one review per product per user).
 
 ### View: `wishlist_items_with_status`
-Joins `wishlist_items` against both `purchases` (external flow) and `orders` (catalog flow, excluding `pending_payment`/`payment_failed`/`cancelled` statuses) so the frontend can determine purchased state regardless of which flow an item went through, without needing to know which table to check. Migration 004 recreates this view with the dashboard item fields the app selects, including `description` and `sort_order`; migration 005 adds `master_item_id` to the view for occasion wishlist sections. The view filters rows through `gifvtme_can_read_wishlist_by_id(wishlist_id)` so wishlist visibility rules still apply to direct view reads.
+Joins `wishlist_items` against both `purchases` (external flow) and `orders` (catalog flow, excluding `pending_payment`/`payment_failed`/`cancelled` statuses) so the frontend can determine purchased state regardless of which flow an item went through, without needing to know which table to check. Migration 004 recreates this view with the dashboard item fields the app selects, including `description` and `sort_order`; migration 005 adds `master_item_id` to the view for occasion wishlist sections. The anon-readable view exposes purchase status metadata, but not raw buyer, purchase, or order identifiers. The view filters rows through `gifvtme_can_read_wishlist_by_id(wishlist_id)` so wishlist visibility rules still apply to direct view reads.
 
 ## Supabase Storage
 

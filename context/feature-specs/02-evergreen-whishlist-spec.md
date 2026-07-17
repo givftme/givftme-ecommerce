@@ -306,11 +306,7 @@ const { data: wishlist } = await supabase
       status,
       is_exclusive,
       sort_order,
-      affiliate_buyer_id,
       affiliate_purchased_at,
-      purchase_id,
-      order_buyer_id,
-      order_id,
       order_status
     )
   `)

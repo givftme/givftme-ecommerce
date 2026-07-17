@@ -50,7 +50,8 @@ export async function POST(request: Request) {
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message.toLowerCase().includes("master_item_id")
+      (error.message.toLowerCase().includes("master_item_id") ||
+        error.message.includes("gifvtme_create_occasion_with_wishlist"))
     ) {
       return jsonError("Run the occasion wishlist migration before creating occasions.", 409);
     }

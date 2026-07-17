@@ -9,6 +9,10 @@ interface ReactivateRouteContext {
   params: Promise<{ id: string }>;
 }
 
+interface ReactivationCandidateRow {
+  master_item_id: string | null;
+}
+
 export async function POST(request: Request, context: ReactivateRouteContext) {
   const { id } = await context.params;
   const supabase = await createClient();
@@ -30,6 +34,10 @@ export async function POST(request: Request, context: ReactivateRouteContext) {
     return jsonError(owner.error, owner.status);
   }
 
+  if (owner.occasion.status !== "archived") {
+    return jsonError("Only archived occasions can reactivate items.", 409);
+  }
+
   const body = await readJson(request);
   const parsed = reactivateItemsSchema.safeParse(body);
 
@@ -37,12 +45,52 @@ export async function POST(request: Request, context: ReactivateRouteContext) {
     return jsonError("Invalid item selection.", 400);
   }
 
-  if (parsed.data.item_ids.length > 0) {
+  const requestedItemIds = [...new Set(parsed.data.item_ids)];
+
+  if (requestedItemIds.length > 0) {
+    const { data: wishlist, error: wishlistError } = await supabase
+      .from("wishlists")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "occasion")
+      .eq("occasion_id", id)
+      .maybeSingle();
+
+    if (wishlistError) {
+      return jsonError("Couldn't verify occasion wishlist. Try again.", 500);
+    }
+
+    if (!wishlist) {
+      return jsonError("Occasion wishlist not found.", 404);
+    }
+
+    const { data: candidates, error: candidatesError } = await supabase
+      .from("wishlist_items_with_status")
+      .select("master_item_id")
+      .eq("wishlist_id", (wishlist as { id: string }).id)
+      .eq("status", "purchased")
+      .eq("is_exclusive", false)
+      .in("master_item_id", requestedItemIds)
+      .returns<ReactivationCandidateRow[]>();
+
+    if (candidatesError) {
+      return jsonError("Couldn't verify purchased occasion items. Try again.", 500);
+    }
+
+    const eligibleMasterItemIds = [
+      ...new Set((candidates || []).map((item) => item.master_item_id).filter(Boolean)),
+    ] as string[];
+
+    if (eligibleMasterItemIds.length === 0) {
+      return NextResponse.json({ ok: true });
+    }
+
     const { error } = await supabase
       .from("master_items")
       .update({ status: "available" })
-      .in("id", parsed.data.item_ids)
-      .eq("user_id", user.id);
+      .in("id", eligibleMasterItemIds)
+      .eq("user_id", user.id)
+      .eq("status", "purchased");
 
     if (error) {
       return jsonError("Couldn't reactivate items. Try again.", 500);

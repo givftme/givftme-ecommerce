@@ -12,13 +12,6 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { AddItemSheet } from "@/components/wishlist/AddItemSheet";
 import { Button } from "@/components/ui/Button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { CreateOccasionStepper } from "@/components/occasion/CreateOccasionStepper";
@@ -27,7 +20,6 @@ import { PullFromEvergreen } from "@/components/occasion/PullFromEvergreen";
 import {
   OCCASION_TITLE_SUGGESTIONS,
 } from "@/lib/occasion/constants";
-import { isPastDateOnly } from "@/lib/occasion/date";
 import type { MasterItem, OccasionType } from "@/lib/occasion/types";
 import {
   occasionBasicsSchema,
@@ -35,7 +27,7 @@ import {
   type OccasionBasicsInput,
 } from "@/lib/occasion/validation";
 import { trackEvent } from "@/lib/analytics";
-import { formatWishlistPrice } from "@/lib/wishlist/display";
+import { formatPrice } from "@/lib/utils";
 import type { WishlistItem } from "@/lib/wishlist/types";
 
 gsap.registerPlugin(useGSAP);
@@ -75,7 +67,9 @@ function ExclusiveDraftCard({
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-sm font-medium text-ink">{item.title}</h3>
           <p className="mt-1 text-xs font-semibold text-ink">
-            {formatWishlistPrice(item.price)}
+            {item.price == null || item.price <= 0
+              ? "Price not listed"
+              : formatPrice(item.price)}
           </p>
         </div>
         <button
@@ -106,7 +100,6 @@ export function CreateOccasionForm({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [exclusiveItems, setExclusiveItems] = useState<WishlistItem[]>([]);
   const [addOpen, setAddOpen] = useState(false);
-  const [pastWarningOpen, setPastWarningOpen] = useState(false);
   const [lastSuggestion, setLastSuggestion] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -163,7 +156,6 @@ export function CreateOccasionForm({
   const goToStep = (nextStep: 1 | 2 | 3) => {
     setDirection(nextStep > step ? 1 : -1);
     setStep(nextStep);
-    router.push(nextStep === 1 ? "/dashboard/occasions/new" : `/dashboard/occasions/new?step=${nextStep}`);
   };
 
   const hasEnteredData =
@@ -208,11 +200,6 @@ export function CreateOccasionForm({
       return;
     }
 
-    if (isPastDateOnly(form.getValues("occasion_date"))) {
-      setPastWarningOpen(true);
-      return;
-    }
-
     goToStep(2);
   };
 
@@ -220,6 +207,7 @@ export function CreateOccasionForm({
     const parsed = occasionBasicsSchema.safeParse(form.getValues());
 
     if (!parsed.success) {
+      goToStep(1);
       await validateStepOne();
       return;
     }
@@ -417,30 +405,6 @@ export function CreateOccasionForm({
         draftMode
       />
 
-      <Dialog open={pastWarningOpen} onOpenChange={setPastWarningOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>This date has passed</DialogTitle>
-            <DialogDescription>
-              Create anyway? You can still build the wishlist, but countdowns will show it as past.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button type="button" variant="ghost" onClick={() => setPastWarningOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                setPastWarningOpen(false);
-                goToStep(2);
-              }}
-            >
-              Create anyway
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }

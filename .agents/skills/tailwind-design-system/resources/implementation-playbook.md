@@ -36,95 +36,46 @@ Base styles → Variants → Sizes → States → Overrides
 
 ## Quick Start
 
-```typescript
-// tailwind.config.ts
-import type { Config } from 'tailwindcss'
-
-const config: Config = {
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        // Semantic color tokens
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        border: 'hsl(var(--border))',
-        ring: 'hsl(var(--ring))',
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-      },
-    },
-  },
-  plugins: [require('tailwindcss-animate')],
-}
-
-export default config
-```
-
 ```css
 /* globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(14.5% 0.025 264);
+  --color-primary: oklch(45% 0.2 260);
+  --color-primary-foreground: oklch(98% 0.01 264);
+  --color-muted: oklch(96% 0.01 264);
+  --color-muted-foreground: oklch(46% 0.02 264);
+  --color-border: oklch(91% 0.01 264);
+  --color-ring: oklch(45% 0.2 260);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(14.5% 0.025 264);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  --color-background: oklch(14.5% 0.025 264);
+  --color-foreground: oklch(98% 0.01 264);
+  --color-primary: oklch(98% 0.01 264);
+  --color-primary-foreground: oklch(14.5% 0.025 264);
+  --color-muted: oklch(22% 0.02 264);
+  --color-muted-foreground: oklch(65% 0.02 264);
+  --color-border: oklch(22% 0.02 264);
+  --color-ring: oklch(83% 0.02 264);
+  --color-card: oklch(14.5% 0.025 264);
+  --color-card-foreground: oklch(98% 0.01 264);
+}
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 ```
@@ -135,8 +86,8 @@ export default config
 
 ```typescript
 // components/ui/button.tsx
+import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
@@ -170,21 +121,26 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  ref?: React.Ref<HTMLButtonElement>
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button'
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Button.displayName = 'Button'
+export function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ref,
+  ...props
+}: ButtonProps) {
+  const Comp = asChild ? Slot : 'button'
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      ref={ref}
+      {...props}
+    />
+  )
+}
 
 export { Button, buttonVariants }
 
@@ -199,10 +155,13 @@ export { Button, buttonVariants }
 ```typescript
 // components/ui/card.tsx
 import { cn } from '@/lib/utils'
-import { forwardRef } from 'react'
 
-const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+export function Card({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+  return (
     <div
       ref={ref}
       className={cn(
@@ -212,59 +171,71 @@ const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
       {...props}
     />
   )
-)
-Card.displayName = 'Card'
+}
 
-const CardHeader = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+export function CardHeader({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+  return (
     <div
       ref={ref}
       className={cn('flex flex-col space-y-1.5 p-6', className)}
       {...props}
     />
   )
-)
-CardHeader.displayName = 'CardHeader'
+}
 
-const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
+export function CardTitle({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement> & { ref?: React.Ref<HTMLHeadingElement> }) {
+  return (
     <h3
       ref={ref}
       className={cn('text-2xl font-semibold leading-none tracking-tight', className)}
       {...props}
     />
   )
-)
-CardTitle.displayName = 'CardTitle'
+}
 
-const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
+export function CardDescription({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement> & { ref?: React.Ref<HTMLParagraphElement> }) {
+  return (
     <p
       ref={ref}
       className={cn('text-sm text-muted-foreground', className)}
       {...props}
     />
   )
-)
-CardDescription.displayName = 'CardDescription'
+}
 
-const CardContent = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
-  )
-)
-CardContent.displayName = 'CardContent'
+export function CardContent({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+  return <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
+}
 
-const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+export function CardFooter({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+  return (
     <div
       ref={ref}
       className={cn('flex items-center p-6 pt-0', className)}
       {...props}
     />
   )
-)
-CardFooter.displayName = 'CardFooter'
+}
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
@@ -287,43 +258,40 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 ```typescript
 // components/ui/input.tsx
-import { forwardRef } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string
+  ref?: React.Ref<HTMLInputElement>
 }
 
-const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, error, ...props }, ref) => {
-    return (
-      <div className="relative">
-        <input
-          type={type}
-          className={cn(
-            'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-            error && 'border-destructive focus-visible:ring-destructive',
-            className
-          )}
-          ref={ref}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${props.id}-error` : undefined}
-          {...props}
-        />
-        {error && (
-          <p
-            id={`${props.id}-error`}
-            className="mt-1 text-sm text-destructive"
-            role="alert"
-          >
-            {error}
-          </p>
+export function Input({ className, type, error, ref, ...props }: InputProps) {
+  return (
+    <div className="relative">
+      <input
+        type={type}
+        className={cn(
+          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          error && 'border-destructive focus-visible:ring-destructive',
+          className
         )}
-      </div>
-    )
-  }
-)
-Input.displayName = 'Input'
+        ref={ref}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${props.id}-error` : undefined}
+        {...props}
+      />
+      {error && (
+        <p
+          id={`${props.id}-error`}
+          className="mt-1 text-sm text-destructive"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // components/ui/label.tsx
 import { cva, type VariantProps } from 'class-variance-authority'
@@ -332,12 +300,13 @@ const labelVariants = cva(
   'text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
 )
 
-const Label = forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLLabelElement>>(
-  ({ className, ...props }, ref) => (
-    <label ref={ref} className={cn(labelVariants(), className)} {...props} />
-  )
-)
-Label.displayName = 'Label'
+export function Label({
+  className,
+  ref,
+  ...props
+}: React.LabelHTMLAttributes<HTMLLabelElement> & { ref?: React.Ref<HTMLLabelElement> }) {
+  return <label ref={ref} className={cn(labelVariants(), className)} {...props} />
+}
 
 // Usage with React Hook Form
 import { useForm } from 'react-hook-form'
@@ -482,46 +451,47 @@ export const dropdownExit = cn(fadeOut, 'slide-out-to-top', 'duration-150')
 // components/ui/dialog.tsx
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 
-const DialogOverlay = forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      'fixed inset-0 z-50 bg-black/80',
-      'data-[state=open]:animate-in data-[state=closed]:animate-out',
-      'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-      className
-    )}
-    {...props}
-  />
-))
+type DialogOverlayProps = React.ComponentProps<typeof DialogPrimitive.Overlay>
+type DialogContentProps = React.ComponentProps<typeof DialogPrimitive.Content>
 
-const DialogContent = forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
+export function DialogOverlay({ className, ref, ...props }: DialogOverlayProps) {
+  return (
+    <DialogPrimitive.Overlay
       ref={ref}
       className={cn(
-        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg',
+        'fixed inset-0 z-50 bg-black/80',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-        'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-        'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
-        'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
-        'sm:rounded-lg',
         className
       )}
       {...props}
-    >
-      {children}
-    </DialogPrimitive.Content>
-  </DialogPortal>
-))
+    />
+  )
+}
+
+export function DialogContent({ className, children, ref, ...props }: DialogContentProps) {
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg',
+          'data-[state=open]:animate-in data-[state=closed]:animate-out',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+          'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+          'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
+          'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+          'sm:rounded-lg',
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  )
+}
 ```
 
 ### Pattern 6: Dark Mode Implementation
@@ -647,7 +617,7 @@ export const disabled = 'disabled:pointer-events-none disabled:opacity-50'
 - **Use CSS variables** - Enable runtime theming
 - **Compose with CVA** - Type-safe variants
 - **Use semantic colors** - `primary` not `blue-500`
-- **Forward refs** - Enable composition
+- **Accept `ref` as a prop** - Use React 19 composition with regular ref props
 - **Add accessibility** - ARIA attributes, focus states
 
 ### Don'ts

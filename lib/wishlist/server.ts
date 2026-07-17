@@ -223,11 +223,7 @@ function getWishlistDetailSelect({
     "is_exclusive",
     ...(includeSortOrder ? ["sort_order"] : []),
     "created_at",
-    "affiliate_buyer_id",
     "affiliate_purchased_at",
-    "purchase_id",
-    "order_buyer_id",
-    "order_id",
     "order_status",
   ];
 
@@ -349,11 +345,7 @@ export async function getOwnedWishlistDetail(
       is_exclusive: Boolean(item.is_exclusive),
       sort_order: item.sort_order ?? 0,
       created_at: item.created_at || null,
-      affiliate_buyer_id: item.affiliate_buyer_id || null,
       affiliate_purchased_at: item.affiliate_purchased_at || null,
-      purchase_id: item.purchase_id || null,
-      order_buyer_id: item.order_buyer_id || null,
-      order_id: item.order_id || null,
       order_status: item.order_status || null,
       buyer_name: item.buyer_name || null,
     }))

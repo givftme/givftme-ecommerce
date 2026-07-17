@@ -17,7 +17,7 @@ Mirrors `.env.local.example` at the project root. Update both files together whe
 | Variable | Public? | Description |
 |---|---|---|
 | `NEXT_PUBLIC_SANITY_PROJECT_ID` | Yes | Sanity project identifier |
-| `NEXT_PUBLIC_SANITY_DATASET` | Yes | Defaults to `production` if unset |
+| `NEXT_PUBLIC_SANITY_DATASET` | Yes | Required dataset name; set explicitly, usually `production` for launch |
 
 **If missing:** all catalog/museum pages fail to fetch product data — home page, shop, product detail pages will error or render empty.
 

@@ -42,8 +42,8 @@ Styling guidelines for the Mastra Playground UI, designed for AI agents and LLMs
 
 | Rule                     | Title                                       | Impact   | Summary                                                                               | Canonical file                               |
 | ------------------------ | ------------------------------------------- | -------- | ------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `tokens-use-existing`    | Use Existing Tokens from tailwind.config.ts | CRITICAL | Use only color, spacing, font, radius, and shadow tokens defined by `@playground-ui`. | `references/rules/tokens-use-existing.md`    |
-| `tokens-no-modification` | Never Modify Design Tokens                  | CRITICAL | Do not modify design tokens or Tailwind config without explicit approval.             | `references/rules/tokens-no-modification.md` |
+| `tokens-use-existing`    | Use Existing @theme CSS Tokens | CRITICAL | Use only theme values defined in `app/globals.css` `@theme` and documented in `context/design/DESIGN_SYSTEM.md`. | `references/rules/tokens-use-existing.md`    |
+| `tokens-no-modification` | Never Modify Design Tokens     | CRITICAL | Do not modify `@theme` CSS token definitions without explicit approval and matching design-system docs updates.    | `references/rules/tokens-no-modification.md` |
 
 ### 3. ClassName Usage
 
@@ -54,6 +54,6 @@ Styling guidelines for the Mastra Playground UI, designed for AI agents and LLMs
 
 ## Repository References
 
-- Design tokens: `packages/playground-ui/src/ds/tokens/`
-- Tailwind config: `packages/playground-ui/tailwind.config.ts`
+- Design tokens: `app/globals.css` `@theme`
+- Design-system docs: `context/design/DESIGN_SYSTEM.md`
 - DS components: `packages/playground-ui/src/ds/components/`

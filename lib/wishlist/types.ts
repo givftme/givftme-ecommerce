@@ -29,11 +29,7 @@ export interface WishlistItem {
   is_exclusive: boolean;
   sort_order: number;
   created_at: string | null;
-  affiliate_buyer_id?: string | null;
   affiliate_purchased_at?: string | null;
-  purchase_id?: string | null;
-  order_buyer_id?: string | null;
-  order_id?: string | null;
   order_status?: string | null;
   buyer_name?: string | null;
 }

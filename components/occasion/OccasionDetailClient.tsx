@@ -53,11 +53,7 @@ function normalizeWishlistItem(
     is_exclusive: Boolean(data.is_exclusive),
     sort_order: data.sort_order ?? 0,
     created_at: data.created_at || new Date().toISOString(),
-    affiliate_buyer_id: data.affiliate_buyer_id || null,
     affiliate_purchased_at: data.affiliate_purchased_at || null,
-    purchase_id: data.purchase_id || null,
-    order_buyer_id: data.order_buyer_id || null,
-    order_id: data.order_id || null,
     order_status: data.order_status || null,
     buyer_name: data.buyer_name || null,
   };
@@ -197,6 +193,7 @@ export function OccasionDetailClient({
   const [addExclusiveOpen, setAddExclusiveOpen] = useState(false);
   const [addPulledOpen, setAddPulledOpen] = useState(false);
   const [selectedPulledIds, setSelectedPulledIds] = useState<string[]>([]);
+  const [isAddingPulledItems, setIsAddingPulledItems] = useState(false);
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WishlistItem | null>(null);
   const archived = occasion.status === "archived";
@@ -258,9 +255,11 @@ export function OccasionDetailClient({
   };
 
   const addPulledItems = async () => {
-    if (selectedPulledIds.length === 0) {
+    if (selectedPulledIds.length === 0 || isAddingPulledItems) {
       return;
     }
+
+    setIsAddingPulledItems(true);
 
     try {
       const response = await fetch(`/api/occasions/${occasion.id}/items`, {
@@ -295,6 +294,8 @@ export function OccasionDetailClient({
       router.refresh();
     } catch {
       toast({ title: "Couldn't add items. Try again.", variant: "danger" });
+    } finally {
+      setIsAddingPulledItems(false);
     }
   };
 
@@ -540,10 +541,10 @@ export function OccasionDetailClient({
             type="button"
             fullWidth
             className="mt-5"
-            disabled={selectedPulledIds.length === 0}
+            disabled={selectedPulledIds.length === 0 || isAddingPulledItems}
             onClick={() => void addPulledItems()}
           >
-            Add selected
+            {isAddingPulledItems ? "Adding..." : "Add selected"}
           </Button>
         </DialogContent>
       </Dialog>

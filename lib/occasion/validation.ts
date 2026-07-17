@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { OCCASION_TYPES } from "@/lib/occasion/constants";
-import { isMoreThanFiveYearsAway } from "@/lib/occasion/date";
+import {
+  isMoreThanFiveYearsAway,
+  isPastDateOnly,
+  parseDateOnly,
+} from "@/lib/occasion/date";
 import { externalWishlistItemSchema } from "@/lib/wishlist/validation";
 
 export const occasionTypeSchema = z.enum(OCCASION_TYPES);
@@ -8,6 +12,12 @@ export const occasionTypeSchema = z.enum(OCCASION_TYPES);
 export const occasionDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Select a date")
+  .refine((value) => parseDateOnly(value) !== null, {
+    message: "Select a date",
+  })
+  .refine((value) => !isPastDateOnly(value), {
+    message: "This date has passed",
+  })
   .refine((value) => !isMoreThanFiveYearsAway(value), {
     message: "Date can't be more than 5 years in the future",
   });

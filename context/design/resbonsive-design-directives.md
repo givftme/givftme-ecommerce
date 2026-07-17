@@ -307,10 +307,10 @@ When giving an agent a feature spec:
 
 1. Attach the mobile UI screenshots from the Figma exports
 2. Attach the relevant feature spec (e.g. `EVERGREEN_WISHLIST_SPEC.md`)
-3. Attach this document (`RESPONSIVE_DESIGN_DIRECTIVE.md`)
+3. Attach this document (`context/design/resbonsive-design-directives.md`)
 4. Tell the agent:
 
-> "Implement the UI exactly as shown in the mobile screenshots. Then apply the rules in `RESPONSIVE_DESIGN_DIRECTIVE.md` to make it work correctly on desktop and tablet. The mobile screenshots are the source of truth for design decisions. The responsive directive is the source of truth for desktop adaptation."
+> "Implement the UI exactly as shown in the mobile screenshots. Then apply the rules in `context/design/resbonsive-design-directives.md` to make it work correctly on desktop and tablet. The mobile screenshots are the source of truth for design decisions. The responsive directive is the source of truth for desktop adaptation."
 
 ---
 
@@ -322,14 +322,14 @@ Implement the [Feature Name] feature for Gifvtme.
 Reference files:
 - Feature spec: [FEATURE_SPEC.md]
 - Mobile UI reference: [screenshot-1.png, screenshot-2.png, ...]
-- Responsive rules: [RESPONSIVE_DESIGN_DIRECTIVE.md]
+- Responsive rules: [context/design/resbonsive-design-directives.md]
 - Design system: [context/design/DESIGN_SYSTEM.md]
-- Project context: [context/AGENTS.md]
+- Project context: [AGENTS.md]
 
 Instructions:
 1. The mobile screenshots are the primary design reference — match them exactly on mobile (375px)
-2. Apply the responsive rules from RESPONSIVE_DESIGN_DIRECTIVE.md for tablet and desktop
+2. Apply the responsive rules from context/design/resbonsive-design-directives.md for tablet and desktop
 3. Use the tech stack: Next.js 16, Tailwind CSS v4, shadcn/ui, react-hook-form + Zod, GSAP + @gsap/react, lucide-react
 4. Implement both UI and backend logic
-5. Do not ask for clarification — make reasonable decisions and note them in comments
+5. Ask for clarification only for high-risk ambiguity involving money, pricing, payments, refunds, data visibility, or business rules; for lower-stakes ambiguity, do not ask for clarification — make reasonable decisions and note them in comments
 ```

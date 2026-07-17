@@ -1,21 +1,20 @@
 ---
-title: Use Existing Tokens from tailwind.config.ts
+title: Use Existing @theme CSS Tokens
 impact: CRITICAL
 impactDescription: Ensures visual consistency, enables global updates
 tags: tokens, design-tokens, tailwind, colors, spacing, consistency
 ---
 
-## Use Existing Tokens from tailwind.config.ts
+## Use Existing @theme CSS Tokens
 
-Only use color, spacing, and other values that are defined in the `tailwind.config.ts` file from `@playground-ui`. All tokens are sourced from `packages/playground-ui/src/ds/tokens/`.
+Only use color, font, and other project theme values exposed through the Tailwind v4 `@theme` block in `app/globals.css`. Treat `context/design/DESIGN_SYSTEM.md` as the human-readable design contract for those CSS tokens.
 
 **Token categories available:**
 
-- **Colors**: `surface1-5`, `accent1-6`, `neutral1-6`, `border1-2`, `error`, `overlay`
-- **Spacings**: `0`, `px`, `0.5`, `1`, `1.5`, `2`, `2.5`, `3`, `4`, `5`, `6`, `8`, `10`, `12`, etc.
-- **Font sizes**: `ui-xs`, `ui-sm`, `ui-md`, `ui-lg`, `ui-xl`
-- **Border radius**: `xs`, `sm`, `md`, `lg`, `xl`, `2xl`, `full`
-- **Shadows**: `sm`, `md`, `lg`, `inner`, `card`, `elevated`, `dialog`, `glow-accent1`, `glow-accent2`
+- **Colors**: `brand`, `brand-dark`, `brand-light`, `ink`, `muted`, `surface`
+- **Font family**: `font-sans` via `--font-sans`
+- **Shape**: use the documented Tailwind radius choices (`rounded-full`, `rounded-2xl`, `rounded-xl`)
+- **Spacing and type scale**: use Tailwind's standard spacing and font-size utilities unless the design system documents a project token
 
 **Incorrect (using non-token values):**
 
@@ -34,18 +33,18 @@ Only use color, spacing, and other values that are defined in the `tailwind.conf
 
 ```tsx
 // DO: Use token-based colors
-<div className="bg-surface4 text-neutral3">Content</div>
+<div className="bg-brand-light text-brand">Content</div>
+<p className="text-muted">Secondary copy</p>
 
 // DO: Use token-based spacing
-<div className="p-3 m-2">Content</div>
+<div className="m-2 p-4">Content</div>
 
-// DO: Use token-based font sizes
-<span className="text-ui-md">Text</span>
+// DO: Use documented shape and typography utilities
+<section className="rounded-2xl bg-surface p-6 text-sm">Content</section>
 ```
 
 **Token reference locations:**
 
-- Colors: `packages/playground-ui/src/ds/tokens/colors.ts`
-- Spacings: `packages/playground-ui/src/ds/tokens/spacings.ts`
-- Font sizes: `packages/playground-ui/src/ds/tokens/fonts.ts`
-- Shadows: `packages/playground-ui/src/ds/tokens/shadows.ts`
+- Source of truth: `app/globals.css` `@theme`
+- Design contract: `context/design/DESIGN_SYSTEM.md`
+- Tailwind v4 convention: `context/engineering/CODING_STANDARDS.md`

@@ -44,8 +44,8 @@ This feature covers:
 |---|---|---|
 | Dashboard (occasions section) | `/dashboard/wishlists` | Already stubbed — replace stub with real content |
 | Create occasion step 1 | `/dashboard/occasions/new` | Title, type, date |
-| Create occasion step 2 | `/dashboard/occasions/new?step=2` | Pull from evergreen checklist |
-| Create occasion step 3 | `/dashboard/occasions/new?step=3` | Add exclusive items |
+| Create occasion step 2 | `/dashboard/occasions/new` (client step) | Pull from evergreen checklist |
+| Create occasion step 3 | `/dashboard/occasions/new` (client step) | Add exclusive items |
 | Occasion detail | `/dashboard/occasions/[id]` | Manage the occasion and its wishlist |
 
 ---
@@ -219,20 +219,24 @@ Shown at the top of the occasion detail when the occasion is archived and has pu
 
 ### `POST /api/occasions` — Create occasion
 
-Validates input, then in a single logical flow:
+Validates input, then commits rows 1-4 in a single database transaction:
 1. Inserts `occasions` row
 2. Inserts linked `wishlists` row (`type='occasion'`, `occasion_id` set)
 3. For each `pulled_item_id`: fetches the `master_items` row and inserts a `wishlist_items` row with `master_item_id` set, `is_exclusive=false`
 4. For each exclusive item: inserts a `wishlist_items` row with `is_exclusive=true`, `master_item_id=null`
-5. If `occasion_date` is in the future: schedules reminders (see below)
-6. Returns `{ occasion_id, wishlist_id }`
+
+If any insert in rows 1-4 fails, the whole transaction rolls back and no partial occasion, wishlist, or item rows remain. After the transaction succeeds, commit those rows before invoking reminder scheduling. Reminder scheduling remains non-blocking: if `occasion_date` is in the future, schedule reminders in a try/catch after the transaction, log failures, and still return `{ occasion_id, wishlist_id }` from the committed transaction.
 
 **Validation schema:**
 ```typescript
 const CreateOccasionSchema = z.object({
   title: z.string().min(1, 'Give your occasion a name').max(100),
   occasion_type: z.enum(['birthday','wedding','anniversary','baby_shower','graduation','other']),
-  occasion_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Select a date'),
+  occasion_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Select a date')
+    .refine(value => parseDateOnly(value) !== null, 'Select a date')
+    .refine(value => !isPastDateOnly(value), 'This date has passed')
+    .refine(value => !isMoreThanFiveYearsAway(value), "Date can't be more than 5 years in the future"),
   pulled_item_ids: z.array(z.string().uuid()).default([]),
   exclusive_items: z.array(ExternalItemSchema).default([])
 })
@@ -252,6 +256,7 @@ const channels = ['email', 'push']
 const reminders = windows.flatMap(days =>
   channels.map(channel => ({
     user_id: userId,
+    occasion_id: occasionId,
     reminder_type: 'occasion_owner',
     channel,
     scheduled_at: subDays(new Date(occasionDate), days).toISOString(),
@@ -266,21 +271,42 @@ Reminder scheduling failure must NOT block occasion creation — wrap in try/cat
 
 ### `PATCH /api/occasions/[id]` — Update
 
-Updates `occasions` row. If `occasion_date` changes: delete all unsent reminders for this user with `reminder_type='occasion_owner'` and reschedule with the new date.
+Updates `occasions` row. If the title changes, updates the linked occasion `wishlists.title` in the same database transaction and rolls back both rows if either update fails. If `occasion_date` changes: delete unsent reminders for this user with `reminder_type='occasion_owner'` and this `occasion_id`, then reschedule with the new date.
 
 ### `DELETE /api/occasions/[id]` — Archive
 
-Soft delete: sets `status='archived'`, `archived_at=now()`. Does NOT delete any wishlist or item rows. Deletes unsent reminders.
+Soft delete: sets `status='archived'`, `archived_at=now()`. Does NOT delete any wishlist or item rows. Deletes unsent reminders for this user with `reminder_type='occasion_owner'` and this `occasion_id`.
 
 ### `POST /api/occasions/[id]/reactivate` — Reactivation
 
 ```typescript
 // Body: { item_ids: string[] } — array of master_items IDs to reactivate
+const { data: wishlist } = await supabase
+  .from('wishlists')
+  .select('id')
+  .eq('user_id', userId)
+  .eq('type', 'occasion')
+  .eq('occasion_id', occasionId)
+  .maybeSingle()
+
+const { data: candidates } = await supabase
+  .from('wishlist_items_with_status')
+  .select('master_item_id')
+  .eq('wishlist_id', wishlist.id)
+  .eq('status', 'purchased')
+  .eq('is_exclusive', false)
+  .in('master_item_id', body.item_ids)
+
+const eligibleMasterItemIds = candidates
+  .map(item => item.master_item_id)
+  .filter(Boolean)
+
 await supabase
   .from('master_items')
   .update({ status: 'available' })
-  .in('id', body.item_ids)
   .eq('user_id', userId)
+  .eq('status', 'purchased')
+  .in('id', eligibleMasterItemIds)
 ```
 
 ### `POST /api/occasions/archive` — Cron auto-archive
@@ -356,7 +382,8 @@ export const OCCASION_EMOJIS: Record<string, string> = {
 |---|---|
 | No type selected | Field error: "Select an occasion type" |
 | No date selected | Field error: "Select a date" |
-| Date in the past | Soft warning dialog: "This date has passed — create anyway?" |
+| Impossible calendar date | Field error: "Select a date" |
+| Date in the past | Field error: "This date has passed" |
 | Date > 5 years away | Field error: "Date can't be more than 5 years in the future" |
 | Creation fails | Toast: "Couldn't create occasion. Try again." |
 | Occasion not found | `notFound()` → 404 |

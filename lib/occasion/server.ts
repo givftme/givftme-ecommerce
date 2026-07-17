@@ -24,6 +24,31 @@ interface OccasionWishlistRow {
   wishlist_items?: Array<{ id: string }>;
 }
 
+interface PulledMasterItemRow {
+  id: string;
+  origin: string;
+  product_url: string | null;
+}
+
+interface TransactionalPulledItem {
+  master_item_id: string;
+  affiliate_url: string | null;
+}
+
+interface TransactionalExclusiveItem {
+  title: string;
+  image_url: string | null;
+  product_url: string;
+  affiliate_url: string;
+  price: number | null;
+  description: string | null;
+}
+
+interface TransactionalOccasionResult {
+  occasion_id: string;
+  wishlist_id: string;
+}
+
 function normalizeOccasion(row: Partial<OccasionRecord>): OccasionRecord {
   return {
     id: row.id || "",
@@ -273,33 +298,6 @@ function itemFromMaster({
   };
 }
 
-function itemFromExclusive({
-  item,
-  wishlistId,
-  sortOrder,
-}: {
-  item: CreateOccasionInput["exclusive_items"][number];
-  wishlistId: string;
-  sortOrder: number;
-}) {
-  const { affiliateUrl } = buildAffiliateUrl(item.product_url);
-
-  return {
-    wishlist_id: wishlistId,
-    master_item_id: null,
-    is_exclusive: true,
-    origin: "external",
-    title: item.title,
-    image_url: item.image_url,
-    product_url: item.product_url,
-    affiliate_url: affiliateUrl,
-    price: item.price,
-    description: item.description,
-    status: "available",
-    sort_order: sortOrder,
-  };
-}
-
 export async function insertPulledOccasionItems({
   supabase,
   userId,
@@ -388,66 +386,69 @@ export async function createOccasionWithWishlist({
   userId: string;
   input: CreateOccasionInput;
 }) {
-  const { data: occasion, error: occasionError } = await supabase
-    .from("occasions")
-    .insert({
-      user_id: userId,
-      title: input.title,
-      occasion_type: input.occasion_type,
-      occasion_date: input.occasion_date,
-      status: "active",
-    })
-    .select("id")
-    .single();
+  const uniquePulledItemIds = [...new Set(input.pulled_item_ids)];
+  let pulledItems: TransactionalPulledItem[] = [];
 
-  if (occasionError || !occasion) {
-    throw new Error(occasionError?.message || "Could not create occasion.");
-  }
+  if (uniquePulledItemIds.length > 0) {
+    const { data: masterItems, error: masterError } = await supabase
+      .from("master_items")
+      .select("id, origin, product_url")
+      .eq("user_id", userId)
+      .in("id", uniquePulledItemIds)
+      .neq("status", "purchased")
+      .neq("status", "archived")
+      .returns<PulledMasterItemRow[]>();
 
-  const { data: wishlist, error: wishlistError } = await supabase
-    .from("wishlists")
-    .insert({
-      user_id: userId,
-      title: input.title,
-      type: "occasion",
-      occasion_id: occasion.id,
-      visibility: "private",
-      prices_visible: true,
-    })
-    .select("id")
-    .single();
-
-  if (wishlistError || !wishlist) {
-    throw new Error(wishlistError?.message || "Could not create occasion wishlist.");
-  }
-
-  const pulled = await insertPulledOccasionItems({
-    supabase,
-    userId,
-    occasionId: occasion.id,
-    pulledItemIds: input.pulled_item_ids,
-  });
-
-  if (input.exclusive_items.length > 0) {
-    const payload = input.exclusive_items.map((item, index) =>
-      itemFromExclusive({
-        item,
-        wishlistId: wishlist.id,
-        sortOrder: pulled.length + index,
-      })
-    );
-    const { error } = await supabase.from("wishlist_items").insert(payload);
-
-    if (error) {
-      throw new Error(error.message);
+    if (masterError) {
+      throw new Error(masterError.message);
     }
+
+    const masterItemsById = new Map((masterItems || []).map((item) => [item.id, item]));
+
+    pulledItems = uniquePulledItemIds
+      .map((id) => masterItemsById.get(id))
+      .filter((item): item is PulledMasterItemRow => Boolean(item))
+      .map((item) => ({
+        master_item_id: item.id,
+        affiliate_url:
+          item.origin === "external" && item.product_url
+            ? buildAffiliateUrl(item.product_url).affiliateUrl
+            : null,
+      }));
   }
+
+  const exclusiveItems: TransactionalExclusiveItem[] = input.exclusive_items.map((item) => ({
+    title: item.title,
+    image_url: item.image_url,
+    product_url: item.product_url,
+    affiliate_url: buildAffiliateUrl(item.product_url).affiliateUrl,
+    price: item.price,
+    description: item.description,
+  }));
+
+  const { data, error } = await supabase
+    .rpc("gifvtme_create_occasion_with_wishlist", {
+      p_user_id: userId,
+      p_title: input.title,
+      p_occasion_type: input.occasion_type,
+      p_occasion_date: input.occasion_date,
+      p_pulled_items: pulledItems,
+      p_exclusive_items: exclusiveItems,
+    })
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || "Could not create occasion.");
+  }
+
+  const result = data as TransactionalOccasionResult;
 
   if (isFutureDateOnly(input.occasion_date)) {
     try {
       await scheduleOccasionReminders({
         supabase,
         userId,
+        occasionId: result.occasion_id,
         occasionDate: input.occasion_date,
       });
     } catch (error) {
@@ -455,26 +456,28 @@ export async function createOccasionWithWishlist({
     }
   }
 
-  return { occasion_id: occasion.id as string, wishlist_id: wishlist.id as string };
+  return result;
 }
 
 export async function rescheduleOccasionReminders({
   supabase,
   userId,
+  occasionId,
   occasionDate,
 }: {
   supabase: SupabaseClient;
   userId: string;
+  occasionId: string;
   occasionDate: string;
 }) {
-  await deleteUnsentOccasionReminders({ supabase, userId });
+  await deleteUnsentOccasionReminders({ supabase, userId, occasionId });
 
   if (!isFutureDateOnly(occasionDate)) {
     return;
   }
 
   try {
-    await scheduleOccasionReminders({ supabase, userId, occasionDate });
+    await scheduleOccasionReminders({ supabase, userId, occasionId, occasionDate });
   } catch (error) {
     console.error("Occasion reminder rescheduling failed.", error);
   }

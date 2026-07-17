@@ -43,7 +43,7 @@ export interface ButtonProps
   asChild?: boolean
 }
 
-// React 19: No forwardRef needed
+// React 19: ref is a regular prop
 export function Button({
   className,
   variant,
@@ -74,7 +74,7 @@ export function Button({
 // components/ui/card.tsx
 import { cn } from '@/lib/utils'
 
-// React 19: ref is a regular prop, no forwardRef
+// React 19: ref is a regular prop
 export function Card({
   className,
   ref,

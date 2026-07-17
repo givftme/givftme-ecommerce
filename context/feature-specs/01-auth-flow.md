@@ -207,7 +207,7 @@ User taps "Add to wishlist" / "Buy this gift" / any protected action
 
 **On submit (valid form):**
 1. Call Supabase `signInWithPassword({ email, password })`
-2. On success: redirect to the `redirect` URL param if present, otherwise `/dashboard/wishlists`
+2. On success: redirect to the validated safe `redirect` URL param if present, otherwise `/dashboard/wishlists`
 3. On error: show global error banner above the form — "Incorrect email or password."
 
 ---
@@ -350,7 +350,7 @@ When an unauthenticated user attempts a protected action anywhere on the site:
   - "Create account" button (ghost, pill, full width)
   - Both buttons navigate to their respective auth routes with `?redirect=[current-path]`
 
-**After successful auth:** redirect to the `redirect` param value to return the user to exactly where they were.
+**After successful auth:** redirect to the `redirect` param only after validating it as a same-origin relative path. Accept paths like `/dashboard/wishlists`; reject absolute URLs, protocol-relative paths beginning with `//`, and raw or encoded backslash variants, falling back to `/dashboard/wishlists`.
 
 ---
 

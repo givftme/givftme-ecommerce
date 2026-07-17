@@ -1,13 +1,13 @@
 ---
 title: Never Modify Design Tokens
 impact: CRITICAL
-impactDescription: Token changes affect entire application
-tags: tokens, design-tokens, tailwind-config, modification, forbidden
+impactDescription: Theme token changes affect the entire application
+tags: tokens, design-tokens, theme-css, modification, forbidden
 ---
 
 ## Never Modify Design Tokens
 
-Never modify the design tokens in `packages/playground-ui/src/ds/tokens/` or the `tailwind.config.ts` file without explicit approval.
+Never modify the Tailwind v4 `@theme` CSS token definitions in `app/globals.css` without explicit approval. Approved token changes must also update `context/design/DESIGN_SYSTEM.md` so the documented design contract stays aligned.
 
 **Why this matters:**
 
@@ -17,41 +17,34 @@ Never modify the design tokens in `packages/playground-ui/src/ds/tokens/` or the
 
 **Incorrect (modifying tokens):**
 
-```typescript
-// DON'T: Adding new colors to tokens/colors.ts
-export const Colors = {
-  // ... existing colors
-  myNewColor: '#FF5500', // FORBIDDEN
-};
+```css
+/* DON'T: Adding ad hoc colors to app/globals.css */
+@theme {
+  --color-promo: #ff5500; /* FORBIDDEN */
+}
 
-// DON'T: Adding new spacing values to tokens/spacings.ts
-export const Spacings = {
-  // ... existing spacings
-  '13': '3.25rem', // FORBIDDEN
-};
+/* DON'T: Changing existing brand tokens without approval */
+@theme {
+  --color-brand: #123456; /* FORBIDDEN */
+}
 
-// DON'T: Modifying tailwind.config.ts
-export default {
-  theme: {
-    extend: {
-      colors: {
-        customColor: '#123456', // FORBIDDEN
-      },
-    },
-  },
-};
+/* DON'T: Adding one-off spacing or typography tokens */
+@theme {
+  --spacing-card-gap: 13px; /* FORBIDDEN */
+}
 ```
 
 **Correct (requesting token changes):**
 
-If a new token is needed, escalate to the design team. Use existing tokens that are closest to the requirement until the new token is approved and added.
+If a new token is needed, escalate first. Use existing `@theme` tokens and standard Tailwind utilities that are closest to the requirement until the new token is approved and added.
 
 When escalating:
 
 1. Document the use case and rationale
-2. Wait for the new token to be added through proper channels
+2. Wait for approval before editing `app/globals.css`
+3. Update `context/design/DESIGN_SYSTEM.md` in the same change as any approved token edit
 
 **Protected files:**
 
-- `packages/playground-ui/src/ds/tokens/*.ts`
-- `packages/playground-ui/tailwind.config.ts`
+- `app/globals.css` `@theme` definitions
+- `context/design/DESIGN_SYSTEM.md`

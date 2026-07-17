@@ -331,5 +331,5 @@ Instructions:
 2. Apply the responsive rules from RESPONSIVE_DESIGN_DIRECTIVE.md for tablet and desktop
 3. Use the tech stack: Next.js 16, Tailwind CSS v4, shadcn/ui, react-hook-form + Zod, GSAP + @gsap/react, lucide-react
 4. Implement both UI and backend logic
-5. Do not ask for clarification — make reasonable decisions and note them in comments
+5. Ask for clarification only for high-risk ambiguity involving pricing, payments, refunds, money-sensitive decisions, data visibility, or rules in `BUSINESS_RULES.md`; for lower-stakes ambiguity, do not ask for clarification — make reasonable decisions and note them in comments
 ```

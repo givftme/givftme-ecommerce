@@ -8,12 +8,7 @@ progressive_disclosure:
     summary: "Tailwind CSS utility-first framework for rapid UI development with responsive design and dark mode"
     when_to_use: "When working with tailwind-css or related functionality."
     quick_start: "1. Review the core concepts below. 2. Apply patterns to your use case. 3. Follow best practices for implementation."
----
-# Tailwind CSS Skill
-
----
-progressive_disclosure:
-  entry_point:
+  entry_point_sections:
     - summary
     - when_to_use
     - quick_start
@@ -38,6 +33,7 @@ tokens:
   entry: 75
   full: 4500
 ---
+# Tailwind CSS Skill
 
 ## Summary
 
@@ -64,42 +60,42 @@ Tailwind CSS is a utility-first CSS framework that provides low-level utility cl
 
 ```bash
 # npm
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
+npm install -D tailwindcss @tailwindcss/postcss
 
 # yarn
-yarn add -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
+yarn add -D tailwindcss @tailwindcss/postcss
 
 # pnpm
-pnpm add -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
+pnpm add -D tailwindcss @tailwindcss/postcss
 ```
 
-### Configuration
+### PostCSS Configuration
 
-**tailwind.config.js:**
+**postcss.config.mjs:**
 ```javascript
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    "./src/**/*.{js,jsx,ts,tsx}",
-    "./public/index.html",
-  ],
-  theme: {
-    extend: {},
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
   },
-  plugins: [],
 }
+
+export default config
 ```
 
 ### Basic CSS Setup
 
-**styles/globals.css:**
+**app/globals.css:**
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0ea5e9;
+  --font-sans: var(--font-inter);
+}
+
+body {
+  @apply bg-white text-gray-900 font-sans;
+}
 ```
 
 ### First Component
@@ -898,15 +894,58 @@ function Container({ children, size = 'default' }) {
 #### Grid Layout
 
 ```jsx
+const gridColumnClasses = {
+  base: {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4',
+    5: 'grid-cols-5',
+    6: 'grid-cols-6',
+    7: 'grid-cols-7',
+    8: 'grid-cols-8',
+    9: 'grid-cols-9',
+    10: 'grid-cols-10',
+    11: 'grid-cols-11',
+    12: 'grid-cols-12',
+  },
+  md: {
+    1: 'md:grid-cols-1',
+    2: 'md:grid-cols-2',
+    3: 'md:grid-cols-3',
+    4: 'md:grid-cols-4',
+    5: 'md:grid-cols-5',
+    6: 'md:grid-cols-6',
+    7: 'md:grid-cols-7',
+    8: 'md:grid-cols-8',
+    9: 'md:grid-cols-9',
+    10: 'md:grid-cols-10',
+    11: 'md:grid-cols-11',
+    12: 'md:grid-cols-12',
+  },
+  lg: {
+    1: 'lg:grid-cols-1',
+    2: 'lg:grid-cols-2',
+    3: 'lg:grid-cols-3',
+    4: 'lg:grid-cols-4',
+    5: 'lg:grid-cols-5',
+    6: 'lg:grid-cols-6',
+    7: 'lg:grid-cols-7',
+    8: 'lg:grid-cols-8',
+    9: 'lg:grid-cols-9',
+    10: 'lg:grid-cols-10',
+    11: 'lg:grid-cols-11',
+    12: 'lg:grid-cols-12',
+  },
+};
+
 function GridLayout({ children, cols = { default: 1, md: 2, lg: 3 } }) {
+  const defaultCols = gridColumnClasses.base[cols.default] || gridColumnClasses.base[1];
+  const mdCols = cols.md ? gridColumnClasses.md[cols.md] || '' : '';
+  const lgCols = cols.lg ? gridColumnClasses.lg[cols.lg] || '' : '';
+
   return (
-    <div className={`
-      grid
-      grid-cols-${cols.default}
-      md:grid-cols-${cols.md}
-      lg:grid-cols-${cols.lg}
-      gap-6
-    `}>
+    <div className={`grid ${defaultCols} ${mdCols} ${lgCols} gap-6`}>
       {children}
     </div>
   );
@@ -916,9 +955,49 @@ function GridLayout({ children, cols = { default: 1, md: 2, lg: 3 } }) {
 #### Stack (Vertical Spacing)
 
 ```jsx
+const gapClasses = {
+  0: 'gap-0',
+  px: 'gap-px',
+  '0.5': 'gap-0.5',
+  1: 'gap-1',
+  '1.5': 'gap-1.5',
+  2: 'gap-2',
+  '2.5': 'gap-2.5',
+  3: 'gap-3',
+  '3.5': 'gap-3.5',
+  4: 'gap-4',
+  5: 'gap-5',
+  6: 'gap-6',
+  7: 'gap-7',
+  8: 'gap-8',
+  9: 'gap-9',
+  10: 'gap-10',
+  11: 'gap-11',
+  12: 'gap-12',
+  14: 'gap-14',
+  16: 'gap-16',
+  20: 'gap-20',
+  24: 'gap-24',
+  28: 'gap-28',
+  32: 'gap-32',
+  36: 'gap-36',
+  40: 'gap-40',
+  44: 'gap-44',
+  48: 'gap-48',
+  52: 'gap-52',
+  56: 'gap-56',
+  60: 'gap-60',
+  64: 'gap-64',
+  72: 'gap-72',
+  80: 'gap-80',
+  96: 'gap-96',
+};
+
 function Stack({ children, spacing = 4 }) {
+  const gapClass = gapClasses[spacing] || gapClasses[4];
+
   return (
-    <div className={`flex flex-col gap-${spacing}`}>
+    <div className={`flex flex-col ${gapClass}`}>
       {children}
     </div>
   );
@@ -966,7 +1045,76 @@ function Card({ title, description, image, footer }) {
 #### Modal
 
 ```jsx
+import { useEffect, useId, useRef } from 'react';
+
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 function Modal({ isOpen, onClose, title, children }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const previouslyFocusedElementRef = useRef(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocusedElementRef.current = document.activeElement;
+
+    const dialog = dialogRef.current;
+    const focusableElements = dialog
+      ? Array.from(dialog.querySelectorAll(focusableSelector))
+      : [];
+    const firstFocusableElement = focusableElements[0] || dialog;
+
+    firstFocusableElement?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialog) return;
+
+      const elements = Array.from(dialog.querySelectorAll(focusableSelector));
+
+      if (elements.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const firstElement = elements[0];
+      const lastElement = elements[elements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedElementRef.current?.focus();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -979,18 +1127,26 @@ function Modal({ isOpen, onClose, title, children }) {
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
+          className="
           relative bg-white dark:bg-gray-800
           rounded-lg shadow-xl
           max-w-md w-full
           p-6
           animate-fade-in
-        ">
-          <h2 className="text-2xl font-bold mb-4">
+        "
+        >
+          <h2 id={titleId} className="text-2xl font-bold mb-4">
             {title}
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
           >
             ✕

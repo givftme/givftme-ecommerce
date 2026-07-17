@@ -74,30 +74,24 @@ export async function PATCH(request: Request, context: OccasionRouteContext) {
     updates.occasion_date !== owner.occasion.occasion_date;
 
   const { data, error } = await supabase
-    .from("occasions")
-    .update(updates)
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("id, title, occasion_type, occasion_date, status, archived_at")
+    .rpc("gifvtme_update_occasion_with_wishlist", {
+      p_user_id: user.id,
+      p_occasion_id: id,
+      p_title: updates.title ?? null,
+      p_occasion_type: updates.occasion_type ?? null,
+      p_occasion_date: updates.occasion_date ?? null,
+    })
     .single();
 
   if (error || !data) {
     return jsonError("Couldn't update occasion. Try again.", 500);
   }
 
-  if (updates.title) {
-    await supabase
-      .from("wishlists")
-      .update({ title: updates.title })
-      .eq("occasion_id", id)
-      .eq("user_id", user.id)
-      .eq("type", "occasion");
-  }
-
   if (dateChanged && updates.occasion_date) {
     await rescheduleOccasionReminders({
       supabase,
       userId: user.id,
+      occasionId: id,
       occasionDate: updates.occasion_date,
     });
   }
@@ -136,7 +130,7 @@ export async function DELETE(_request: Request, context: OccasionRouteContext) {
     return jsonError("Couldn't archive occasion. Try again.", 500);
   }
 
-  await deleteUnsentOccasionReminders({ supabase, userId: user.id });
+  await deleteUnsentOccasionReminders({ supabase, userId: user.id, occasionId: id });
 
   return new NextResponse(null, { status: 204 });
 }

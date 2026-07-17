@@ -13,13 +13,38 @@ allowed-tools:
 
 # Tailwind CSS - Configuration
 
-Tailwind CSS is highly customizable through its configuration file, allowing you to define your design system, extend the default theme, and configure plugins.
+Tailwind CSS v4 is CSS-first: define design tokens and project-level customization in CSS with `@theme`, and use `@source` only for sources Tailwind cannot detect automatically. The JavaScript configuration examples below are Tailwind v3 or legacy config patterns unless a project explicitly keeps a config file.
 
 ## Key Concepts
 
-### Configuration File Structure
+### Tailwind v4 CSS-First Setup
 
-The `tailwind.config.js` (or `.ts`, `.cjs`, `.mjs`) file is the heart of Tailwind customization:
+Use one app-level CSS entry point:
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #0ea5e9;
+  --font-sans: var(--font-inter);
+}
+```
+
+Configure the Tailwind v4 PostCSS plugin:
+
+```javascript
+const config = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+}
+
+export default config
+```
+
+### Tailwind v3 Configuration File Structure
+
+In Tailwind v3, the `tailwind.config.js` (or `.ts`, `.cjs`, `.mjs`) file is the heart of Tailwind customization:
 
 ```javascript
 /** @type {import('tailwindcss').Config} */
@@ -283,18 +308,11 @@ module.exports = {
 
 ### 5. Optimize for Production
 
-Configure for smaller bundle sizes:
+Tailwind v4 removes unused styles from detected sources automatically. Do not add a `purge` key; keep the CSS entry point focused and add `@source` only for external locations Tailwind cannot detect.
 
-```javascript
-module.exports = {
-  content: [
-    './src/**/*.{html,js,jsx,ts,tsx}',
-  ],
-  // Remove unused styles in production
-  purge: {
-    enabled: process.env.NODE_ENV === 'production',
-  },
-}
+```css
+@import "tailwindcss";
+@source "../packages/ui";
 ```
 
 ## Examples

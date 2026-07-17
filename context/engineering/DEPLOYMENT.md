@@ -7,14 +7,14 @@ Vercel, deploying directly from the Next.js project root. No custom server — A
 ## Supabase production setup
 
 1. Create a production Supabase project, separate from any local/dev project.
-2. Run `gifvtme_migration.sql` followed by `gifvtme_migration_002.sql` in the SQL Editor, in that order — `002` depends on tables created in the first migration.
+2. Run the complete Supabase migration chain in the SQL Editor, in this exact order: `gifvtme_migration.sql`, `gifvtme_migration_002.sql`, `gifvtme_migration_003.sql`, `gifvtme_migration_004_wishlist_rls.sql`, `gifvtme_migration_005_occasion_wishlist.sql`. Each migration depends on the schema state produced by the previous one.
 3. Confirm RLS is enabled on every table (the migrations enable it explicitly per table, but verify in the dashboard before launch — a table with RLS accidentally disabled is a serious data exposure risk).
 4. Enable email and Google OAuth providers under Authentication → Providers.
 5. Set the Site URL and Redirect URLs under Authentication → URL Configuration to match the production domain (this must match `NEXT_PUBLIC_APP_URL`).
 
 ## Sanity production setup
 
-1. Create a `production` dataset (the default dataset name referenced in `lib/sanity/client.ts`).
+1. Create the Sanity dataset used by `sanity/lib/client.ts`; for launch, set `NEXT_PUBLIC_SANITY_DATASET` explicitly to `production` in every production environment.
 2. Deploy Sanity Studio (either hosted via Sanity's own hosting or embedded — decide before launch, not yet specified as of this writing in `ROADMAP.md`).
 3. Confirm the catalog team has Studio access with appropriate roles before launch — this is how products actually get added, there is no other path in v1.
 
@@ -24,7 +24,7 @@ All variables from `ENV_VARIABLES.md` must be set in Vercel's project settings (
 
 ## Pre-launch checklist
 
-- [ ] Both Supabase migrations run against production
+- [ ] All Supabase migrations through `gifvtme_migration_005_occasion_wishlist.sql` run against production in order
 - [ ] RLS verified enabled on every table
 - [ ] Sanity production dataset populated with at least the initial occasions/collections/products needed for launch
 - [ ] `NEXT_PUBLIC_APP_URL` set to the real production domain

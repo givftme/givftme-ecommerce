@@ -5,7 +5,17 @@ export function parseDateOnly(value: string) {
     return null;
   }
 
-  return new Date(year, month - 1, day);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
 }
 
 export function toDateOnly(value: Date) {

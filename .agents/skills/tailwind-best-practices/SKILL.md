@@ -1,18 +1,19 @@
 ---
 name: tailwind-best-practices
-description: Tailwind CSS styling guidelines for Mastra Playground UI. This skill should be used when writing, reviewing, or refactoring styling code in packages/playground-ui and packages/playground to ensure design system consistency. Triggers on tasks involving Tailwind classes, component styling, or design tokens.
+description: Tailwind CSS styling guidelines for Gifvtme's Next.js app. Use when writing, reviewing, or refactoring styling code in app/, components/, or shared UI primitives to preserve Gifvtme's design system, component library, and Tailwind v4 token usage. Triggers on tasks involving Tailwind classes, component styling, className overrides, responsive layout, or design tokens.
 ---
 
 # Tailwind Best Practices
 
 ## Overview
 
-Routing and priority guide for Mastra Playground UI styling, containing 5 rules across 3 categories. Rule files hold the detailed explanations, examples, and review guidance that ensure design system consistency, prevent token drift, and maintain component library integrity.
+Routing and priority guide for Gifvtme app styling, containing 5 rules across 3 categories. Rule files hold the detailed explanations, examples, and review guidance that ensure design system consistency, prevent token drift, and maintain component library integrity.
 
 ## Scope
 
-- `packages/playground-ui`
-- `packages/playground`
+- `app/`
+- `components/`
+- `context/design/`
 
 ## When to Apply
 
@@ -39,20 +40,20 @@ Rules are prioritized by impact:
 
 **Component Usage:**
 
-- Use existing components from `@playground-ui/ds/components/` (`component-use-existing`)
-- Never create new components in the `ds/` folder
+- Use existing primitives from `components/ui/` and domain components from `components/<domain>/` (`component-use-existing`)
+- Never duplicate a component that belongs in the shared component library
 
 **Design Tokens:**
 
-- Only use tokens from `tailwind.config.ts` in `@playground-ui` (`tokens-use-existing`)
-- Never modify design tokens or `tailwind.config.ts` (`tokens-no-modification`)
+- Use Gifvtme's `@theme` CSS tokens in `app/globals.css`, documented by `context/design/DESIGN_SYSTEM.md` (`tokens-use-existing`)
+- Do not modify the `@theme` CSS token definitions without explicit approval and matching design-system docs updates (`tokens-no-modification`)
 
 ### High-Impact Patterns
 
 **ClassName Usage:**
 
 - No arbitrary Tailwind values except `height` and `width` (`classname-no-arbitrary`)
-- No `className` prop on DS components except `h-`/`w-` on `DialogContent` and `Popover` (`classname-no-ds-override`)
+- Use component variants/props before overriding shared primitive styles with `className` (`classname-no-ds-override`)
 
 ## References
 

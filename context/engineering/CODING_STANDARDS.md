@@ -28,7 +28,7 @@ lucide-react exclusively. Do not mix in another icon library or inline SVGs for 
 
 ## Tailwind CSS v4
 
-Tailwind v4 uses CSS-first configuration — theme tokens (brand colors, fonts, border radii) are defined via `@theme` in the global CSS file rather than (or in addition to) `tailwind.config.js`. When adding or changing a design token, check `src/styles/globals.css` for the `@theme` block first; `tailwind.config.js` may only hold content paths and plugin config under v4, depending on how the project's config was migrated. Keep `design/DESIGN_SYSTEM.md` in sync with whichever location is authoritative.
+Tailwind v4 uses CSS-first configuration — theme tokens (brand colors, fonts, border radii) are defined via `@theme` in the global CSS file rather than (or in addition to) `tailwind.config.js`. When adding or changing a design token, check `app/globals.css` for the `@theme` block first; `tailwind.config.js` may only hold content paths and plugin config under v4, depending on how the project's config was migrated. Keep `design/DESIGN_SYSTEM.md` in sync with whichever location is authoritative.
 
 Use the `cn()` utility (`lib/utils.ts`, wraps `clsx` + `tailwind-merge`) whenever a component accepts a `className` prop that needs to merge with internal conditional classes.
 

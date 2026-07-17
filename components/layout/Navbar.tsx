@@ -54,23 +54,32 @@ export function Navbar({
           <Image src="/logo.png" alt="Gifvtme" width={132} height={44} priority />
         </Link>
 
-        <div className="hidden flex-1 md:block">
-          <label className="relative flex max-w-md items-center">
-            <span className="sr-only">Search products</span>
+        <form
+          action="/shop"
+          method="get"
+          role="search"
+          className="hidden flex-1 md:block"
+        >
+          <div className="relative flex max-w-md items-center">
+            <label htmlFor="navbar-search" className="sr-only">
+              Search products
+            </label>
             <input
+              id="navbar-search"
+              name="q"
               type="search"
               placeholder="Electronic blender"
               className="h-11 w-full rounded-full border border-stone-200 bg-white pl-5 pr-12 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
             />
             <button
-              type="button"
+              type="submit"
               aria-label="Search"
               className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white transition-colors hover:bg-brand-dark"
             >
               <Search className="h-4 w-4" />
             </button>
-          </label>
-        </div>
+          </div>
+        </form>
 
         <div className="hidden items-center gap-6 md:flex">
           <button
