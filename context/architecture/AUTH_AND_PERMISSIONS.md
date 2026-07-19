@@ -38,7 +38,7 @@ Browsing the public shop, viewing a shared wishlist (if `public` or with a valid
 |---|---|
 | `/`, `/shop`, `/product/[slug]`, `/occasions/[slug]`, `/collections/[slug]` | No |
 | `/w/[id]` (shared wishlist view) | No — but depends on wishlist visibility |
-| `/w/[id]/item/[itemId]`, `/w/[id]/confirm/[itemId]` | Yes, to mark purchased |
+| `/w/[id]/item/[itemId]`, `/w/[id]/confirm/[itemId]`, `/w/[id]/success/[itemId]` | No to view when the share key is valid; auth is required for buy/confirm/intent/reminder actions |
 | `/cart`, `/checkout` | Yes, to complete checkout |
 | `/wishlists`, `/wishlists/*`, `/my-occasions`, `/my-occasions/*`, `/dates`, `/orders/*`, `/settings` | Yes |
 | `/account/*` | Yes |
@@ -46,6 +46,10 @@ Browsing the public shop, viewing a shared wishlist (if `public` or with a valid
 | `/callback`, `/forgot-password`, `/verify-otp`, `/success` | No |
 | `/reset-password` | No proxy auth-only redirect; requires a valid OTP-established session enforced by the route-level session guard |
 | `/api/scrape` | Yes |
+| `/api/wishlists/[id]/invites`, `/api/wishlists/[id]/invites/*` | Yes |
+| `/api/wishlists/[id]/reminders/opt-in` | Yes |
+| `/api/wishlists/items/[itemId]/flag-intent` | Yes |
+| `/api/purchases` | Yes |
 | `/api/occasions`, `/api/occasions/[id]`, `/api/occasions/[id]/items`, `/api/occasions/[id]/reactivate` | Yes |
 | `/api/occasions/archive` | No user auth — protected by `Authorization: Bearer ${CRON_SECRET}` |
 | `/api/flutterwave/webhook` | No user auth — verified via Flutterwave signature instead |
@@ -54,3 +58,5 @@ Browsing the public shop, viewing a shared wishlist (if `public` or with a valid
 ## A note on the shared wishlist link
 
 The `/w/[id]` route resolves `id` as either a `wishlist_invites.token` or a raw `wishlists.id` (for public wishlists shared directly). This dual resolution is intentional — see `app/w/[id]/page.tsx`. Do not assume `id` is always one or the other.
+
+Invite-token access is handled by the narrow database helper `gifvtme_get_shared_wishlist(share_key)`, called through the regular Supabase client. The helper treats the token as a bearer credential for that one wishlist payload without granting anonymous table-wide access. After an authenticated viewer opens a token link, `gifvtme_accept_wishlist_invite(invite_id)` claims the invite for that user so normal invitee RLS continues to work.

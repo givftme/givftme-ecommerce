@@ -43,6 +43,7 @@ app/
   w/[id]/                       PUBLIC GIVER-FACING — shared wishlist
     item/[itemId]/                item detail from a giver's perspective
     confirm/[itemId]/             "did you complete your purchase" (external flow only)
+    success/[itemId]/             claimed success + invitee reminder opt-in
 
   (dashboard)/                   requires auth — RECEIVER-FACING
     wishlists/, wishlists/new/, wishlists/[id]/edit/
@@ -71,12 +72,12 @@ components/
   cart/          CartItem, CartSummary, EmptyCart
   checkout/      CheckoutForm, AddressForm, PaymentSelector, OrderSummaryPanel
   order/         OrderCard, OrderList, OrderTracking, OrderStatusBadge
-  wishlist/      WishlistItem, WishlistGrid, SharedWishlistHeader, ClaimedBadge
+  wishlist/      WishlistItem, WishlistGrid, ShareSettingsSheet, SharedWishlistHeader, SharedWishlistItem, ClaimedBadge, IntentFlagBadge, ReminderOptIn, AuthGateSheet
   review/        ReviewCard, ReviewsList, StarRating, RatingBreakdown
   flash-sale/    FlashSaleBanner, FlashSaleTimer
   occasion/      occasion-museum-specific display components
   reminders/     reminder opt-in UI components
-  shared/        cross-domain components that don't fit elsewhere
+  shared/        cross-domain components that don't fit elsewhere, e.g. CopyLinkButton
 ```
 
 **The one component, responsive variants rule:** components in this library should handle both mobile and desktop layouts internally via Tailwind responsive classes (see `Navbar.tsx` for an example — one component, different markup shown/hidden by breakpoint). Do not create `ProductCardMobile.tsx` and `ProductCardDesktop.tsx` as separate files. See `design/COMPONENT_LIBRARY.md`.
@@ -90,7 +91,7 @@ lib/
   affiliate/     transform.ts — affiliate URL building per retailer
   scraper/       microlink.ts — URL metadata extraction
   flutterwave/   payment initiation + webhook verification (to be built)
-  email/         reminders.ts and other Resend-triggering logic
+  email/         Resend-triggering logic such as wishlist invite delivery
   orders/        order status transition helpers (to be built)
   reviews/       verified-purchase gating logic (to be built)
   utils.ts       cn(), formatPrice(), formatCountdown(), daysUntil(), pluralize(), wishlistUrl()

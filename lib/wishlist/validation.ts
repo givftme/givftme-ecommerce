@@ -1,6 +1,33 @@
 import { z } from "zod";
 import { isWishlistStoragePath } from "@/lib/wishlist/images";
 
+const optionalInviteEmail = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim().toLowerCase();
+    return trimmed === "" ? undefined : trimmed;
+  },
+  z.string().email("Enter a valid email").optional()
+);
+
+const optionalInvitePhone = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    return trimmed === "" ? undefined : trimmed;
+  },
+  z
+    .string()
+    .regex(/^(\+234|0)[789][01]\d{8}$/, "Enter a valid Nigerian phone number")
+    .optional()
+);
+
 const optionalImageRef = z
   .union([
     z
@@ -94,6 +121,34 @@ export const wishlistTitleSchema = z.object({
   title: z.string().trim().min(1, "Title cannot be empty").max(100),
 });
 
+export const wishlistUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1, "Title cannot be empty").max(100).optional(),
+    visibility: z.enum(["private", "friends_family", "public"]).optional(),
+    prices_visible: z.boolean().optional(),
+  })
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.visibility !== undefined ||
+      value.prices_visible !== undefined,
+    { message: "Provide something to update" }
+  );
+
+export const inviteWishlistViewerSchema = z
+  .object({
+    invitee_email: optionalInviteEmail,
+    invitee_phone: optionalInvitePhone,
+  })
+  .refine(
+    (value) => Boolean(value.invitee_email || value.invitee_phone),
+    { message: "Enter an email or phone number" }
+  );
+
+export const purchaseConfirmationSchema = z.object({
+  wishlist_item_id: z.string().uuid(),
+});
+
 export const scrapeRequestSchema = z.object({
   url: z.string().url("Enter a valid URL"),
 });
@@ -104,3 +159,7 @@ export type ExternalWishlistItemFormValues = z.input<
 export type ExternalWishlistItemInput = z.output<typeof externalWishlistItemSchema>;
 export type EditWishlistItemFormValues = z.input<typeof editWishlistItemSchema>;
 export type EditWishlistItemInput = z.output<typeof editWishlistItemSchema>;
+export type InviteWishlistViewerInput = z.input<
+  typeof inviteWishlistViewerSchema
+>;
+export type InviteWishlistViewer = z.output<typeof inviteWishlistViewerSchema>;

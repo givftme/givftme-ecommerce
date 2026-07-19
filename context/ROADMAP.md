@@ -23,22 +23,23 @@ This file should be updated frequently — at minimum every time a feature moves
 - Microlink scraping integration (`/api/scrape`)
 - Evergreen wishlist core — dashboard auto-creation, wishlist list/detail screens, add/edit/archive/reorder external items, manual image upload wiring, title editing, and owner-checked wishlist APIs
 - Supabase schema migration 003 file — adds `sort_order` to `wishlist_items` and `master_items` (must still be applied to the Supabase project)
-- Giver-facing UI mockups designed (shared wishlist view, item detail, purchase confirmation, claimed success) — not yet built as real pages, mockups only
+- Sharing and giver flow core — receiver share settings sheet, visibility/price auto-save, invite management with Resend email fallback, `/w/[id]` shared wishlist view, giver item detail, external purchase confirmation, claimed success, intent flagging, invitee reminder opt-in, `/api/purchases`, and `/api/reminders`
+- Supabase schema migration 006 file — adds intent flags, invite helper policies/functions, and shared wishlist resolver (must still be applied to the Supabase project)
 
 ### In progress / partially done
-- Reminder system — scheduling logic exists (`lib/email/reminders.ts`, creates `reminders` rows), but `/api/reminders` marks reminders sent without actually sending email via Resend yet
+- Reminder system — owner and invitee scheduling logic creates `reminders` rows, but `/api/reminders` only leaves due rows queued as deferred handoff until actual email/push delivery is built
 - Context file system (this folder) — being built out
-- Supabase project setup — migrations 003, 004 and the private `wishlist-images` bucket with owner-folder storage policies must be applied/created before wishlist reorder, auto-creation, and manual image uploads fully work
+- Supabase project setup — migrations 003, 004, 005, 006 and the private `wishlist-images` bucket with owner-folder storage policies must be applied/created before wishlist reorder, sharing, auto-creation, and manual image uploads fully work
 
 ### Not started
 - Reviews table/migration (referenced in `DATABASE_SCHEMA.md` as not yet in the migrations)
 - Flash sale fields on the Sanity product schema (sale price, start/end time)
-- `/api/checkout`, `/api/flutterwave/webhook`, `/api/orders/[id]/status`, `/api/purchases`, `/api/reviews` — not implemented
+- `/api/checkout`, `/api/flutterwave/webhook`, `/api/orders/[id]/status`, `/api/reviews` — not implemented
 - Cart, checkout, order tracking, review, and flash sale UI components — folders exist, components not built
 - Product detail page, variant selector
 - Retool setup against production Supabase
 - Sanity Studio deployment
-- Actual Resend email sending (reminders, order status, thank-you messages)
+- Actual Resend email sending for reminders, order status, and thank-you messages
 
 ## Explicitly deferred to v2 — do not build without an explicit decision
 

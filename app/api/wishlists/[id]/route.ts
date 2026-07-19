@@ -5,7 +5,7 @@ import {
   assertWishlistOwner,
   getAuthenticatedApiUser,
 } from "@/lib/wishlist/server";
-import { wishlistTitleSchema } from "@/lib/wishlist/validation";
+import { wishlistUpdateSchema } from "@/lib/wishlist/validation";
 
 interface WishlistRouteContext {
   params: Promise<{ id: string }>;
@@ -33,15 +33,25 @@ export async function PATCH(request: Request, context: WishlistRouteContext) {
   }
 
   const body = await readJson(request);
-  const parsed = wishlistTitleSchema.safeParse(body);
+  const parsed = wishlistUpdateSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError("Title cannot be empty.", 400);
+    return jsonError(parsed.error.issues[0]?.message || "Invalid wishlist update.", 400);
   }
+
+  const update = {
+    ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+    ...(parsed.data.visibility !== undefined
+      ? { visibility: parsed.data.visibility }
+      : {}),
+    ...(parsed.data.prices_visible !== undefined
+      ? { prices_visible: parsed.data.prices_visible }
+      : {}),
+  };
 
   const { data, error } = await supabase
     .from("wishlists")
-    .update({ title: parsed.data.title })
+    .update(update)
     .eq("id", id)
     .eq("user_id", user.id)
     .select("id, title, type, visibility, prices_visible")

@@ -28,6 +28,9 @@ Radix Dialog-backed bottom sheet primitive. `SheetContent` accepts `showClose` (
 ### `Dialog`
 Radix Dialog-backed confirmation/modal primitive. Used by wishlist duplicate and delete confirmations.
 
+### `Switch`
+Accessible shadcn-style switch primitive with `checked` and `onCheckedChange`. Used for binary settings such as wishlist price visibility.
+
 ### `Textarea`
 shadcn-style primitive for longer form fields. Matches `Input` shape (`rounded-xl`, stone border, brand focus ring).
 
@@ -99,6 +102,24 @@ Client-side controller for the wishlist detail page. Separates available and pur
 ### `WishlistItemCard`
 Individual wishlist item row/card. Shows thumbnail fallback, title, price, source domain/store badge, gifted state, edit/delete actions, and reorder controls.
 
+### `ShareSettingsSheet`
+Receiver-facing sharing control surface for wishlist detail/card and occasion detail. Handles visibility auto-save, price visibility, invite list/create/delete, invite-token/public share links, copy feedback, and WhatsApp share.
+
+### `SharedWishlistHeader`
+Giver-facing red receiver header/sidebar with avatar fallback, receiver name, occasion title, and countdown.
+
+### `SharedWishlistItem`
+Giver-facing item card for `/w/[id]`. Handles available/claimed visual states, price visibility, source badges, intent warnings, and buy CTA auth routing.
+
+### `ClaimedBadge` / `IntentFlagBadge`
+Small status components for giver-facing item states. `IntentFlagBadge` uses the amber warning style and GSAP entrance.
+
+### `ReminderOptIn`
+Invitee Flow 2 reminder opt-in card. Used on claimed success and backed by the invite/public opt-in APIs.
+
+### `AuthGateSheet`
+Giver-facing auth gate sheet with receiver-specific copy and redirect preservation for shared wishlist actions.
+
 ### `AddItemSheet`
 Bottom sheet for adding external wishlist items via URL scrape or manual entry. Includes duplicate URL warning and Supabase Storage image upload.
 
@@ -117,7 +138,7 @@ These folders exist but components are largely not yet built as of this writing.
 
 - `CartItem` should support both the dense desktop table-row layout and the condensed mobile card layout seen in the reviewed Figma exports — one component, not two.
 - `OrderTracking` should render the four-stage progress tracker (Order Placed → Inprogress → Shipped → Delivered) matching the Figma desktop order detail screen, driven by `order_status_history` data.
-- `WishlistItem` / `SharedWishlistHeader` / `ClaimedBadge` correspond directly to the four mocked-up giver-facing screens (shared wishlist view, item detail, purchase confirmation, claimed success) — reference those mockups for exact layout and copy when building.
+- `SharedWishlistHeader` / `SharedWishlistItem` / `ClaimedBadge` / `IntentFlagBadge` / `ReminderOptIn` correspond directly to the giver-facing screens (shared wishlist view, item detail, purchase confirmation, claimed success).
 - `FlashSaleTimer` needs to compute remaining time from a Sanity product's sale `endTime` and use `formatCountdown()` from `lib/utils.ts`.
 
 ## Conventions for new components

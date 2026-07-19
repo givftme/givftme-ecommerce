@@ -42,7 +42,7 @@ No money is ever processed by Gifvtme in this flow. No `orders` row is created.
 
 ## Data flow: wishlist sharing
 
-A wishlist's `visibility` field (`private` / `friends_family` / `public`) and `prices_visible` boolean control access, enforced via RLS — see `AUTH_AND_PERMISSIONS.md` for the exact policies. Friends & family access is resolved through `wishlist_invites`, matched against the viewer's `auth.uid()` or email — there is no separate sharing/permission table.
+A wishlist's `visibility` field (`private` / `friends_family` / `public`) and `prices_visible` boolean control access, enforced via RLS — see `AUTH_AND_PERMISSIONS.md` for the exact policies. Friends & family access is resolved through `wishlist_invites`, matched against the viewer's `auth.uid()` or email after login, and invite-token URLs are resolved through the narrow `gifvtme_get_shared_wishlist(share_key)` helper for public giver pages. There is no separate sharing/permission table.
 
 ## Data flow: reminders
 

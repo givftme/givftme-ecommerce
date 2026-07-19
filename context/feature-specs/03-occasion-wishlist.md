@@ -177,7 +177,7 @@ Cron runs daily → finds active occasions where occasion_date < today - 7 days
 **Header:**
 - Back arrow → `/wishlists`
 - Occasion title (center, bold)
-- Three-dot menu: "Edit occasion" | "Share wishlist" (stub if sharing not built) | "Delete occasion"
+- Three-dot menu: "Edit occasion" | "Share wishlist" (opens the share settings sheet) | "Delete occasion"
 
 **Hero section:**
 - Large occasion type emoji (40px)

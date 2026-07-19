@@ -14,6 +14,7 @@ interface WishlistDetailSelectOptions {
   includeDescription: boolean;
   includeSortOrder: boolean;
   includeMasterItemId: boolean;
+  includeIntentFields: boolean;
 }
 
 const EVERGREEN_WISHLIST_SELECT = "id, title, type, visibility, prices_visible";
@@ -207,6 +208,7 @@ function getWishlistDetailSelect({
   includeDescription,
   includeSortOrder,
   includeMasterItemId,
+  includeIntentFields,
 }: WishlistDetailSelectOptions) {
   const itemColumns = [
     "id",
@@ -224,6 +226,7 @@ function getWishlistDetailSelect({
     "is_exclusive",
     ...(includeSortOrder ? ["sort_order"] : []),
     "created_at",
+    ...(includeIntentFields ? ["intent_flagged_by", "intent_flagged_at"] : []),
     "affiliate_purchased_at",
     "order_status",
   ];
@@ -249,6 +252,7 @@ export async function getOwnedWishlistDetail(
     includeDescription: true,
     includeSortOrder: true,
     includeMasterItemId: true,
+    includeIntentFields: true,
   };
   const fetchWishlist = () => {
     let query = supabase
@@ -310,6 +314,17 @@ export async function getOwnedWishlistDetail(
       shouldRetry = true;
     }
 
+    if (
+      selectOptions.includeIntentFields &&
+      isMissingColumn(response.error, "intent_flagged")
+    ) {
+      console.error(
+        "wishlist_items_with_status intent fields are missing. Run gifvtme_migration_006_sharing_giver_flow.sql before using giver intent flags."
+      );
+      selectOptions.includeIntentFields = false;
+      shouldRetry = true;
+    }
+
     if (!shouldRetry) {
       break;
     }
@@ -346,6 +361,8 @@ export async function getOwnedWishlistDetail(
       is_exclusive: Boolean(item.is_exclusive),
       sort_order: item.sort_order ?? 0,
       created_at: item.created_at || null,
+      intent_flagged_by: item.intent_flagged_by || null,
+      intent_flagged_at: item.intent_flagged_at || null,
       affiliate_purchased_at: item.affiliate_purchased_at || null,
       order_status: item.order_status || null,
       buyer_name: item.buyer_name || null,

@@ -1,60 +1,48 @@
-# Memory — Occasion Wishlist Hardening And Handoff
+# Memory — Sharing Giver Flow Follow-Up
 
-Last updated: 2026-07-17 01:12 +01:00
+Last updated: 2026-07-20 00:23 +01:00
 
 ## What was built
 
-- Updated `gifvtme_migration_005_occasion_wishlist.sql` and the user confirmed the full file ran successfully in the Supabase SQL Editor.
-- Migration 005 now adds/uses `wishlist_items.master_item_id`, `wishlist_items.description`, `wishlist_items.sort_order`, `purchases.created_at`, `reminders.occasion_id`, the `reminders_occasion_owner_unsent_idx` index, and a nullable-source reminder check including `occasion_id`.
-- Added race protection with a unique partial index: `wishlist_items_wishlist_master_item_unique_idx` on `(wishlist_id, master_item_id)` where `master_item_id is not null`.
-- Added transactional RPCs:
-  - `gifvtme_create_occasion_with_wishlist` for occasion creation, linked wishlist creation, pulled item inserts, and exclusive item inserts.
-  - `gifvtme_update_occasion_with_wishlist` for atomic occasion updates plus linked occasion wishlist title updates.
-- Recreated `wishlist_items_with_status` without raw buyer/transaction identifiers (`affiliate_buyer_id`, `purchase_id`, `order_buyer_id`, `order_id`).
-- Updated occasion app code around creation, update, reactivation, reminder scheduling, pulled item insertion, date validation, and client pending-state handling:
-  - `lib/occasion/server.ts`
-  - `app/api/occasions/route.ts`
-  - `app/api/occasions/[id]/route.ts`
-  - `app/api/occasions/[id]/reactivate/route.ts`
-  - `components/occasion/CreateOccasionForm.tsx`
-  - `components/occasion/OccasionDetailClient.tsx`
-  - `lib/reminders/scheduleOccasionReminders.ts`
-  - `lib/occasion/date.ts`
-  - `lib/occasion/validation.ts`
-- Updated `README.md` from the default Next.js template to Gifvtme-specific setup guidance with env, Sanity, architecture, and local dev links.
-- Updated supporting context docs and agent skill docs so they match the current repo conventions and Tailwind/React/Next stack.
+- Updated `components/shared/CopyLinkButton.tsx` so clipboard failures now show the existing toast fallback: `Couldn't copy link. Try again.`
+- Added `useToast()` to `CopyLinkButton` and wrapped `navigator.clipboard.writeText(value)` in a `try/catch`.
+- Removed the old TODO/comment: `no-op fallback; consider a toast here if available in this context`.
 
 ## Decisions made
 
-- Supabase JS client does not provide a multi-query transaction wrapper, so multi-row occasion creation/update consistency is handled with database RPC functions.
-- Reminder scheduling remains outside the occasion creation transaction and non-blocking after the core occasion/wishlist/item rows commit.
-- Create-occasion wizard step state is now client-only. Direct `?step=2` or `?step=3` URLs no longer hydrate advanced steps without a persisted draft.
-- Occasion date validation is strict: impossible normalized dates are rejected, past dates are rejected, and the five-year future limit remains.
-- Raw buyer/order/purchase IDs are not exposed through the anon-readable wishlist status view because current app behavior only needs status/timestamp metadata.
+- Use the app's existing `components/ui/Toast` context for copy-link failure feedback.
+- Keep copy success behavior unchanged: set copied state, track `wishlist.link.copied`, and reset after 2 seconds.
+- No broader refactor or validation pass was done because the request explicitly prioritized speed and a narrow comment implementation.
 
 ## Problems solved
 
-- Updated migration 005 was successfully applied in Supabase, including the new unique pulled-item index and transactional RPC functions.
-- Occasion creation is atomic for occasion, linked wishlist, pulled items, and exclusive items.
-- Occasion title updates can no longer drift from linked occasion wishlist titles.
-- Pulled-item duplicate submissions are guarded both in the database and in the client button pending state.
-- `parseDateOnly` no longer accepts impossible dates via JavaScript Date normalization.
-- README no longer contains generated create-next-app instructions.
+- Confirmed `CopyLinkButton` is used under layouts that already provide `ToastProvider`, so using `useToast()` is appropriate in its current context.
+- Replaced a silent clipboard failure path with visible user feedback.
 
 ## Current state
 
-- Worktree is dirty with many intentional changes from this session. Run `git status --short` before continuing and do not discard changes unless the user explicitly asks.
-- `npm run lint` passed after the latest changes.
-- Targeted checks for transaction wiring, date validation, README links, and sensitive wishlist view fields passed during the session.
-- `npx tsc --noEmit --pretty false` is still blocked by an existing unrelated error in `components/wishlist/AddItemSheet.tsx:234`: the `DialogContent` usage passes `showClose`, but the component type does not accept that prop.
-- Migration 005 has already been run successfully in Supabase, so do not rerun it unless it changes again.
-- No secrets were saved here. `.env.local` contains local values but should not be read into memory or copied.
+- `components/shared/CopyLinkButton.tsx` has an uncommitted change for the toast fallback.
+- `git status --short` also showed other modified files already present in the working tree:
+  - `app/api/reminders/route.ts`
+  - `app/api/wishlists/[id]/reminders/opt-in/route.ts`
+  - `app/w/[id]/confirm/[itemId]/page.tsx`
+  - `app/w/[id]/success/[itemId]/page.tsx`
+  - `context/ROADMAP.md`
+  - `context/architecture/API_ROUTES.md`
+  - `context/architecture/THIRD_PARTY_INTEGRATIONS.md`
+  - `context/feature-specs/04-sharing-giver-flow.md`
+  - `gifvtme_migration_006_sharing_giver_flow.sql`
+  - `lib/email/resend.ts`
+  - `lib/reminders/scheduleInviteeReminders.ts`
+  - `memory.md`
+- No tests were run for the CopyLinkButton change.
+- Git emitted warnings about denied access to `C:\Users\USER/.config/git/ignore`; status still returned successfully.
 
 ## Next session starts with
 
-Run `/remember restore`, then inspect `git status --short`. Confirm the next feature the user wants to build. Before implementing, account for the existing dirty changes and the known TypeScript blocker in `components/wishlist/AddItemSheet.tsx:234`. If the next feature touches occasion wishlists or database behavior, treat `gifvtme_migration_005_occasion_wishlist.sql` as already applied in Supabase.
+Run `/remember restore`, then inspect `git status --short --untracked-files=all` and decide whether to validate the modified sharing/reminder files together. For the CopyLinkButton change specifically, a quick lint/typecheck is enough if touching no other code.
 
 ## Open questions
 
-- Should the existing `showClose` type error in `components/wishlist/AddItemSheet.tsx` be fixed before the next feature, or left until a task specifically asks for it?
-- Should the session’s many validated changes be committed before starting the next feature?
+- Determine whether the broader modified sharing/reminder files are intentional in-progress edits and whether they should be tested or committed with the CopyLinkButton change.
+- Decide whether to keep `memory.md` as a local handoff file or include it in version control.
