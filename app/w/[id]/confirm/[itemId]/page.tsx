@@ -24,7 +24,7 @@ export default async function PurchaseConfirmationPage({
 
   const item = getSharedWishlistItem(wishlist, itemId);
 
-  if (!item || item.origin !== "external") {
+  if (!item || item.origin !== "external" || item.status === "purchased") {
     notFound();
   }
 

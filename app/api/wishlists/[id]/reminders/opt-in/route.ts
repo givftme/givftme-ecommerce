@@ -12,14 +12,12 @@ const INVITE_SELECT =
   "id, wishlist_id, invitee_user_id, invitee_email, reminder_opted_in";
 
 function getOccasionDate(row: unknown) {
-  const wishlist = row as
-    | {
-        occasions?:
-          | { occasion_date?: string | null }
-          | Array<{ occasion_date?: string | null }>
-          | null;
-      }
-    | null;
+  const wishlist = row as {
+    occasions?:
+      | { occasion_date?: string | null }
+      | Array<{ occasion_date?: string | null }>
+      | null;
+  } | null;
   const occasion = Array.isArray(wishlist?.occasions)
     ? wishlist?.occasions[0]
     : wishlist?.occasions;
@@ -29,7 +27,7 @@ function getOccasionDate(row: unknown) {
 
 export async function POST(
   _request: Request,
-  context: PublicReminderOptInRouteContext
+  context: PublicReminderOptInRouteContext,
 ) {
   const { id } = await context.params;
   const supabase = await createClient();
@@ -45,13 +43,11 @@ export async function POST(
     .eq("id", id)
     .maybeSingle();
 
-  const wishlistRow = wishlist as
-    | {
-        id: string;
-        user_id: string;
-        visibility: string;
-      }
-    | null;
+  const wishlistRow = wishlist as {
+    id: string;
+    user_id: string;
+    visibility: string;
+  } | null;
 
   if (wishlistError) {
     return jsonError("Couldn't load wishlist.", 500);
@@ -78,9 +74,17 @@ export async function POST(
       .select(INVITE_SELECT)
       .eq("wishlist_id", id)
       .eq("invitee_email", user.email.toLowerCase())
+      .is("invitee_user_id", null)
       .maybeSingle();
 
-    inviteId = (emailInvite as { id?: string } | null)?.id || null;
+    const matchedId = (emailInvite as { id?: string } | null)?.id || null;
+    if (matchedId) {
+      await supabase
+        .from("wishlist_invites")
+        .update({ invitee_user_id: user.id })
+        .eq("id", matchedId);
+      inviteId = matchedId;
+    }
   }
 
   if (!inviteId) {
@@ -118,7 +122,7 @@ export async function POST(
 
   const { error: optInError } = await supabase.rpc(
     "gifvtme_opt_in_wishlist_invite",
-    { p_invite_id: inviteId }
+    { p_invite_id: inviteId },
   );
 
   if (optInError) {

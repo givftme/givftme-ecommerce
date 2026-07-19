@@ -65,9 +65,9 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/reminders`
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to be called by a scheduled job (Vercel Cron or external scheduler), not the frontend.
-**Purpose:** expires wishlist item intent flags older than 24 hours, then queries `reminders` where `sent = false` and `scheduled_at <= now()`, and processes them.
-**Response:** `{ processed: number }`.
-**Status as of this writing:** marks reminders as sent without actually sending email — the Resend send call is a TODO. Do not assume reminder emails are actually firing until this is completed; check `ROADMAP.md`.
+**Purpose:** expires wishlist item intent flags older than 24 hours, then queries `reminders` where `sent = false` and `scheduled_at <= now()`.
+**Response:** `{ processed: number, deferred: number }`.
+**Status as of this writing:** reminder email/push delivery is intentionally deferred to the Reminders feature. Due reminder rows remain `sent = false` as the handoff queue until a real dispatcher succeeds and marks them sent. Do not assume reminder emails are firing until this is completed; check `ROADMAP.md`.
 
 ## `/api/checkout` (to be built)
 **Method:** POST. **Auth:** required. **Purpose:** initiates a Flutterwave payment for catalog items in the cart.

@@ -44,13 +44,17 @@ export async function scheduleInviteeReminders({
     return;
   }
 
-  await supabase
+  const { error: deleteError } = await supabase
     .from("reminders")
     .delete()
     .eq("user_id", userId)
     .eq("invite_id", inviteId)
     .eq("reminder_type", "invitee")
     .eq("sent", false);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
 
   const { error } = await supabase.from("reminders").insert(reminders);
 

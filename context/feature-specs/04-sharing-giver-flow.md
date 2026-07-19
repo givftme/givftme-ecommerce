@@ -396,44 +396,26 @@ Deletes the `wishlist_invites` row. DB cascade removes associated `reminders` ro
 Server component logic:
 
 ```typescript
-// 1. Try resolving as an invite token
-const { data: invite } = await supabase
-  .from('wishlist_invites')
-  .select('wishlist_id, invitee_user_id')
-  .eq('token', id)
-  .maybeSingle()
+// 1. Resolve the share key through the narrow bearer-token RPC.
+// The RPC tries invite tokens first. If no invite matches, UUID-like keys are
+// treated as direct wishlist IDs and only public wishlists or owner previews
+// can resolve. Private wishlists and invalid tokens return null.
+const { data, error } = await supabase.rpc('gifvtme_get_shared_wishlist', {
+  p_share_key: id
+})
 
-const wishlistId = invite?.wishlist_id ?? id
+if (error || !data) notFound()
 
-// 2. Fetch wishlist with RLS (handles public/friends_family/private access)
-const { data: wishlist } = await supabase
-  .from('wishlists')
-  .select(`
-    id, title, visibility, prices_visible,
-    users!inner(id, full_name, avatar_url),
-    occasions(id, title, occasion_type, occasion_date),
-    wishlist_items_with_status(
-      id, title, image_url, product_url, affiliate_url,
-      price, origin, catalog_product_id, status,
-      is_exclusive, sort_order,
-      intent_flagged_by, intent_flagged_at,
-      affiliate_buyer_id, purchase_id,
-      order_buyer_id, order_id, order_status
-    )
-  `)
-  .eq('id', wishlistId)
-  .single()
+const { wishlist, invite } = normalizeSharedWishlistPayload(data)
 
 if (!wishlist) notFound()
-if (wishlist.visibility === 'private') notFound()
 
-// 3. If authenticated, auto-accept the invite
+// 2. If authenticated, auto-accept the invite through the RPC. Do not update
+// wishlist_invites directly from the server component.
 if (invite && currentUser && !invite.invitee_user_id) {
-  await supabase
-    .from('wishlist_invites')
-    .update({ invitee_user_id: currentUser.id })
-    .eq('token', id)
-    .is('invitee_user_id', null)
+  await supabase.rpc('gifvtme_accept_wishlist_invite', {
+    p_invite_id: invite.id
+  })
 }
 ```
 

@@ -22,7 +22,7 @@ export default async function ClaimedSuccessPage({
 
   const item = getSharedWishlistItem(wishlist, itemId);
 
-  if (!item) {
+  if (!item || item.status !== "purchased") {
     notFound();
   }
 

@@ -33,19 +33,27 @@ export async function sendWishlistInviteEmail({
   }
 
   function escapeHtml(value: string) {
-    return value.replace(/[&<>"']/g, (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&`#39`;" }[char] as string)
-    );
-  }
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&`#39`;",
+      })[char] as string,
+  );
+}
 
   const subject = `${receiverName} shared their wishlist with you`;
   const text = `${receiverName} has invited you to see their wishlist. View it here: ${wishlistUrl}`;
   const html = `
-    <div style="font-family: Inter, Arial, sans-serif; color: `#000000`; line-height: 1.6;">
+    <div style="font-family: Inter, Arial, sans-serif; color: #000000; line-height: 1.6;">
       <p>${escapeHtml(receiverName)} has invited you to see their wishlist.</p>
       <p>Click below to view it.</p>
       <p>
-        <a href="${wishlistUrl}" style="display: inline-block; border-radius: 999px; background: `#C50404`; color: `#ffffff`; padding: 12px 20px; text-decoration: none; font-weight: 600;">
+        <a href="${wishlistUrl}" style="display: inline-block; border-radius: 999px; background: #C50404; color: #ffffff; padding: 12px 20px; text-decoration: none; font-weight: 600;">
           View wishlist
         </a>
       </p>
@@ -66,6 +74,7 @@ export async function sendWishlistInviteEmail({
         text,
         html,
       }),
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {

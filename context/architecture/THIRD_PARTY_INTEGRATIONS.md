@@ -19,7 +19,7 @@
 ## Resend (email)
 
 **Used for:** order status update emails, reminder emails (Flow 1 and Flow 2), thank-you message delivery if email-based.
-**Integration points:** wishlist invite email is sent from `lib/email/resend.ts` when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are configured. Reminder scheduling creates rows in the `reminders` table, but the actual reminder send-via-Resend call is not yet implemented in `/api/reminders`. Do not assume reminder emails are live; check `ROADMAP.md`.
+**Integration points:** wishlist invite email is sent from `lib/email/resend.ts` when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are configured. Reminder scheduling creates rows in the `reminders` table, but the actual reminder send-via-Resend call is not yet implemented in `/api/reminders`; due rows remain unsent as the handoff queue. Do not assume reminder emails are live; check `ROADMAP.md`.
 **Auth:** `RESEND_API_KEY` env var, `RESEND_FROM_EMAIL` for the sender address, plus a verified sender/domain in Resend.
 **Order status emails:** intended to fire on every `order_status_history` insert (see `ERROR_HANDLING.md`) — not yet wired up as of this writing.
 

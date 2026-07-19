@@ -316,8 +316,6 @@ BEGIN
           'id', invite_record.id,
           'wishlist_id', invite_record.wishlist_id,
           'inviter_user_id', invite_record.inviter_user_id,
-          'invitee_email', invite_record.invitee_email,
-          'invitee_phone', invite_record.invitee_phone,
           'invitee_user_id', invite_record.invitee_user_id,
           'token', invite_record.token,
           'reminder_opted_in', invite_record.reminder_opted_in,

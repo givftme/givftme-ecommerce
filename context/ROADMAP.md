@@ -27,7 +27,7 @@ This file should be updated frequently — at minimum every time a feature moves
 - Supabase schema migration 006 file — adds intent flags, invite helper policies/functions, and shared wishlist resolver (must still be applied to the Supabase project)
 
 ### In progress / partially done
-- Reminder system — owner and invitee scheduling logic creates `reminders` rows, but `/api/reminders` marks reminders sent without actually sending email via Resend yet
+- Reminder system — owner and invitee scheduling logic creates `reminders` rows, but `/api/reminders` only leaves due rows queued as deferred handoff until actual email/push delivery is built
 - Context file system (this folder) — being built out
 - Supabase project setup — migrations 003, 004, 005, 006 and the private `wishlist-images` bucket with owner-folder storage policies must be applied/created before wishlist reorder, sharing, auto-creation, and manual image uploads fully work
 
