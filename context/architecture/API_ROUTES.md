@@ -13,9 +13,24 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **POST request:** `{ title?: string, type?: "evergreen" | "occasion" }`. Occasion creation currently returns 400 because occasion wishlists are a later feature; evergreen creation is idempotent.
 
 ## `/api/wishlists/[id]`
-**Method:** PATCH. **Auth:** required, must own wishlist. **Purpose:** updates wishlist title.
-**Request:** `{ title: string }` (1-100 chars). **Response:** `{ wishlist }`.
+**Method:** PATCH. **Auth:** required, must own wishlist. **Purpose:** updates wishlist title, visibility, and price visibility.
+**Request:** partial `{ title?: string, visibility?: "private" | "friends_family" | "public", prices_visible?: boolean }`. **Response:** `{ wishlist }`.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
+
+## `/api/wishlists/[id]/invites`
+**Methods:** GET, POST. **Auth:** required, must own wishlist. **Purpose:** lists invites or invites a viewer by email/phone for friends-and-family sharing.
+**POST request:** `{ invitee_email?: string, invitee_phone?: string }`, requiring one field. Nigerian phone numbers must match `+234...` or local `0...` format.
+**Behavior:** rejects self-invites and duplicates; creates `wishlist_invites` with a DB-generated token; sends a Resend email for email invites when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are configured. If Resend is not configured, the invite row still succeeds and the server logs a warning.
+**Failure shape:** duplicate invites return 409 with `{ error: "You've already invited this person" }`.
+
+## `/api/wishlists/[id]/invites/[inviteId]`
+**Method:** DELETE. **Auth:** required, must own wishlist. **Purpose:** revokes an invite. DB cascades remove associated reminder rows where configured.
+
+## `/api/wishlists/[id]/invites/[inviteId]/opt-in`
+**Method:** POST. **Auth:** required invitee. **Purpose:** opts an invite-based viewer into Flow 2 reminders and schedules 14-day/3-day invitee reminders when the wishlist has a future occasion date.
+
+## `/api/wishlists/[id]/reminders/opt-in`
+**Method:** POST. **Auth:** required. **Purpose:** public-wishlist reminder opt-in. Creates or reuses a `wishlist_invites` row for the authenticated viewer, marks `reminder_opted_in = true`, then schedules invitee reminders.
 
 ## `/api/wishlists/[id]/items`
 **Methods:** GET, POST. **Auth:** required, must own wishlist. **Purpose:** lists or creates wishlist items.
@@ -34,6 +49,11 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Request:** `{ ordered_ids: string[] }`. **Dependency:** requires `gifvtme_migration_003.sql` to be applied so `wishlist_items.sort_order` exists.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
+## `/api/wishlists/items/[itemId]/flag-intent`
+**Methods:** POST, DELETE. **Auth:** required. **Purpose:** giver advisory intent flag.
+**POST behavior:** calls the narrow DB helper `gifvtme_flag_wishlist_item_intent`, which only sets `intent_flagged_by` and `intent_flagged_at` when the item is available, readable by the giver, and not already flagged. Already-flagged items return 409.
+**DELETE behavior:** clears the flag only when the current user is the flagger.
+
 ## `/api/occasions`
 **Methods:** GET, POST. **Auth:** required. **Purpose:** lists the current user's occasions and creates occasion wishlists.
 **POST request:** `{ title, occasion_type, occasion_date, pulled_item_ids?, exclusive_items? }`. Creation writes the occasion, linked wishlist, pulled wishlist items, and exclusive wishlist items through a single database transaction before non-blocking reminder scheduling.
@@ -45,7 +65,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/reminders`
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to be called by a scheduled job (Vercel Cron or external scheduler), not the frontend.
-**Purpose:** queries `reminders` where `sent = false` and `scheduled_at <= now()`, and processes them.
+**Purpose:** expires wishlist item intent flags older than 24 hours, then queries `reminders` where `sent = false` and `scheduled_at <= now()`, and processes them.
 **Response:** `{ processed: number }`.
 **Status as of this writing:** marks reminders as sent without actually sending email — the Resend send call is a TODO. Do not assume reminder emails are actually firing until this is completed; check `ROADMAP.md`.
 
@@ -62,8 +82,10 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 ## `/api/orders/[id]/status` (to be built)
 **Method:** PATCH. **Auth:** intended for Retool (service role), not customer-facing. **Purpose:** updates an order's status; relies on the `on_order_status_changed` trigger to log to `order_status_history` automatically. Consider whether this needs to exist as a Next.js route at all, since Retool can write to Supabase directly — only build this if Retool's direct-write approach proves insufficient (e.g. if you need to trigger a Resend email synchronously on status change).
 
-## `/api/purchases` (to be built)
-**Method:** POST. **Auth:** required. **Purpose:** the external-flow "mark as purchased" action — creates a `purchases` row after a giver confirms they completed an affiliate purchase. The `on_purchase_created` trigger handles marking the item itself; this route just needs to insert the row and trigger the automated thank-you message.
+## `/api/purchases`
+**Method:** POST. **Auth:** required. **Purpose:** the external-flow "mark as purchased" action — creates a `purchases` row after a giver confirms they completed an affiliate purchase.
+**Request:** `{ wishlist_item_id: string }`.
+**Behavior:** verifies the item exists, is still available, and has `origin = "external"`; inserts `{ wishlist_item_id, buyer_id }`. The `on_purchase_created` DB trigger handles marking the item/master item purchased and creating the automated thank-you record. Unique-constraint races return 409 with a user-friendly message.
 
 ## `/api/reviews` (to be built)
 **Method:** POST. **Auth:** required. **Purpose:** create a review. Must verify the user has a completed order containing the referenced `catalog_product_id` before allowing the insert (business rule #13) — this check should happen in the route handler, not rely solely on RLS, since the verified-purchase logic is more complex than a simple ownership check.

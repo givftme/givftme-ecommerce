@@ -28,7 +28,9 @@ Mirrors `.env.local.example` at the project root. Update both files together whe
 | `RESEND_API_KEY` | **No — secret** | From resend.com dashboard |
 | `RESEND_FROM_EMAIL` | No (server-only, not secret but not exposed) | Sender address for all transactional email |
 
-**If missing:** reminder emails, order status emails, and thank-you message emails cannot send (though as of this writing the actual send call isn't implemented yet — see `THIRD_PARTY_INTEGRATIONS.md`).
+**If missing:** wishlist invite creation still succeeds but logs that the invite email was not sent. Reminder emails, order status emails, and thank-you message emails cannot send.
+
+**Resend dashboard dependency:** `RESEND_FROM_EMAIL` must belong to a verified sender/domain in Resend before invite delivery works in production.
 
 ## Microlink
 
@@ -64,7 +66,7 @@ Not yet in `.env.local.example` as of this writing. Will need a secret key for i
 
 | Variable | Public? | Description |
 |---|---|---|
-| `CRON_SECRET` | **No — secret** | Shared bearer token for cron-protected routes such as `/api/occasions/archive` and the planned `/api/reminders` processor. |
+| `CRON_SECRET` | **No — secret** | Shared bearer token for cron-protected routes such as `/api/occasions/archive` and `/api/reminders`. |
 
 **If missing:** cron-protected routes return an error and refuse to run.
 

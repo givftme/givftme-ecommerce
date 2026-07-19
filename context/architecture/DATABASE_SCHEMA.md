@@ -21,7 +21,7 @@ Birthday, wedding, anniversary, etc. `status` (`active`/`archived`) plus `archiv
 `type` (`evergreen`/`occasion`), `occasion_id` (nullable — only set for occasion-type lists), `visibility` (`private`/`friends_family`/`public`), `prices_visible` (the single global price toggle — there is no item-level visibility). A user has at most one evergreen wishlist, enforced by a partial unique constraint.
 
 ### `wishlist_items`
-The core item table. Key fields: `origin`, `catalog_product_id` (Sanity `_id`, only for catalog origin), `product_url`/`affiliate_url` (only for external origin), `master_item_id` (nullable link back to `master_items` when an occasion pulls from evergreen; added by migration 005), `gifting_type` (`individual`/`group` — reserved for v2, never wired to payment in v1), `status` (`available`/`purchased`/`archived`), `is_exclusive` (true if this item belongs only to an occasion, not pulled from evergreen), and `sort_order` (added by migration 003 for manual ordering). Migration 005 enforces one pulled item row per `(wishlist_id, master_item_id)` when `master_item_id` is set.
+The core item table. Key fields: `origin`, `catalog_product_id` (Sanity `_id`, only for catalog origin), `product_url`/`affiliate_url` (only for external origin), `master_item_id` (nullable link back to `master_items` when an occasion pulls from evergreen; added by migration 005), `gifting_type` (`individual`/`group` — reserved for v2, never wired to payment in v1), `status` (`available`/`purchased`/`archived`), `is_exclusive` (true if this item belongs only to an occasion, not pulled from evergreen), and `sort_order` (added by migration 003 for manual ordering). Migration 005 enforces one pulled item row per `(wishlist_id, master_item_id)` when `master_item_id` is set. Migration 006 adds `intent_flagged_by` and `intent_flagged_at` for the 24-hour advisory "someone is buying this" flag.
 
 ### `purchases`
 Records affiliate-flow purchases only. `wishlist_item_id` has a unique constraint (`one_purchase_per_item`) — this is the database-level enforcement of business rule #1. No payment data lives here; it's purely a "this was claimed" record. Migration 004 now backfills `created_at` if the original remote table is missing it, because `wishlist_items_with_status` exposes that timestamp as `affiliate_purchased_at`. The `on_purchase_created` trigger marks the item (and linked master item) as purchased automatically.
@@ -39,7 +39,7 @@ Append-only log, auto-populated by the `on_order_status_changed` trigger wheneve
 References either `purchase_id` (external flow) or `order_id` (catalog flow) — exactly one must be set, enforced by a check constraint. `type` is `auto` or `personal`.
 
 ### `wishlist_invites`
-Tracks who's been invited to view a wishlist. `token` is the public sharing token (used in `/w/[token]` URLs). `reminder_opted_in` is the explicit opt-in flag for Flow 2 reminders — never default this to true.
+Tracks who's been invited to view a wishlist. `token` is the invite-specific sharing token (used in `/w/[token]` URLs). `invitee_email`, `invitee_phone`, and `invitee_user_id` identify the invitee; `reminder_opted_in` is the explicit opt-in flag for Flow 2 reminders — never default this to true. Migration 006 adds/repairs invite metadata columns and unique indexes for token, per-wishlist email, per-wishlist phone, and per-wishlist invitee user.
 
 ### `important_dates`
 The receiver's personal calendar of *other* people's occasions (Flow 1 reminders). `linked_wishlist_id` is optional — set if that person also has a Gifvtme wishlist.
@@ -54,7 +54,15 @@ Reserved for v2. `wishlist_item_id` unique constraint (one pool per item). No RL
 Will need: `id`, `user_id`, `catalog_product_id` (Sanity reference), `order_item_id` (to enforce verified-purchase gating per business rule #13), `rating` (1–5), `body`, `created_at`. Unique constraint on `(user_id, catalog_product_id)` to enforce business rule #14 (one review per product per user).
 
 ### View: `wishlist_items_with_status`
-Joins `wishlist_items` against both `purchases` (external flow) and `orders` (catalog flow, excluding `pending_payment`/`payment_failed`/`cancelled` statuses) so the frontend can determine purchased state regardless of which flow an item went through, without needing to know which table to check. Migration 004 recreates this view with the dashboard item fields the app selects, including `description` and `sort_order`; migration 005 adds `master_item_id` to the view for occasion wishlist sections. The anon-readable view exposes purchase status metadata, but not raw buyer, purchase, or order identifiers. The view filters rows through `gifvtme_can_read_wishlist_by_id(wishlist_id)` so wishlist visibility rules still apply to direct view reads.
+Joins `wishlist_items` against both `purchases` (external flow) and `orders` (catalog flow, excluding `pending_payment`/`payment_failed`/`cancelled` statuses) so the frontend can determine purchased state regardless of which flow an item went through, without needing to know which table to check. Migration 004 recreates this view with the dashboard item fields the app selects, including `description` and `sort_order`; migration 005 adds `master_item_id` to the view for occasion wishlist sections; migration 006 adds `intent_flagged_by` and `intent_flagged_at`. The anon-readable view exposes purchase status metadata, but not raw buyer, purchase, or order identifiers. The view filters rows through `gifvtme_can_read_wishlist_by_id(wishlist_id)` so wishlist visibility rules still apply to direct view reads.
+
+### Sharing helper functions
+Migration 006 adds narrow security-definer functions used through the regular Supabase client:
+
+- `gifvtme_get_shared_wishlist(share_key)` resolves `/w/[id]` as an invite token or public wishlist ID and returns only the shared wishlist payload allowed by that key.
+- `gifvtme_accept_wishlist_invite(invite_id)` claims an invite for the authenticated viewer after login.
+- `gifvtme_flag_wishlist_item_intent(item_id)` and `gifvtme_clear_wishlist_item_intent(item_id)` only mutate the two intent flag columns.
+- `gifvtme_opt_in_wishlist_invite(invite_id)` marks explicit Flow 2 reminder opt-in without granting broad invite-row update rights.
 
 ## Supabase Storage
 

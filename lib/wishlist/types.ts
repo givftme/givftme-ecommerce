@@ -29,6 +29,8 @@ export interface WishlistItem {
   is_exclusive: boolean;
   sort_order: number;
   created_at: string | null;
+  intent_flagged_by?: string | null;
+  intent_flagged_at?: string | null;
   affiliate_purchased_at?: string | null;
   order_status?: string | null;
   buyer_name?: string | null;
@@ -41,4 +43,43 @@ export interface WishlistDetail {
   visibility: WishlistVisibility;
   prices_visible: boolean;
   items: WishlistItem[];
+}
+
+export interface WishlistInvite {
+  id: string;
+  wishlist_id: string;
+  inviter_user_id: string | null;
+  invitee_email: string | null;
+  invitee_phone: string | null;
+  invitee_user_id: string | null;
+  token: string;
+  reminder_opted_in: boolean;
+  accepted_at: string | null;
+  created_at: string | null;
+}
+
+export interface SharedWishlistOwner {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface SharedWishlistOccasion {
+  id: string;
+  title: string;
+  occasion_type: string | null;
+  occasion_date: string | null;
+}
+
+export interface SharedWishlist {
+  id: string;
+  title: string;
+  visibility: WishlistVisibility;
+  prices_visible: boolean;
+  owner: SharedWishlistOwner;
+  occasion: SharedWishlistOccasion | null;
+  items: WishlistItem[];
+  invite: WishlistInvite | null;
+  share_id: string;
+  viewer_is_owner: boolean;
 }

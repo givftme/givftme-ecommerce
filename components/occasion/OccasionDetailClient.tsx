@@ -23,6 +23,7 @@ import { OccasionHero } from "@/components/occasion/OccasionHero";
 import { OccasionTypeSelector } from "@/components/occasion/OccasionTypeSelector";
 import { PullFromEvergreen } from "@/components/occasion/PullFromEvergreen";
 import { ReactivationPrompt } from "@/components/occasion/ReactivationPrompt";
+import { ShareSettingsSheet } from "@/components/wishlist/ShareSettingsSheet";
 import { OCCASION_LABELS } from "@/lib/occasion/constants";
 import type { OccasionDetail, OccasionRecord, OccasionType } from "@/lib/occasion/types";
 import {
@@ -190,6 +191,7 @@ export function OccasionDetailClient({
   const [menuOpen, setMenuOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [addExclusiveOpen, setAddExclusiveOpen] = useState(false);
   const [addPulledOpen, setAddPulledOpen] = useState(false);
   const [selectedPulledIds, setSelectedPulledIds] = useState<string[]>([]);
@@ -393,10 +395,7 @@ export function OccasionDetailClient({
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
-                  toast({
-                    title: "Sharing is coming soon.",
-                    description: "The sharing flow arrives in the next spec.",
-                  });
+                  setShareOpen(true);
                 }}
                 className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-ink hover:bg-brand-light hover:text-brand"
               >
@@ -501,6 +500,15 @@ export function OccasionDetailClient({
           setOccasion(updated);
           router.refresh();
         }}
+      />
+
+      <ShareSettingsSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        wishlistId={detail.wishlist.id}
+        initialVisibility={detail.wishlist.visibility}
+        initialPricesVisible={detail.wishlist.prices_visible}
+        occasionTitle={occasion.title}
       />
 
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Gift, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { buttonVariants } from "@/components/ui/Button";
-import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 import type { WishlistSummary } from "@/lib/wishlist/types";
+import { ShareSettingsSheet } from "@/components/wishlist/ShareSettingsSheet";
 import { WishlistTitleEditor } from "@/components/wishlist/WishlistTitleEditor";
 
 export function WishlistCard({ wishlist }: { wishlist: WishlistSummary }) {
-  const { toast } = useToast();
+  const [shareOpen, setShareOpen] = useState(false);
 
   return (
     <section className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
@@ -48,13 +49,21 @@ export function WishlistCard({ wishlist }: { wishlist: WishlistSummary }) {
         </Link>
         <button
           type="button"
-          onClick={() => toast({ title: "Sharing coming soon." })}
+          onClick={() => setShareOpen(true)}
           className={cn(buttonVariants({ variant: "ghost" }), "h-11")}
         >
           <Share2 className="h-4 w-4" />
           Share
         </button>
       </div>
+
+      <ShareSettingsSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        wishlistId={wishlist.id}
+        initialVisibility={wishlist.visibility}
+        initialPricesVisible={wishlist.prices_visible}
+      />
     </section>
   );
 }

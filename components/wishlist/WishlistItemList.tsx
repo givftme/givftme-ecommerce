@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MoreHorizontal, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Share2 } from "lucide-react";
 import Link from "next/link";
 import gsap from "gsap";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +20,7 @@ import { AddItemSheet } from "@/components/wishlist/AddItemSheet";
 import { EditItemSheet } from "@/components/wishlist/EditItemSheet";
 import { EmptyWishlist } from "@/components/wishlist/EmptyWishlist";
 import { WishlistItemCard } from "@/components/wishlist/WishlistItemCard";
+import { ShareSettingsSheet } from "@/components/wishlist/ShareSettingsSheet";
 import { WishlistTitleEditor } from "@/components/wishlist/WishlistTitleEditor";
 
 function sortItems(items: WishlistItem[]) {
@@ -58,6 +59,7 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
   const [reorderMode, setReorderMode] = useState(false);
   const [savedOrder, setSavedOrder] = useState(items);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const sortedItems = useMemo(() => sortItems(items), [items]);
   const availableItems = useMemo(
@@ -202,16 +204,11 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
 
           <button
             type="button"
-            aria-label="Wishlist menu"
-            onClick={() =>
-              toast({
-                title: "Wishlist settings coming soon.",
-                description: "Sharing and visibility controls are part of the next spec.",
-              })
-            }
+            aria-label="Share wishlist"
+            onClick={() => setShareOpen(true)}
             className="flex h-10 w-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-brand-light hover:text-brand"
           >
-            <MoreHorizontal className="h-5 w-5" />
+            <Share2 className="h-5 w-5" />
           </button>
         </header>
 
@@ -306,6 +303,14 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
         }}
         onItemUpdated={handleItemUpdated}
         onItemDeleted={removeItemFromState}
+      />
+
+      <ShareSettingsSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        wishlistId={wishlist.id}
+        initialVisibility={wishlist.visibility}
+        initialPricesVisible={wishlist.prices_visible}
       />
 
       <Dialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>

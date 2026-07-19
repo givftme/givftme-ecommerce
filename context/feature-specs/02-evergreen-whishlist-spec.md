@@ -117,7 +117,7 @@ User long-presses an item (mobile) or drags the handle (desktop)
 - Item count: "X items" below the title
 - Two CTAs side by side:
   - "View wishlist" (filled, brand red) → navigates to `/wishlists/[id]`
-  - "Share" (ghost) → opens the share sheet (stub for now — the sharing feature comes later; just show a toast "Sharing coming soon")
+  - "Share" (ghost) → opens the real share settings sheet from the sharing feature
 - If 0 items: show a soft prompt inside the card "Add things you'd love to receive"
 
 **Occasion wishlists section:**
@@ -799,6 +799,6 @@ Do not implement these — they come in later feature specs:
 
 - Sharing the wishlist (visibility settings, invite by email) — comes in the Sharing feature
 - Pulling items into an occasion — comes in the Occasion Wishlist feature
-- Viewing the wishlist as a giver — comes in the Shared Wishlist View feature
+- Viewing the wishlist as a giver — implemented by the Sharing & Giver Flow feature
 - Adding catalog items from the Gifvtme store — comes in the Gift Museum feature
 - The occasion wishlist card on the dashboard — stub the section with an empty state only

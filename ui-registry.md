@@ -159,3 +159,83 @@ Last updated: 2026-07-10
 
 **Pattern notes:**
 Toasts are compact feedback panels fixed above the mobile bottom nav and at bottom-right on desktop. Keep them informational, not decorative; use semantic color sparingly.
+
+### Share Settings Sheet
+
+File: components/wishlist/ShareSettingsSheet.tsx
+Last updated: 2026-07-19
+
+| Property         | Class                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| Background       | sheet `bg-white`, selected option `bg-brand-light`, setting rows `bg-surface`          |
+| Border           | sheet/card `border border-stone-100`, selected option `border-brand`                   |
+| Border radius    | sheet mobile `rounded-t-2xl`, desktop `rounded-2xl`, options `rounded-2xl`             |
+| Text — primary   | `text-sm font-semibold text-ink`, sheet title inherited `text-lg font-semibold`        |
+| Text — secondary | `text-xs text-muted`, helper/link text `text-sm text-muted`                            |
+| Spacing          | sheet `p-6`, sections `space-y-7`, cards `p-4`, invite rows `p-3`                      |
+| Hover state      | option `hover:bg-brand-light`, remove `hover:bg-red-50 hover:text-red-600`             |
+| Shadow           | inherited sheet `shadow-lg`                                                           |
+| Accent usage     | lucide icons `text-brand`, selected card `border-brand bg-brand-light`, brand CTAs     |
+
+**Pattern notes:**
+Share settings follows existing wishlist sheet density: compact sections, rounded-xl inputs, pill buttons, and restrained status rows. Friends-and-family links are invite-token-specific, so empty token states use muted helper copy instead of disabled-looking form controls.
+
+### Shared Wishlist Cards
+
+File: components/wishlist/SharedWishlistItem.tsx
+Last updated: 2026-07-19
+
+| Property         | Class                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| Background       | card `bg-white`, thumbnail fallback `bg-surface`, source badge `bg-surface`            |
+| Border           | `border border-stone-100`                                                              |
+| Border radius    | card `rounded-2xl`, thumbnail/status `rounded-xl`/`rounded-full`                       |
+| Text — primary   | title `text-sm font-medium leading-5 text-ink`, price `text-sm font-semibold text-ink` |
+| Text — secondary | source/status badge `text-xs font-medium text-muted`                                   |
+| Spacing          | card `p-4`, row `gap-3`, metadata `mt-2 gap-2`                                         |
+| Hover state      | title `hover:text-brand`, inactive filters elsewhere `hover:bg-brand-light`            |
+| Shadow           | `shadow-sm`                                                                            |
+| Accent usage     | available `bg-green-50 text-green-700`, claimed opacity, brand buy CTA                 |
+
+**Pattern notes:**
+Giver-facing item cards mirror dashboard wishlist cards but remove edit controls and prioritize the buy/claimed state. Price rendering must be omitted entirely when `prices_visible` is false.
+
+### Shared Wishlist Header
+
+File: components/wishlist/SharedWishlistHeader.tsx
+Last updated: 2026-07-19
+
+| Property         | Class                                                               |
+| ---------------- | ------------------------------------------------------------------- |
+| Background       | `bg-brand`, avatar fallback `bg-brand-light`/`bg-surface` variants |
+| Border           | none                                                                |
+| Border radius    | desktop header `rounded-2xl`, avatar `rounded-full`                 |
+| Text — primary   | `text-white`, name `text-xl font-bold`                              |
+| Text — secondary | `text-white/70`, countdown `text-sm text-white`                     |
+| Spacing          | mobile `px-4 pb-6 pt-8`, desktop `p-6`, content `gap-3`             |
+| Hover state      | none                                                                |
+| Shadow           | none                                                                |
+| Accent usage     | full brand-red panel with white text                                |
+
+**Pattern notes:**
+The shared wishlist header is the first-viewport brand signal for giver pages. Keep it compact and informational, not hero-like; on desktop it becomes a sticky sidebar panel.
+
+### Claimed Success
+
+File: components/wishlist/GiftClaimedSuccess.tsx
+Last updated: 2026-07-19
+
+| Property         | Class                                                                         |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Background       | page `bg-white`, icon circle `bg-brand-light`, reminder card `bg-white`       |
+| Border           | reminder card `border border-stone-100`                                       |
+| Border radius    | icon `rounded-full`, reminder card `rounded-2xl`                              |
+| Text — primary   | headline `text-3xl font-bold text-ink`, reminder title `text-sm font-semibold` |
+| Text — secondary | body `text-sm leading-6 text-muted`, reminder subcopy `text-xs leading-5`     |
+| Spacing          | page `px-4 py-10`, stack `space-y-6`, reminder `p-4`                          |
+| Hover state      | footer CTA uses ghost button `hover:bg-brand-light`                           |
+| Shadow           | reminder `shadow-sm`                                                          |
+| Accent usage     | success icon `text-brand`, primary opt-in CTA                                 |
+
+**Pattern notes:**
+Success screens should stay centered and calm, with a single large brand-light icon treatment and compact supporting cards underneath.
