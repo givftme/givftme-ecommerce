@@ -83,6 +83,9 @@ export function useCartPriceRefresh() {
     [items]
   );
 
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   useEffect(() => {
     if (cartProductIds.length === 0) {
       return;
@@ -112,7 +115,7 @@ export function useCartPriceRefresh() {
         const changedTitles: string[] = [];
         const saleEndedTitles: string[] = [];
 
-        for (const line of items) {
+        for (const line of itemsRef.current) {
           const product = byId.get(line.catalog_product_id) ?? null;
           const unavailableReason = getLineUnavailableReason(line, product);
 
@@ -188,7 +191,7 @@ export function useCartPriceRefresh() {
       window.clearTimeout(loadingTimeout);
       controller.abort();
     };
-  }, [cartProductIds, items, updateItemDetails]);
+  }, [cartProductIds, updateItemDetails]);
 
   return {
     recommendedProducts: cartProductIds.length > 0 ? recommendedProducts : [],
