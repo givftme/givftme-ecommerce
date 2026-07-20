@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart, type CartItem } from "@/components/cart/CartContext";
 import {
   getActivePrice,
@@ -84,7 +84,10 @@ export function useCartPriceRefresh() {
   );
 
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     if (cartProductIds.length === 0) {
