@@ -4,6 +4,8 @@ import { ProductCard, type ProductCardData } from "@/components/product/ProductC
 export interface ProductGridProps {
   products: ProductCardData[];
   onToggleWishlist?: (id: string) => void;
+  onAddToWishlist?: (product: ProductCardData) => void;
+  onAddToCart?: (product: ProductCardData) => void;
   wishlistedIds?: Set<string>;
   showBadges?: boolean;
   emptyMessage?: string;
@@ -13,6 +15,8 @@ export interface ProductGridProps {
 export function ProductGrid({
   products,
   onToggleWishlist,
+  onAddToWishlist,
+  onAddToCart,
   wishlistedIds,
   showBadges,
   emptyMessage = "No products to show yet.",
@@ -34,8 +38,11 @@ export function ProductGrid({
           key={product.id}
           product={product}
           onToggleWishlist={onToggleWishlist}
+          onAddToWishlist={onAddToWishlist}
+          onAddToCart={onAddToCart}
           isWishlisted={wishlistedIds?.has(product.id)}
           showBadges={showBadges}
+          className="catalog-product-card"
         />
       ))}
     </div>

@@ -239,3 +239,103 @@ Last updated: 2026-07-19
 
 **Pattern notes:**
 Success screens should stay centered and calm, with a single large brand-light icon treatment and compact supporting cards underneath.
+
+### Catalog Product Card
+
+File: components/product/ProductCard.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Background       | image shell `bg-surface`, card body transparent                                       |
+| Border           | none on card, image action buttons use implicit white surface                         |
+| Border radius    | image `rounded-2xl`, icon buttons `rounded-full`                                      |
+| Text — primary   | title `font-medium text-ink`, price via `PriceDisplay`                                |
+| Text — secondary | subtitle `text-sm text-muted`, missing price `text-sm font-semibold text-muted`       |
+| Spacing          | body `mt-3 space-y-1`, overlay `px-3 pb-3 pt-10`, action gap `gap-2`                  |
+| Hover state      | title `hover:text-brand`, overlay `group-hover:opacity-100`, image controls visible   |
+| Shadow           | wishlist icon `shadow-sm`                                                             |
+| Accent usage     | sale `Badge`, `bg-ink` hover cart CTA, brand hover states                             |
+
+**Pattern notes:**
+Catalog cards keep product photography dominant and reserve cards/shadows for the interactive controls. Product titles clamp to two lines and missing prices render as muted text rather than fake currency.
+
+### Product Detail Surface
+
+File: components/product/ProductDetail.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Background       | page `bg-white`, info panels `bg-white`, helper panels `bg-surface`                  |
+| Border           | panels `border border-stone-100`, tabs `border-b border-stone-100`                   |
+| Border radius    | panels/images `rounded-2xl`, sale timer `rounded-xl`, controls `rounded-full`        |
+| Text — primary   | title `text-3xl font-bold text-ink`, labels `text-sm font-semibold text-ink`         |
+| Text — secondary | body/meta `text-sm text-muted`, description `text-sm leading-7 text-muted`           |
+| Spacing          | page `px-4 py-10`, columns `gap-10`, right rail `space-y-6`, panel `p-4`/`p-5`       |
+| Hover state      | text links `hover:text-brand`, button variants from `Button`                         |
+| Shadow           | info/review cards `shadow-sm`                                                        |
+| Accent usage     | brand CTAs, `bg-brand-light text-brand` timer/highlight, amber stars                 |
+
+**Pattern notes:**
+Product detail uses a two-column desktop layout and stacked mobile layout. Interactive catalog controls stay in compact bordered panels, while brand red is reserved for sale state and primary actions.
+
+### Product Explorer
+
+File: components/collection/ProductExplorer.tsx, components/collection/FilterSheet.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Background       | sidebar/card `bg-white`, checkbox rows `bg-surface`                                |
+| Border           | `border border-stone-100`, inputs/selects `border-stone-200`                       |
+| Border radius    | sidebar/cards `rounded-2xl`, filters `rounded-xl`, toolbar controls `rounded-full` |
+| Text — primary   | headings `text-sm font-semibold text-ink`, toolbar value `text-sm font-medium`     |
+| Text — secondary | result/filter copy `text-sm text-muted`, helper labels `text-xs font-medium`       |
+| Spacing          | sidebar `p-5`, controls `space-y-6`, toolbar `gap-3`, list cards `p-4`             |
+| Hover state      | view toggles active `bg-brand text-white`, links `hover:text-brand`                |
+| Shadow           | sidebar/list cards `shadow-sm`                                                     |
+| Accent usage     | brand active toggles, brand focus rings, brand filter CTA                          |
+
+**Pattern notes:**
+Catalog listing controls are utilitarian and compact. Mobile filters use the shared bottom sheet; desktop filters sit in a fixed-width left sidebar with the same input language.
+
+### Museum Cards
+
+File: components/occasion/MuseumOccasionCard.tsx, components/collection/CollectionCard.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Background       | card `bg-white`, image fallback `bg-surface`, emoji chip `bg-white`                |
+| Border           | `border border-stone-100`, hover `hover:border-brand/40`                           |
+| Border radius    | cards/images `rounded-2xl`, emoji chip `rounded-full`                              |
+| Text — primary   | titles `text-base font-semibold text-ink`                                          |
+| Text — secondary | descriptions/counts `text-sm text-muted`, collection description `leading-6`       |
+| Spacing          | occasion card `p-4`, collection text `mt-4 space-y-2`, grids `gap-6`/`gap-8`       |
+| Hover state      | image `group-hover:scale-105`, title/link `group-hover:text-brand`                 |
+| Shadow           | occasion cards `shadow-sm`, emoji chip `shadow-sm`                                |
+| Accent usage     | featured/sale `Badge`, brand text link                                             |
+
+**Pattern notes:**
+Museum cards are editorial but restrained: large real images when available, neutral fallbacks, and small brand accents. They should not become marketing hero cards.
+
+### Newsletter Signup
+
+File: components/shared/NewsletterSignup.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| Background       | section `bg-surface`, panel `bg-white`, icon tile `bg-brand-light`                 |
+| Border           | panel `border border-stone-100`                                                    |
+| Border radius    | panel `rounded-2xl`, icon tile `rounded-full`, input inherited `rounded-xl`        |
+| Text — primary   | heading `text-xl font-semibold text-ink`                                           |
+| Text — secondary | supporting copy `text-sm leading-6 text-muted`, errors `text-xs text-brand`        |
+| Spacing          | section `py-12`, panel `p-6`, content `gap-6`, form `gap-2`                        |
+| Hover state      | button variants from `Button`                                                      |
+| Shadow           | panel `shadow-sm`                                                                  |
+| Accent usage     | brand icon tile, brand error text, success/danger toasts                           |
+
+**Pattern notes:**
+Newsletter capture is a compact CTA panel, not a marketing landing section. It keeps the same rounded input/button language as auth and wishlist sheets.

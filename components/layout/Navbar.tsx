@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,7 +14,11 @@ import {
   User,
   X,
 } from "lucide-react";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/utils";
+
+gsap.registerPlugin(useGSAP);
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -28,17 +32,23 @@ const navLinks = [
 
 export interface NavbarProps {
   cartCount?: number;
+  cartPulseKey?: number;
   userName?: string;
   isAuthenticated?: boolean;
+  searchQuery?: string;
 }
 
 export function Navbar({
   cartCount = 0,
+  cartPulseKey = 0,
   userName,
   isAuthenticated = false,
+  searchQuery,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
+  const desktopCartRef = useRef<HTMLAnchorElement>(null);
+  const mobileCartRef = useRef<HTMLAnchorElement>(null);
   const accountHref = isAuthenticated ? "/account" : "/login";
   const accountPrimaryLabel = userName
     ? `Welcome, ${userName}`
@@ -47,15 +57,33 @@ export function Navbar({
       : "Welcome";
   const accountSecondaryLabel = isAuthenticated ? "My Account" : "Sign In / Log In";
 
+  useGSAP(
+    () => {
+      if (cartPulseKey === 0) {
+        return;
+      }
+
+      const targets = [desktopCartRef.current, mobileCartRef.current].filter(Boolean);
+      gsap.to(targets, {
+        scale: 1.12,
+        duration: 0.18,
+        yoyo: true,
+        repeat: 1,
+        ease: "power2.out",
+      });
+    },
+    { dependencies: [cartPulseKey] }
+  );
+
   return (
     <header className="sticky top-0 z-50 bg-white">
       <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4 lg:px-8">
         <Link href="/" className="shrink-0">
-          <Image src="/logo.png" alt="Gifvtme" width={132} height={44} priority />
+          <Image src="/logo.png" alt="Gifvtme" width={132} height={44} preload />
         </Link>
 
         <form
-          action="/shop"
+          action="/search"
           method="get"
           role="search"
           className="hidden flex-1 md:block"
@@ -68,6 +96,7 @@ export function Navbar({
               id="navbar-search"
               name="q"
               type="search"
+              defaultValue={searchQuery}
               placeholder="Electronic blender"
               className="h-11 w-full rounded-full border border-stone-200 bg-white pl-5 pr-12 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
             />
@@ -107,6 +136,7 @@ export function Navbar({
           </Link>
 
           <Link
+            ref={desktopCartRef}
             href="/cart"
             className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
           >
@@ -120,7 +150,12 @@ export function Navbar({
         </div>
 
         <div className="ml-auto flex items-center gap-4 md:hidden">
-          <Link href="/cart" aria-label="Cart" className="relative text-ink">
+          <Link
+            ref={mobileCartRef}
+            href="/cart"
+            aria-label="Cart"
+            className="relative text-ink"
+          >
             <ShoppingCart className="h-6 w-6" strokeWidth={1.5} />
             {cartCount > 0 && (
               <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[10px] text-white">

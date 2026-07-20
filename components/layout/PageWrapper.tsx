@@ -1,8 +1,6 @@
 import { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { PublicPageShell } from "@/components/layout/PublicPageShell";
 import { createClient } from "@/lib/supabase/server";
 
 export interface PageWrapperProps {
@@ -10,6 +8,7 @@ export interface PageWrapperProps {
   cartCount?: number;
   userName?: string;
   isAuthenticated?: boolean;
+  searchQuery?: string;
 }
 
 function getMetadataString(metadata: Record<string, unknown>, key: string) {
@@ -37,9 +36,9 @@ function getUserDisplayName(user: User | null) {
 
 export async function PageWrapper({
   children,
-  cartCount,
   userName,
   isAuthenticated,
+  searchQuery,
 }: PageWrapperProps) {
   const supabase = await createClient();
   const {
@@ -49,15 +48,12 @@ export async function PageWrapper({
   const resolvedUserName = userName ?? getUserDisplayName(user);
 
   return (
-    <>
-      <Navbar
-        cartCount={cartCount}
-        userName={resolvedUserName}
-        isAuthenticated={resolvedIsAuthenticated}
-      />
-      <main className="flex-1 pb-16 md:pb-0">{children}</main>
-      <Footer />
-      <MobileBottomNav />
-    </>
+    <PublicPageShell
+      userName={resolvedUserName}
+      isAuthenticated={resolvedIsAuthenticated}
+      searchQuery={searchQuery}
+    >
+      {children}
+    </PublicPageShell>
   );
 }

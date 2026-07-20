@@ -1,135 +1,72 @@
 import { PageWrapper } from "@/components/layout/PageWrapper";
+import { FlashSaleBanner } from "@/components/flash-sale/FlashSaleBanner";
 import { Hero } from "@/app/_components/home/Hero";
 import { OccasionCategories, type OccasionCategory } from "@/app/_components/home/OccasionCategories";
 import { ProductSection } from "@/app/_components/home/ProductSection";
-import type { ProductCardData } from "@/components/product/ProductCard";
+import { TrustBadges } from "@/app/_components/home/TrustBadges";
+import { NewsletterSignup } from "@/components/shared/NewsletterSignup";
+import { TrackView } from "@/components/shared/TrackView";
+import {
+  normalizeOccasion,
+  normalizeProductCards,
+} from "@/lib/sanity/catalog";
+import { sanityFetch } from "@/lib/sanity/fetch";
+import {
+  FEATURED_PRODUCTS_QUERY,
+  FLASH_SALE_PRODUCTS_QUERY,
+  NEW_PRODUCTS_QUERY,
+  OCCASIONS_QUERY,
+} from "@/lib/sanity/queries";
+import type { MuseumOccasion, ProductCardData } from "@/lib/sanity/types";
 
-// Placeholder content until the Sanity catalog client and GROQ queries
-// (lib/sanity/queries.ts, per ROADMAP.md "Not started") are wired up.
-const occasions: OccasionCategory[] = [
-  { slug: "birthdays", name: "Birthdays", itemCount: 32 },
-  { slug: "weddings", name: "Weddings", itemCount: 21 },
-  { slug: "anniversaries", name: "Anniversaries", itemCount: 17 },
-  { slug: "baby-showers", name: "Baby Showers", itemCount: 14 },
-  { slug: "graduations", name: "Graduations", itemCount: 19 },
-  { slug: "housewarmings", name: "Housewarmings", itemCount: 12 },
-];
+export const revalidate = 60;
 
-const recommendedProducts: ProductCardData[] = [
-  {
-    id: "rec-1",
-    slug: "aurora-scented-candle-set",
-    title: "Aurora Candle Set",
-    subtitle: "Hand-poured scented candles",
-    price: 12500,
-    compareAtPrice: 17800,
-  },
-  {
-    id: "rec-2",
-    slug: "heritage-leather-weekender",
-    title: "Heritage Weekender",
-    subtitle: "Full-grain leather travel bag",
-    price: 68000,
-  },
-  {
-    id: "rec-3",
-    slug: "rosegold-classic-watch",
-    title: "Rosegold Classic Watch",
-    subtitle: "Stainless steel, sapphire glass",
-    price: 45000,
-    compareAtPrice: 90000,
-  },
-  {
-    id: "rec-4",
-    slug: "woven-picnic-basket",
-    title: "Woven Picnic Basket",
-    subtitle: "Outdoor dining essentials",
-    price: 21000,
-    isNew: true,
-  },
-];
+export default async function Page() {
+  const now = new Date().toISOString();
+  const [rawOccasions, rawFeatured, rawSale, rawNew] = await Promise.all([
+    sanityFetch<Partial<MuseumOccasion>[]>(OCCASIONS_QUERY),
+    sanityFetch<ProductCardData[]>(FEATURED_PRODUCTS_QUERY, { limit: 8 }),
+    sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, limit: 8 }),
+    sanityFetch<ProductCardData[]>(NEW_PRODUCTS_QUERY, { limit: 8 }),
+  ]);
+  const occasions: OccasionCategory[] = rawOccasions
+    .map(normalizeOccasion)
+    .filter((occasion) => occasion.id)
+    .slice(0, 6)
+    .map((occasion) => ({
+      slug: occasion.slug,
+      title: occasion.title,
+      itemCount: occasion.itemCount,
+      coverImageUrl: occasion.coverImageUrl,
+      emoji: occasion.emoji,
+    }));
+  const featuredProducts = normalizeProductCards(rawFeatured);
+  const saleProducts = normalizeProductCards(rawSale);
+  const newProducts = normalizeProductCards(rawNew);
+  const productTabs = ["Best Seller", "On sale", "New Arrivals", "Top Rated"];
+  const productsByTab = {
+    "Best Seller": featuredProducts,
+    "On sale": saleProducts,
+    "New Arrivals": newProducts,
+    "Top Rated": featuredProducts,
+  };
 
-const featuredProducts: ProductCardData[] = [
-  {
-    id: "feat-1",
-    slug: "aurora-scented-candle-set",
-    title: "Aurora Candle Set",
-    subtitle: "Hand-poured scented candles",
-    price: 12500,
-    compareAtPrice: 17800,
-  },
-  {
-    id: "feat-2",
-    slug: "heritage-leather-weekender",
-    title: "Heritage Weekender",
-    subtitle: "Full-grain leather travel bag",
-    price: 68000,
-  },
-  {
-    id: "feat-3",
-    slug: "rosegold-classic-watch",
-    title: "Rosegold Classic Watch",
-    subtitle: "Stainless steel, sapphire glass",
-    price: 45000,
-    compareAtPrice: 90000,
-  },
-  {
-    id: "feat-4",
-    slug: "woven-picnic-basket",
-    title: "Woven Picnic Basket",
-    subtitle: "Outdoor dining essentials",
-    price: 21000,
-  },
-  {
-    id: "feat-5",
-    slug: "wireless-earbuds-pro",
-    title: "Wireless Earbuds Pro",
-    subtitle: "Noise-cancelling, 30hr battery",
-    price: 32000,
-  },
-  {
-    id: "feat-6",
-    slug: "ceramic-mug-gift-set",
-    title: "Ceramic Mug Set",
-    subtitle: "Set of two, hand-glazed",
-    price: 9500,
-  },
-  {
-    id: "feat-7",
-    slug: "curated-gift-hamper",
-    title: "Curated Gift Hamper",
-    subtitle: "Snacks, treats & a keepsake box",
-    price: 27500,
-    compareAtPrice: 35000,
-  },
-  {
-    id: "feat-8",
-    slug: "terrazzo-planter-pot",
-    title: "Terrazzo Planter Pot",
-    subtitle: "Minimalist ceramic planter",
-    price: 8500,
-  },
-];
-
-export default function Page() {
   return (
     <PageWrapper>
+      <TrackView event="museum.home.viewed" properties={{}} />
+      <FlashSaleBanner saleEndTime={saleProducts[0]?.saleEndTime} />
       <Hero />
       <OccasionCategories occasions={occasions} />
       <ProductSection
-        title="Recommendations"
-        tabs={["Best Seller", "On sale", "New Arrivals", "Top Rated"]}
-        products={recommendedProducts}
-        showBadges
-      />
-      <ProductSection
-        title="Featured Products"
-        tabs={["Tech Accessories", "All", "Givft Box", "Corporate Gift"]}
+        title="Featured gifts"
+        tabs={productTabs}
         products={featuredProducts}
-        showWishlist
+        productsByTab={productsByTab}
+        showBadges
         showMoreHref="/shop"
-        className="bg-surface"
       />
+      <TrustBadges />
+      <NewsletterSignup />
     </PageWrapper>
   );
 }

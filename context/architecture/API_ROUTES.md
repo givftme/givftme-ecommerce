@@ -35,9 +35,24 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 ## `/api/wishlists/[id]/items`
 **Methods:** GET, POST. **Auth:** required, must own wishlist. **Purpose:** lists or creates wishlist items.
 **GET response:** `{ items }` from `wishlist_items_with_status`, excluding archived items in the page-level helper.
-**POST request:** external item only for this feature: `{ origin: "external", title, product_url, image_url?, price?, description?, scraped_currency? }`.
-**Behavior:** builds `affiliate_url`, inserts `wishlist_items`, and mirrors evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
+**POST request:** either external `{ origin: "external", title, product_url, image_url?, price?, description?, scraped_currency? }` or catalog `{ origin: "catalog", catalog_product_id, title, image_url?, price, description?, is_exclusive? }`.
+**Behavior:** external items build `affiliate_url`; catalog items set `catalog_product_id` and leave `product_url`/`affiliate_url` null. Both insert `wishlist_items` and mirror evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
+
+## `/api/newsletter`
+**Method:** POST. **Auth:** none. **Purpose:** stores catalog/homepage newsletter subscription emails in `newsletter_subscribers`.
+**Request:** `{ email: string }`, validated by Zod email format.
+**Response:** `{ ok: true }` with 201 on success. Duplicate emails return 409 with `{ error: "You're already subscribed." }`.
+
+## `/api/collections/[slug]/products`
+**Method:** GET. **Auth:** none. **Purpose:** fetches the next paginated batch of active Sanity products for a collection page.
+**Query params:** `offset` (default 0), `limit` (default 12, max 48).
+**Response:** `{ products, totalProducts }`, where `products` are normalized catalog product card rows.
+
+## `/api/shop/products`
+**Method:** GET. **Auth:** none. **Purpose:** fetches the next paginated batch of active Sanity products for the flat shop page.
+**Query params:** `offset` (default 0), `limit` (default 16, max 48).
+**Response:** `{ products, totalProducts }`, where `products` are normalized catalog product card rows.
 
 ## `/api/wishlists/[id]/items/[itemId]`
 **Methods:** PATCH, DELETE. **Auth:** required, must own wishlist. **Purpose:** edit an item or soft-delete it.

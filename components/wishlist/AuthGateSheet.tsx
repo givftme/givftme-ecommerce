@@ -17,20 +17,24 @@ export function AuthGateSheet({
   onOpenChange,
   redirectPath,
   receiverName,
+  description,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   redirectPath: string;
-  receiverName: string;
+  receiverName?: string;
+  description?: string;
 }) {
+  const sheetDescription =
+    description ||
+    `Sign in to buy gifts and let ${receiverName || "the receiver"} know it's coming.`;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>You need an account</SheetTitle>
-          <SheetDescription>
-            Sign in to buy gifts and let {receiverName} know it&apos;s coming.
-          </SheetDescription>
+          <SheetDescription>{sheetDescription}</SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-3">

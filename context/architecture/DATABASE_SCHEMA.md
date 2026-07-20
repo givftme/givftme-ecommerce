@@ -47,6 +47,9 @@ The receiver's personal calendar of *other* people's occasions (Flow 1 reminders
 ### `reminders`
 Generic reminder queue. `reminder_type` (`occasion_owner`/`invitee`) plus exactly one of `important_date_id`, `invite_id`, or `occasion_id` set, enforced by a check constraint. `occasion_id` links owner reminders created for a user-created occasion so rescheduling or archiving one occasion only deletes that occasion's unsent reminders. `channel` (`email`/`push`), `scheduled_at`, `sent` flag.
 
+### `newsletter_subscribers`
+Simple public email capture table for the gift museum/catalog discount CTA. Migration 007 adds `id`, unique `email`, and `created_at`. No email sending is attached in v1.
+
 ### `group_gift_pools`
 Reserved for v2. `wishlist_item_id` unique constraint (one pool per item). No RLS policies are defined yet — intentionally, since this table must not be queryable or writable from customer-facing code in v1 (business rule #15).
 
@@ -81,7 +84,7 @@ Museum-facing occasion content — distinct from the Supabase `occasions` table 
 Editorial groupings within an occasion. References one `occasion`. Products reference collections (many-to-many — a product can appear in several collections).
 
 ### `product`
-The core catalog document. `hasVariants` toggles between simple pricing (`basePrice`, `baseSku`) and complex variants (`attributes` + `variants` array, each variant having its own `combinationKey`, `price`, `supplierSku`). Flash sale fields (sale price, start/end time) should be added here — see `BUSINESS_RULES.md` rule #9 for the time-window semantics. `supplierProductId` is what gets used when the internal team manually forwards an order.
+The core catalog document. `hasVariants` toggles between simple pricing (`basePrice`, `baseSku`) and complex variants (`attributes` + `variants` array, each variant having its own `combinationKey`, `price`, `supplierSku`). Flash sale fields (`salePrice`, `saleStartTime`, `saleEndTime`) live here and are interpreted by time-window checks at read time — see `BUSINESS_RULES.md` rule #9. `supplierProductId` is what gets used when the internal team manually forwards an order.
 
 ### Object types
 `attributeOption` (a single value like "Medium" or "Red"), `variantAttribute` (a dimension like "Size" with a list of options), `productVariant` (one purchasable combination with its own price/SKU/`combinationKey`).

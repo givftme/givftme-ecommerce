@@ -10,7 +10,7 @@ import {
   getOwnedWishlistDetail,
   signWishlistImage,
 } from "@/lib/wishlist/server";
-import { externalWishlistItemSchema } from "@/lib/wishlist/validation";
+import { wishlistItemCreateSchema } from "@/lib/wishlist/validation";
 
 interface WishlistItemsRouteContext {
   params: Promise<{ id: string }>;
@@ -60,7 +60,7 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
   }
 
   const body = await readJson(request);
-  const parsed = externalWishlistItemSchema.safeParse(body);
+  const parsed = wishlistItemCreateSchema.safeParse(body);
 
   if (!parsed.success) {
     return jsonError("Check the item details and try again.", 400);
@@ -79,6 +79,107 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
   } catch {
     return jsonError("Couldn't prepare item order.", 500);
   }
+
+  if (parsed.data.origin === "catalog") {
+    const isExclusive =
+      owner.wishlist.type === "occasion" && parsed.data.is_exclusive;
+    const insertPayload = {
+      wishlist_id: id,
+      origin: "catalog",
+      master_item_id: null,
+      title: parsed.data.title,
+      image_url: imageUrl,
+      product_url: null,
+      affiliate_url: null,
+      price: parsed.data.price,
+      description: parsed.data.description,
+      catalog_product_id: parsed.data.catalog_product_id,
+      is_exclusive: isExclusive,
+      sort_order: nextSortOrder,
+    };
+
+    let payloadToInsert: Partial<typeof insertPayload> = insertPayload;
+    let insert = await supabase
+      .from("wishlist_items")
+      .insert(payloadToInsert)
+      .select()
+      .single();
+
+    while (
+      insert.error?.message.toLowerCase().includes("sort_order") ||
+      insert.error?.message.toLowerCase().includes("master_item_id")
+    ) {
+      const message = insert.error.message.toLowerCase();
+      const missingKey = message.includes("sort_order")
+        ? "sort_order"
+        : "master_item_id";
+
+      if (!(missingKey in payloadToInsert)) {
+        break;
+      }
+
+      console.error(
+        missingKey === "sort_order"
+          ? "wishlist_items.sort_order is missing. Run gifvtme_migration_003.sql before using reorder."
+          : "wishlist_items.master_item_id is missing. Run gifvtme_migration_005_occasion_wishlist.sql before using occasion pulls."
+      );
+
+      payloadToInsert = Object.fromEntries(
+        Object.entries(payloadToInsert).filter(([key]) => key !== missingKey)
+      ) as Partial<typeof insertPayload>;
+
+      insert = await supabase
+        .from("wishlist_items")
+        .insert(payloadToInsert)
+        .select()
+        .single();
+    }
+
+    if (insert.error || !insert.data) {
+      return jsonError("Couldn't save item. Try again.", 500);
+    }
+
+    if (owner.wishlist.type === "evergreen") {
+      const masterPayload = {
+        user_id: user.id,
+        title: parsed.data.title,
+        image_url: imageUrl,
+        product_url: null,
+        price: parsed.data.price,
+        origin: "catalog",
+        catalog_product_id: parsed.data.catalog_product_id,
+        sort_order: nextSortOrder,
+      };
+
+      let masterInsert = await supabase.from("master_items").insert(masterPayload);
+
+      if (masterInsert.error?.message.toLowerCase().includes("sort_order")) {
+        const payloadWithoutSortOrder: Omit<typeof masterPayload, "sort_order"> =
+          Object.fromEntries(
+            Object.entries(masterPayload).filter(([key]) => key !== "sort_order")
+          ) as Omit<typeof masterPayload, "sort_order">;
+        masterInsert = await supabase
+          .from("master_items")
+          .insert(payloadWithoutSortOrder);
+      }
+
+      if (masterInsert.error) {
+        return jsonError(
+          "Item saved, but couldn't update the evergreen pool.",
+          500
+        );
+      }
+    }
+
+    const item = await signWishlistImage(
+      supabase,
+      user.id,
+      insert.data as { image_url: string | null }
+    );
+
+    return NextResponse.json({ item }, { status: 201 });
+  }
+
   const { affiliateUrl } = buildAffiliateUrl(parsed.data.product_url);
   const isExclusive = owner.wishlist.type === "occasion" && parsed.data.is_exclusive;
   const insertPayload = {

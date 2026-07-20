@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { AuthPromptSheet } from "@/components/auth/AuthPromptSheet";
 import { cn } from "@/lib/utils";
-import { ProductGrid } from "@/components/product/ProductGrid";
-import type { ProductCardData } from "@/components/product/ProductCard";
-import { createClient } from "@/lib/supabase/client";
+import { CatalogProductGrid } from "@/components/product/CatalogProductGrid";
+import type { ProductCardData } from "@/lib/sanity/types";
 
 export interface ProductSectionProps {
   title: string;
   tabs: string[];
   products: ProductCardData[];
+  productsByTab?: Record<string, ProductCardData[]>;
   showBadges?: boolean;
   showWishlist?: boolean;
   showMoreHref?: string;
@@ -23,58 +22,13 @@ export function ProductSection({
   title,
   tabs,
   products,
+  productsByTab,
   showBadges,
-  showWishlist,
   showMoreHref,
   className,
 }: ProductSectionProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]);
-  const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
-
-  useEffect(() => {
-    if (!showWishlist) {
-      return;
-    }
-
-    let isMounted = true;
-    const supabase = createClient();
-
-    void supabase.auth.getUser().then(({ data }) => {
-      if (isMounted) {
-        setIsAuthenticated(Boolean(data.user));
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session?.user));
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [showWishlist]);
-
-  const toggleWishlist = (id: string) => {
-    if (!isAuthenticated) {
-      setIsAuthPromptOpen(true);
-      return;
-    }
-
-    setWishlistedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
+  const activeProducts = productsByTab?.[activeTab] || products;
 
   return (
     <section className={cn("py-14", className)}>
@@ -100,11 +54,9 @@ export function ProductSection({
         </div>
 
         <div className="mt-8">
-          <ProductGrid
-            products={products}
+          <CatalogProductGrid
+            products={activeProducts}
             showBadges={showBadges}
-            wishlistedIds={wishlistedIds}
-            onToggleWishlist={showWishlist ? toggleWishlist : undefined}
           />
         </div>
 
@@ -120,13 +72,6 @@ export function ProductSection({
           </div>
         )}
       </div>
-
-      {showWishlist && (
-        <AuthPromptSheet
-          open={isAuthPromptOpen}
-          onOpenChange={setIsAuthPromptOpen}
-        />
-      )}
     </section>
   );
 }
