@@ -339,3 +339,83 @@ Last updated: 2026-07-20
 
 **Pattern notes:**
 Newsletter capture is a compact CTA panel, not a marketing landing section. It keeps the same rounded input/button language as auth and wishlist sheets.
+
+### Cart Item Card
+
+File: components/cart/CartItem.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                             |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Background       | `bg-white`, thumbnail `bg-surface`                                                |
+| Border           | `border border-stone-100`                                                         |
+| Border radius    | card `rounded-2xl`, thumbnail/alerts `rounded-xl`, action `rounded-full`          |
+| Text — primary   | title `text-sm font-semibold text-ink`, totals via `PriceDisplay`                 |
+| Text — secondary | variants/rating `text-xs text-muted`                                              |
+| Spacing          | card `p-4`, row `gap-3`, controls `mt-4`                                          |
+| Hover state      | remove `hover:bg-brand-light`                                                     |
+| Shadow           | `shadow-sm`                                                                       |
+| Accent usage     | remove icon `text-brand`, unavailable alert `bg-red-50 text-red-600`, amber stars |
+
+**Pattern notes:**
+Cart item cards mirror wishlist item density but replace edit/reorder controls with purchase controls. Keep image size fixed at 80px and use GSAP only for the removal animation.
+
+### Checkout Form Surface
+
+File: components/checkout/CheckoutForm.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                            |
+| ---------------- | -------------------------------------------------------------------------------- |
+| Background       | page `bg-surface`, panels `bg-white`, helper rows `bg-surface`                  |
+| Border           | panels `border border-stone-100`, inputs `border-stone-200`                     |
+| Border radius    | panels `rounded-2xl`, inputs/alerts `rounded-xl`                                |
+| Text — primary   | page title `text-2xl font-bold text-ink`, labels `text-xs font-medium text-ink` |
+| Text — secondary | helper text `text-xs/text-sm text-muted`                                         |
+| Spacing          | page `px-4 py-8`, panels `p-5`, form `gap-4`/`space-y-4`                        |
+| Hover state      | payment cards `hover:bg-brand-light`, buttons use shared variants               |
+| Shadow           | panels `shadow-sm`                                                              |
+| Accent usage     | brand focus rings, selected payment `border-brand bg-brand-light`, errors red   |
+
+**Pattern notes:**
+Checkout uses the auth/wishlist input language and a two-column desktop grid. Payment choice cards are compact operational controls, not decorative cards.
+
+### Payment State Screens
+
+File: components/order/ProcessingScreen.tsx, components/order/PaymentFailedScreen.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                        |
+| ---------------- | ------------------------------------------------------------ |
+| Background       | `bg-white`                                                   |
+| Border           | processing ring `border-4 border-brand-light border-t-brand` |
+| Border radius    | ring `rounded-full`, alerts `rounded-xl`                     |
+| Text — primary   | headline `text-2xl font-bold text-ink`                       |
+| Text — secondary | body `text-sm leading-6 text-muted`                          |
+| Spacing          | screen `min-h-dvh px-4`, stack `mt-6`/`mt-8`                 |
+| Hover state      | support link `hover:text-brand`                              |
+| Shadow           | none                                                         |
+| Accent usage     | brand ring and failure icon                                  |
+
+**Pattern notes:**
+Payment state screens are full-screen, centered, and quiet. GSAP is reserved for the rotating ring and failed-icon entrance.
+
+### Order Confirmation
+
+File: components/order/OrderConfirmationScreen.tsx
+Last updated: 2026-07-20
+
+| Property         | Class                                                                         |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Background       | page `bg-surface`, panels `bg-white`, thumbnails `bg-surface`                 |
+| Border           | panels `border border-stone-100`, dividers `border-stone-100`                 |
+| Border radius    | panels `rounded-2xl`, thumbnails `rounded-xl`                                 |
+| Text — primary   | headline `text-3xl font-bold text-ink`, section title `text-lg font-semibold` |
+| Text — secondary | body/item meta `text-sm/text-xs text-muted`                                   |
+| Spacing          | page `py-10`, panels `p-6 md:p-8`, rows `py-4`                                |
+| Hover state      | buttons use shared variants                                                   |
+| Shadow           | panels `shadow-sm`                                                            |
+| Accent usage     | success icon and order reference `text-brand`                                 |
+
+**Pattern notes:**
+Order confirmation follows the existing success-screen pattern: centered brand icon first, concise status copy, then a compact operational summary.

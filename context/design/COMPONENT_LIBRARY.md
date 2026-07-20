@@ -146,13 +146,18 @@ Light wrapper reserved for reorder list presentation. Current v1 reorder uses mo
 
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
-`cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `items`, `addItem`, `removeItem`, `updateQuantity`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
+`cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
+
+`cart/CartItem.tsx`, `cart/CartSummary.tsx`, `cart/EmptyCart.tsx`, and `cart/CartPageClient.tsx` implement the responsive catalog cart page, including GSAP removal animation, background Sanity price refresh, unavailable-item blocking, sticky mobile checkout CTA, desktop summary sidebar, and recommended product grid.
+
+`checkout/CheckoutForm.tsx`, `checkout/AddressSelector.tsx`, `checkout/PaymentMethodSelector.tsx`, and `checkout/OrderSummaryPanel.tsx` implement the protected checkout details screen with react-hook-form + Zod validation, Nigerian state selection, future-ready saved-address prefill, Flutterwave payment preference, and responsive form/summary layout.
+
+`order/ProcessingScreen.tsx`, `order/PaymentFailedScreen.tsx`, and `order/OrderConfirmationScreen.tsx` implement the payment processing poller, failed payment retry screen, and confirmed order success screen.
 
 `flash-sale/FlashSaleBanner.tsx` and `flash-sale/FlashSaleTimer.tsx` render the active sale banner and countdown. The dedicated `/flash-sale` page is still deferred to the Flash Sales spec.
 
-Checkout, order, and review submission components are still not built as of this writing. When building them:
+Review submission components are still not built as of this writing. When building them:
 
-- `CartItem` should support both the dense desktop table-row layout and the condensed mobile card layout seen in the reviewed Figma exports — one component, not two.
 - `OrderTracking` should render the four-stage progress tracker (Order Placed → Inprogress → Shipped → Delivered) matching the Figma desktop order detail screen, driven by `order_status_history` data.
 - `SharedWishlistHeader` / `SharedWishlistItem` / `ClaimedBadge` / `IntentFlagBadge` / `ReminderOptIn` correspond directly to the giver-facing screens (shared wishlist view, item detail, purchase confirmation, claimed success).
 - `FlashSaleTimer` needs to compute remaining time from a Sanity product's sale `endTime` and use `formatCountdown()` from `lib/utils.ts`.

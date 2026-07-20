@@ -58,9 +58,14 @@ Mirrors `.env.local.example` at the project root. Update both files together whe
 
 **If missing for a given network:** `transform.ts` falls back to a plain redirect with just a UTM source param, no commission tracking — the redirect still works, Gifvtme just earns nothing on that click. Add new retailer cases here as additional affiliate programs are joined.
 
-## Flutterwave (to be added when checkout is built)
+## Flutterwave
 
-Not yet in `.env.local.example` as of this writing. Will need a secret key for initiating payments and a webhook verification secret. Add to both this file and `.env.local.example` when `/api/checkout` and `/api/flutterwave/webhook` are implemented — see `API_ROUTES.md`.
+| Variable | Public? | Description | Where to get it |
+|---|---|---|---|
+| `FLUTTERWAVE_SECRET_KEY` | **No — secret** | Server-side key used by `/api/checkout` and `/api/checkout/retry` to initiate hosted Flutterwave payments. | Flutterwave dashboard |
+| `FLUTTERWAVE_SECRET_HASH` | **No — secret** | Custom webhook verification hash compared against Flutterwave's `verif-hash` header before any webhook body parsing or database writes. | Flutterwave dashboard → Webhooks |
+
+**Flutterwave dashboard dependency:** configure the webhook URL as `[your-domain]/api/flutterwave/webhook`, set the same custom verification hash in Flutterwave and this env var, and make sure the account is configured for NGN payments.
 
 ## Cron secret
 

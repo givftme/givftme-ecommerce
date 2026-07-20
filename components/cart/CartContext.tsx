@@ -33,6 +33,19 @@ interface CartContextValue {
     combinationKey: string | null,
     quantity: number
   ) => void;
+  updateItemDetails: (
+    catalogProductId: string,
+    combinationKey: string | null,
+    details: Partial<
+      Pick<
+        CartItem,
+        | "product_title"
+        | "product_image_url"
+        | "unit_price"
+        | "supplier_product_id"
+      >
+    >
+  ) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -147,6 +160,31 @@ export function CartContextProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const updateItemDetails = useCallback(
+    (
+      catalogProductId: string,
+      combinationKey: string | null,
+      details: Partial<
+        Pick<
+          CartItem,
+          | "product_title"
+          | "product_image_url"
+          | "unit_price"
+          | "supplier_product_id"
+        >
+      >
+    ) => {
+      setItems((current) =>
+        current.map((item) =>
+          isSameLineItem(item, catalogProductId, combinationKey)
+            ? { ...item, ...details }
+            : item
+        )
+      );
+    },
+    []
+  );
+
   const clearCart = useCallback(() => {
     setItems([]);
   }, []);
@@ -163,6 +201,7 @@ export function CartContextProvider({ children }: { children: ReactNode }) {
       addItem,
       removeItem,
       updateQuantity,
+      updateItemDetails,
       clearCart,
       totalItems,
       totalPrice,
@@ -173,6 +212,7 @@ export function CartContextProvider({ children }: { children: ReactNode }) {
       addItem,
       removeItem,
       updateQuantity,
+      updateItemDetails,
       clearCart,
       totalItems,
       totalPrice,

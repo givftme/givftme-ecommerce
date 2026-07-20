@@ -20,6 +20,7 @@ This file should be updated frequently — at minimum every time a feature moves
 - Shared component library foundation — Button, Badge, PriceDisplay, QuantityStepper, ProductCard, ProductGrid, Navbar, Footer, MobileBottomNav, PageWrapper
 - Home page — fetches occasions and featured products from Sanity, renders via ProductGrid
 - Gift museum/catalog browsing — homepage flash sale/occasion/featured sections, `/occasions`, `/occasions/[slug]`, `/collections/[slug]`, `/shop`, `/search`, `/product/[slug]`, cart context, variant selector, product image gallery, related products, catalog add-to-wishlist, and newsletter capture
+- Cart and Flutterwave checkout — `/cart`, `/checkout`, `/checkout/processing`, `/checkout/failed`, `/account/orders/[id]`, `/api/cart/prices`, `/api/checkout`, `/api/checkout/retry`, and `/api/flutterwave/webhook` for catalog-only orders with server-fetched Sanity price snapshots and verified webhook confirmation
 - Sanity catalog schema files — supplier, occasion, collection, product, attribute option, variant attribute, product variant, including flash sale fields
 - Affiliate URL transformer (Jumia, Amazon, Konga)
 - Microlink scraping integration (`/api/scrape`)
@@ -36,8 +37,8 @@ This file should be updated frequently — at minimum every time a feature moves
 
 ### Not started
 - Reviews table/migration (referenced in `DATABASE_SCHEMA.md` as not yet in the migrations)
-- `/api/checkout`, `/api/flutterwave/webhook`, `/api/orders/[id]/status`, `/api/reviews` — not implemented
-- Checkout, order tracking, review submission, and dedicated flash sale page UI
+- `/api/orders/[id]/status`, `/api/reviews` — not implemented
+- Full order tracking, review submission, and dedicated flash sale page UI
 - Retool setup against production Supabase
 - Sanity Studio deployment
 - Actual Resend email sending for reminders, order status, and thank-you messages
