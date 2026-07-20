@@ -1,48 +1,46 @@
-# Memory — Sharing Giver Flow Follow-Up
+# Memory — Cart and Flutterwave Checkout PR Follow-Up
 
-Last updated: 2026-07-20 00:23 +01:00
+Last updated: 2026-07-20 16:05 +01:00
 
 ## What was built
 
-- Updated `components/shared/CopyLinkButton.tsx` so clipboard failures now show the existing toast fallback: `Couldn't copy link. Try again.`
-- Added `useToast()` to `CopyLinkButton` and wrapped `navigator.clipboard.writeText(value)` in a `try/catch`.
-- Removed the old TODO/comment: `no-op fallback; consider a toast here if available in this context`.
+- Current checkout PR: implemented cart and Flutterwave checkout in commit `c4b0fc1 Implement cart and Flutterwave checkout`, including `/cart`, `/checkout`, `/checkout/processing`, `/checkout/failed`, `/account/orders/[id]`, `/api/cart/prices`, `/api/checkout`, `/api/checkout/retry`, and `/api/flutterwave/webhook`.
+- Checkout PR review fixes are being applied after that commit: retry uses POST, incomplete checkout orders are cleaned up on `order_items` failure, webhook success checks amount/currency, unsupported address-save controls were removed, retry payment links are allowlisted, Flutterwave fetch has a timeout, and Flutterwave `tx_ref` is now unique per payment attempt with `meta.order_id` for recovery.
+- Historical catalog context, not the active next step:
+- Implemented the Gift Museum & Catalog feature and committed it as `09cf604 Implement gift museum catalog`.
+- Added catalog routes and UI for home catalog sections, occasions, occasion detail, collection detail, product detail, shop, and search.
+- Added Sanity catalog schema/query support under `sanity/schemaTypes/` and `lib/sanity/`, including product, supplier, occasion, collection, variants, flash sale fields, and shared query helpers.
+- Added catalog wishlist/cart support, newsletter API, review aggregate helper, migration `gifvtme_migration_007_gift_museum_catalog.sql`, and updated relevant context/docs plus `ui-registry.md`.
+- Follow-up fixes were committed as `a687de9 Enhance wishlist item handling and error logging in API routes`.
 
 ## Decisions made
 
-- Use the app's existing `components/ui/Toast` context for copy-link failure feedback.
-- Keep copy success behavior unchanged: set copied state, track `wishlist.link.copied`, and reset after 2 seconds.
-- No broader refactor or validation pass was done because the request explicitly prioritized speed and a narrow comment implementation.
+- Catalog wishlist items use the existing wishlist item API with origin-specific payloads and shared insert/mirror helpers, preserving the separate `external` vs `catalog` flows.
+- Catalog content is managed through the embedded Sanity Studio at `/studio`; normal content edits do not require code changes.
+- The gift museum spec now requires clarification for ambiguity involving money, pricing, payments, refunds, data visibility, or `BUSINESS_RULES.md`; lower-stakes unspecified details can be decided reasonably.
+- The dedicated `/flash-sale` page remains out of scope for this feature, even though the banner links there.
 
 ## Problems solved
 
-- Confirmed `CopyLinkButton` is used under layouts that already provide `ToastProvider`, so using `useToast()` is appropriate in its current context.
-- Replaced a silent clipboard failure path with visible user feedback.
+- The catalog/external wishlist item branches had duplicated `wishlist_items` insert retry logic and evergreen `master_items` mirroring; this was extracted into shared helpers in `app/api/wishlists/[id]/items/route.ts`.
+- The spec's blanket "Do not ask for clarification" instruction was narrowed so future agents do not make risky assumptions.
+- Sanity Studio content workflow was clarified: create Supplier, Occasion, Collection, then Product; set documents to `Active`, generate slugs, and wait for cache revalidation.
 
 ## Current state
 
-- `components/shared/CopyLinkButton.tsx` has an uncommitted change for the toast fallback.
-- `git status --short` also showed other modified files already present in the working tree:
-  - `app/api/reminders/route.ts`
-  - `app/api/wishlists/[id]/reminders/opt-in/route.ts`
-  - `app/w/[id]/confirm/[itemId]/page.tsx`
-  - `app/w/[id]/success/[itemId]/page.tsx`
-  - `context/ROADMAP.md`
-  - `context/architecture/API_ROUTES.md`
-  - `context/architecture/THIRD_PARTY_INTEGRATIONS.md`
-  - `context/feature-specs/04-sharing-giver-flow.md`
-  - `gifvtme_migration_006_sharing_giver_flow.sql`
-  - `lib/email/resend.ts`
-  - `lib/reminders/scheduleInviteeReminders.ts`
-  - `memory.md`
-- No tests were run for the CopyLinkButton change.
-- Git emitted warnings about denied access to `C:\Users\USER/.config/git/ignore`; status still returned successfully.
+- Checkout implementation is present and the checkout PR is in a review-fix pass with uncommitted changes.
+- Current dirty checkout-related files include `app/api/checkout/route.ts`, `app/api/checkout/retry/route.ts`, `app/api/flutterwave/webhook/route.ts`, `components/checkout/CheckoutForm.tsx`, `components/order/PaymentFailedScreen.tsx`, `lib/checkout/validation.ts`, `lib/flutterwave/index.ts`, and new `lib/flutterwave/paymentLink.ts` / `lib/flutterwave/paymentReference.ts`.
+- Targeted eslint checks for touched checkout/Flutterwave files have passed during the review-fix pass.
+- Full validation is currently blocked by unrelated dirty-file issues: `components/order/ProcessingScreen.tsx` has a syntax error around line 79, and `components/cart/useCartPriceRefresh.ts` has a missing `useRef`/ref-during-render issue.
+- Git continues to warn about denied access to `C:\Users\USER/.config/git/ignore`; commands still succeed.
+- Saving this memory will leave `memory.md` modified until it is intentionally committed or left local.
 
 ## Next session starts with
 
-Run `/remember restore`, then inspect `git status --short --untracked-files=all` and decide whether to validate the modified sharing/reminder files together. For the CopyLinkButton change specifically, a quick lint/typecheck is enough if touching no other code.
+Run `/remember restore`, then check `git status --short --untracked-files=all`. Continue the checkout PR review-fix pass: resolve the current validation blockers in `components/order/ProcessingScreen.tsx` and `components/cart/useCartPriceRefresh.ts`, rerun `npx tsc --noEmit` and `npm run lint`, then review the checkout diff and decide whether to amend/commit the accumulated fixes. Catalog population guidance from the previous memory is historical only, not the next action.
 
 ## Open questions
 
-- Determine whether the broader modified sharing/reminder files are intentional in-progress edits and whether they should be tested or committed with the CopyLinkButton change.
-- Decide whether to keep `memory.md` as a local handoff file or include it in version control.
+- Decide whether `memory.md` should be committed in this repo or remain local-only.
+- Decide whether the checkout PR review fixes should be amended into `c4b0fc1` or committed separately.
+- Historical catalog follow-up, not the active next step: confirm that production Sanity content and Supabase migration `gifvtme_migration_007_gift_museum_catalog.sql` have been applied outside the codebase.

@@ -34,9 +34,9 @@ No money is ever processed by Gifvtme in this flow. No `orders` row is created.
 
 1. Item already exists in Sanity (`origin = 'catalog'`, `catalog_product_id` is a Sanity document `_id`).
 2. Giver adds one or more catalog items to a cart (client-side state, not persisted until checkout).
-3. Checkout collects shipping details, calls Flutterwave to initiate payment.
-4. On payment confirmation (via Flutterwave webhook, `/api/flutterwave/webhook`), an `orders` row is created (`status = 'confirmed'`) along with one `order_items` row per product — `unit_price` is snapshotted from the Sanity price *at the moment of purchase* and never recalculated afterward.
-5. Internal team reviews the order in Retool, manually changes status (`under_review` → `forwarded` → `shipped` → `delivered`), pasting in tracking info as available.
+3. Checkout collects shipping details, refetches current Sanity prices server-side, creates an `orders` row with `status = 'pending_payment'`, and creates one `order_items` row per product before initiating Flutterwave payment.
+4. On payment confirmation (via Flutterwave webhook, `/api/flutterwave/webhook`), the existing order transitions to `confirmed`; `order_items.unit_price` is already snapshotted from the Sanity price at order creation and must never be recalculated afterward.
+5. Internal team reviews the confirmed order in Retool, manually changes status (`under_review` → `forwarded` → `shipped` → `delivered`), pasting in tracking info as available.
 6. Every status change is automatically logged to `order_status_history` via the `on_order_status_changed` trigger, and (per `ERROR_HANDLING.md`) should trigger a Resend email per stage.
 7. If the order originated from a wishlist item, `orders.wishlist_item_id` links back to it, and that item is marked purchased the same way as Flow A once payment confirms.
 

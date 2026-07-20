@@ -84,15 +84,27 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Response:** `{ processed: number, deferred: number }`.
 **Status as of this writing:** reminder email/push delivery is intentionally deferred to the Reminders feature. Due reminder rows remain `sent = false` as the handoff queue until a real dispatcher succeeds and marks them sent. Do not assume reminder emails are firing until this is completed; check `ROADMAP.md`.
 
-## `/api/checkout` (to be built)
-**Method:** POST. **Auth:** required. **Purpose:** initiates a Flutterwave payment for catalog items in the cart.
-**Expected request shape:** cart items (catalog product IDs + quantities + selected variant `combinationKey` where applicable) + shipping details.
-**Expected response:** a Flutterwave checkout URL or inline payment token to redirect/initialize the client SDK with.
-**Note:** this route should create the `orders` row with `status = 'pending_payment'` before redirecting to Flutterwave, not after — so an abandoned payment still leaves a traceable record.
+## `/api/cart/prices`
+**Method:** GET. **Auth:** none. **Purpose:** refreshes current Sanity prices for catalog cart items and returns four recommended products for the cart page.
+**Query params:** `ids` as comma-separated Sanity product IDs.
+**Response:** `{ products, recommended_products }`, where `products` contain active pricing/variant fields from `CART_PRICES_QUERY` and `recommended_products` are normalized `ProductCardData` rows.
 
-## `/api/flutterwave/webhook` (to be built)
-**Method:** POST. **Auth:** none via user session — verified via Flutterwave's webhook signature header instead. **Purpose:** receives payment confirmation/failure events from Flutterwave, updates the corresponding `orders.status` to `confirmed` or `payment_failed`, and creates `order_items` rows with price snapshots.
-**Critical:** must verify the webhook signature before trusting the payload — never update order status based on an unverified webhook call. See `THIRD_PARTY_INTEGRATIONS.md` for the verification mechanism.
+## `/api/checkout`
+**Method:** POST. **Auth:** required. **Purpose:** creates a pending catalog order, snapshots server-fetched Sanity prices into `order_items`, and initiates a Flutterwave hosted payment.
+**Request:** `{ cart_items, shipping, preferred_payment?, wishlist_item_id? }`. `cart_items[]` includes `{ catalog_product_id, combination_key, quantity, display_price }`, but `display_price` is ignored server-side except for request validation.
+**Response:** `{ order_id, payment_link }`.
+**Critical:** fetches prices from Sanity using `CART_PRICES_QUERY` and never trusts client-submitted prices. Creates `orders.status = 'pending_payment'` and `order_items.unit_price` before contacting Flutterwave. If Flutterwave initiation fails, returns 502 while leaving the order retryable.
+
+## `/api/checkout/retry`
+**Method:** POST. **Auth:** required, must own order. **Purpose:** re-initiates Flutterwave payment for an existing `pending_payment` or `payment_failed` order without creating a new order.
+**Query params:** `order` UUID.
+**Response:** `{ order_id, payment_link }`.
+**Failure shape:** non-owned/missing orders return 404; non-retryable statuses return `{ error: "This order cannot be retried" }` with 400.
+
+## `/api/flutterwave/webhook`
+**Method:** POST. **Auth:** none via user session — verified via Flutterwave's `verif-hash` header before body parsing. **Purpose:** receives payment confirmation/failure events from Flutterwave and updates the corresponding `orders.status` to `confirmed` or `payment_failed`.
+**Behavior:** ignores unknown orders and duplicate/non-pending orders idempotently with 200. Successful events only confirm the order when the webhook amount and currency match the stored order total and currency. Successful catalog wishlist orders mark the linked `wishlist_items` row, and any linked `master_items` row, as `purchased`.
+**Critical:** makes zero database reads or writes before the signature check passes. See `THIRD_PARTY_INTEGRATIONS.md` for the verification mechanism.
 
 ## `/api/orders/[id]/status` (to be built)
 **Method:** PATCH. **Auth:** intended for Retool (service role), not customer-facing. **Purpose:** updates an order's status; relies on the `on_order_status_changed` trigger to log to `order_status_history` automatically. Consider whether this needs to exist as a Next.js route at all, since Retool can write to Supabase directly — only build this if Retool's direct-write approach proves insufficient (e.g. if you need to trigger a Resend email synchronously on status change).

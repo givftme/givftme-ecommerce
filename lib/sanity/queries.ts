@@ -235,3 +235,60 @@ export const RELATED_PRODUCTS_QUERY = defineQuery(/* groq */ `
     ${PRODUCT_CARD_FRAGMENT}
   }
 `);
+
+export const CART_PRICES_QUERY = defineQuery(/* groq */ `
+  *[_type == "product" && _id in $ids] {
+    _id,
+    title,
+    status,
+    hasVariants,
+    basePrice,
+    "baseCompareAtPrice": compareAtPrice,
+    baseSku,
+    salePrice,
+    saleStartTime,
+    saleEndTime,
+    "variants": variants[] {
+      combinationKey,
+      price,
+      compareAtPrice,
+      supplierSku,
+      supplierProductId,
+      "available": coalesce(available, true)
+    },
+    "images": images[0..0] {
+      asset,
+      hotspot,
+      alt,
+      "url": asset->url
+    },
+    "imageUrl": images[0].asset->url,
+    "supplier": supplier-> { _id, name },
+    supplierProductId,
+    "collectionIds": collections[]._ref,
+    "occasionTypes": collections[]->occasion->occasionType
+  }
+`);
+
+export const CART_RECOMMENDATIONS_QUERY = defineQuery(/* groq */ `
+  *[
+    _type == "product" &&
+    status == "active" &&
+    !(_id in $excludeIds) &&
+    count(collections[_ref in $collectionIds]) > 0
+  ]
+  | order(featured desc, _createdAt desc) [0...$limit] {
+    ${PRODUCT_CARD_FRAGMENT}
+  }
+`);
+
+export const CART_FALLBACK_RECOMMENDATIONS_QUERY = defineQuery(/* groq */ `
+  *[
+    _type == "product" &&
+    status == "active" &&
+    !(_id in $excludeIds)
+  ]
+  | order(featured desc, _createdAt desc) [0...$limit] {
+    ${PRODUCT_CARD_FRAGMENT}
+  }
+`);

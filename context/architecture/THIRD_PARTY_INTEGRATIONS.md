@@ -11,8 +11,8 @@
 ## Flutterwave (payments)
 
 **Used for:** processing payment for catalog (Gifvtme checkout) purchases only — never for external/affiliate items.
-**Integration points:** `/api/checkout` (initiate payment, to be built) and `/api/flutterwave/webhook` (receive confirmation, to be built) — see `API_ROUTES.md`.
-**Auth:** Flutterwave secret key, env var (name TBD when implemented, likely `FLUTTERWAVE_SECRET_KEY`).
+**Integration points:** `/api/checkout` (create pending order and initiate payment), `/api/checkout/retry` (re-initiate payment for an existing retryable order), and `/api/flutterwave/webhook` (receive confirmation/failure) — see `API_ROUTES.md`.
+**Auth:** `FLUTTERWAVE_SECRET_KEY` for payment initiation and `FLUTTERWAVE_SECRET_HASH` for webhook signature verification.
 **Critical security note:** the webhook handler must verify Flutterwave's signature (typically a `verif-hash` header compared against a configured secret) before trusting any payload. Never update `orders.status` to `confirmed` based on an unverified webhook call, and never rely solely on the client-side redirect-back-from-payment as proof of payment — always confirm via the webhook or a server-side verification call to Flutterwave's API.
 **Currency:** all charges in NGN — Flutterwave supports this natively for Nigerian merchants.
 
