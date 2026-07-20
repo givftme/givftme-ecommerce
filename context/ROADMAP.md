@@ -19,12 +19,15 @@ This file should be updated frequently — at minimum every time a feature moves
 - Next.js app scaffold — full route structure for dashboard, shop, account, giver-facing wishlist views
 - Shared component library foundation — Button, Badge, PriceDisplay, QuantityStepper, ProductCard, ProductGrid, Navbar, Footer, MobileBottomNav, PageWrapper
 - Home page — fetches occasions and featured products from Sanity, renders via ProductGrid
+- Gift museum/catalog browsing — homepage flash sale/occasion/featured sections, `/occasions`, `/occasions/[slug]`, `/collections/[slug]`, `/shop`, `/search`, `/product/[slug]`, cart context, variant selector, product image gallery, related products, catalog add-to-wishlist, and newsletter capture
+- Sanity catalog schema files — supplier, occasion, collection, product, attribute option, variant attribute, product variant, including flash sale fields
 - Affiliate URL transformer (Jumia, Amazon, Konga)
 - Microlink scraping integration (`/api/scrape`)
 - Evergreen wishlist core — dashboard auto-creation, wishlist list/detail screens, add/edit/archive/reorder external items, manual image upload wiring, title editing, and owner-checked wishlist APIs
 - Supabase schema migration 003 file — adds `sort_order` to `wishlist_items` and `master_items` (must still be applied to the Supabase project)
 - Sharing and giver flow core — receiver share settings sheet, visibility/price auto-save, invite management with Resend email fallback, `/w/[id]` shared wishlist view, giver item detail, external purchase confirmation, claimed success, intent flagging, invitee reminder opt-in, `/api/purchases`, and `/api/reminders`
 - Supabase schema migration 006 file — adds intent flags, invite helper policies/functions, and shared wishlist resolver (must still be applied to the Supabase project)
+- Supabase schema migration 007 file — adds `newsletter_subscribers` for catalog discount/newsletter capture (must still be applied to the Supabase project)
 
 ### In progress / partially done
 - Reminder system — owner and invitee scheduling logic creates `reminders` rows, but `/api/reminders` only leaves due rows queued as deferred handoff until actual email/push delivery is built
@@ -33,10 +36,8 @@ This file should be updated frequently — at minimum every time a feature moves
 
 ### Not started
 - Reviews table/migration (referenced in `DATABASE_SCHEMA.md` as not yet in the migrations)
-- Flash sale fields on the Sanity product schema (sale price, start/end time)
 - `/api/checkout`, `/api/flutterwave/webhook`, `/api/orders/[id]/status`, `/api/reviews` — not implemented
-- Cart, checkout, order tracking, review, and flash sale UI components — folders exist, components not built
-- Product detail page, variant selector
+- Checkout, order tracking, review submission, and dedicated flash sale page UI
 - Retool setup against production Supabase
 - Sanity Studio deployment
 - Actual Resend email sending for reminders, order status, and thank-you messages

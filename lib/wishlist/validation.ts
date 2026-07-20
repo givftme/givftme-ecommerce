@@ -111,6 +111,25 @@ export const externalWishlistItemSchema = wishlistItemDetailsSchema.extend({
   is_exclusive: z.boolean().optional().default(false),
 });
 
+export const catalogWishlistItemSchema = wishlistItemDetailsSchema.extend({
+  origin: z.literal("catalog"),
+  catalog_product_id: z.string().trim().min(1).max(200),
+  is_exclusive: z.boolean().optional().default(false),
+});
+
+export const wishlistItemCreateSchema = z.discriminatedUnion("origin", [
+  externalWishlistItemSchema,
+  catalogWishlistItemSchema,
+]).superRefine((value, ctx) => {
+  if (value.origin === "catalog" && typeof value.price !== "number") {
+    ctx.addIssue({
+      code: "custom",
+      message: "Catalog items require a current display price.",
+      path: ["price"],
+    });
+  }
+});
+
 export const editWishlistItemSchema = wishlistItemDetailsSchema.partial();
 
 export const reorderWishlistItemsSchema = z.object({
@@ -157,6 +176,7 @@ export type ExternalWishlistItemFormValues = z.input<
   typeof externalWishlistItemSchema
 >;
 export type ExternalWishlistItemInput = z.output<typeof externalWishlistItemSchema>;
+export type CatalogWishlistItemInput = z.output<typeof catalogWishlistItemSchema>;
 export type EditWishlistItemFormValues = z.input<typeof editWishlistItemSchema>;
 export type EditWishlistItemInput = z.output<typeof editWishlistItemSchema>;
 export type InviteWishlistViewerInput = z.input<

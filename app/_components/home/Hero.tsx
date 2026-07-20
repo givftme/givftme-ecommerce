@@ -58,7 +58,7 @@ export function Hero() {
           src={slide.src}
           alt={slide.alt}
           fill
-          priority={index === 0}
+          preload={index === 0}
           className={cn(
             "object-cover transition-opacity duration-1000",
             index === activeIndex ? "opacity-100" : "opacity-0"

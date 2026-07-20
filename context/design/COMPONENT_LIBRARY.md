@@ -62,8 +62,20 @@ Props: `product` (`ProductCardData` — see the interface in the file for exact 
 ### `ProductGrid`
 Props: `products` (array of `ProductCardData`), `onToggleWishlist`, `wishlistedIds` (`Set<string>`), `emptyMessage`. Responsive grid: 2 columns mobile, 3 tablet, 4 desktop.
 
-### Still to build
-`ProductDetail`, `ProductImageGallery`, `VariantSelector` — needed for the product detail page. `VariantSelector` will need to read a product's `attributes`/`variants` from Sanity and resolve the customer's selection to a `combinationKey` (see `architecture/DATABASE_SCHEMA.md` → Sanity `product` document).
+### `CatalogProductGrid`
+Client controller around `ProductGrid` that wires product cards to cart context and the catalog wishlist picker. Variant products route to their detail page for option selection.
+
+### `ProductDetail`
+Client product detail controller for image gallery, variants, quantity, cart/wishlist CTAs, sale timer refresh, description/reviews tabs, and product metadata.
+
+### `ProductImageGallery`
+Client image + thumbnail gallery. Uses the product image fallback when no Sanity images exist and animates thumbnail swaps with GSAP.
+
+### `VariantSelector`
+Client variant option resolver. Reads `attributes` and `variants`, requires all attributes to be selected, disables sold-out combinations, and exposes the selected combination to `ProductDetail`.
+
+### `RatingBreakdown` / `RelatedProducts`
+Read-only review summary chart and related product section used below product detail.
 
 ## `auth/`
 
@@ -134,7 +146,11 @@ Light wrapper reserved for reorder list presentation. Current v1 reorder uses mo
 
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
-These folders exist but components are largely not yet built as of this writing. When building them:
+`cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `items`, `addItem`, `removeItem`, `updateQuantity`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
+
+`flash-sale/FlashSaleBanner.tsx` and `flash-sale/FlashSaleTimer.tsx` render the active sale banner and countdown. The dedicated `/flash-sale` page is still deferred to the Flash Sales spec.
+
+Checkout, order, and review submission components are still not built as of this writing. When building them:
 
 - `CartItem` should support both the dense desktop table-row layout and the condensed mobile card layout seen in the reviewed Figma exports — one component, not two.
 - `OrderTracking` should render the four-stage progress tracker (Order Placed → Inprogress → Shipped → Delivered) matching the Figma desktop order detail screen, driven by `order_status_history` data.
