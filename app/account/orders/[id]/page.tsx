@@ -31,8 +31,9 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
     .eq("buyer_id", user.id)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(error.message);
+    if (error) {
+    console.error("Could not load order for account order page.", error);
+    throw new Error("Couldn't load this order. Please try again.");
   }
 
   const order = data as (ConfirmedOrder & { status: string }) | null;

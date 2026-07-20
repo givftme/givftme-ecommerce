@@ -268,6 +268,20 @@ export async function POST(request: Request) {
     .insert(orderItemRows);
 
   if (itemsError) {
+    const { error: cleanupError } = await supabase
+      .from("orders")
+      .delete()
+      .eq("id", order.id)
+      .eq("buyer_id", user.id)
+      .eq("status", "pending_payment");
+
+    if (cleanupError) {
+      console.error("Couldn't clean up incomplete checkout order.", {
+        orderId: order.id,
+        error: cleanupError,
+      });
+    }
+
     return jsonError("Couldn't save your order items. Try again.", 500);
   }
 

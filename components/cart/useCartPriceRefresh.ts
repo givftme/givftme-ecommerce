@@ -174,6 +174,8 @@ export function useCartPriceRefresh() {
           setPriceNotice(
             `${changedTitles.length} ${changedTitles.length === 1 ? "price has" : "prices have"} been updated.`
           );
+        } else {
+          setPriceNotice("");
         }
       })
       .catch((error) => {

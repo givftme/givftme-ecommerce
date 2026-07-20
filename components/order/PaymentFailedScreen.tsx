@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/ui/Button";
 import { trackEvent } from "@/lib/analytics";
+import { isAllowedFlutterwavePaymentLink } from "@/lib/flutterwave/paymentLink";
 
 gsap.registerPlugin(useGSAP);
 
@@ -52,10 +53,13 @@ export function PaymentFailedScreen({ orderId, reason }: PaymentFailedScreenProp
     setError("");
 
     try {
-      const response = await fetch(`/api/checkout/retry?order=${orderId}`);
+      const response = await fetch(
+        `/api/checkout/retry?order=${encodeURIComponent(orderId)}`,
+        { method: "POST" }
+      );
       const data = (await response.json()) as RetryResponse;
 
-      if (!response.ok || !data.payment_link) {
+      if (!response.ok || !isAllowedFlutterwavePaymentLink(data.payment_link)) {
         throw new Error(data.error || "Payment couldn't start - try again.");
       }
 

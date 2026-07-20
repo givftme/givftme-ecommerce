@@ -28,7 +28,9 @@ export function CartSummary({
             className="flex items-start justify-between gap-4 text-sm"
           >
             <div className="min-w-0">
-              <p className="truncate font-medium text-ink">{item.product_title}</p>
+              <p className="truncate font-medium text-ink">
+                {item.product_title}
+              </p>
               <p className="mt-1 text-xs text-muted">Qty {item.quantity}</p>
             </div>
             <p className="shrink-0 font-semibold text-ink">
@@ -54,13 +56,18 @@ export function CartSummary({
       </dl>
 
       <Link
-        href={isAuthenticated ? "/checkout" : withRedirect("/login", "/checkout")}
+        href={
+          isAuthenticated ? "/checkout" : withRedirect("/login", "/checkout")
+        }
         aria-disabled={disabled || items.length === 0}
+        tabIndex={disabled || items.length === 0 ? -1 : undefined}
+        onClick={(e) => {
+          if (disabled || items.length === 0) e.preventDefault();
+        }}
         className={cn(
           buttonVariants({ fullWidth: true }),
           "mt-6",
-          (disabled || items.length === 0) &&
-            "pointer-events-none opacity-50"
+          (disabled || items.length === 0) && "pointer-events-none opacity-50",
         )}
       >
         {isAuthenticated ? "Checkout" : "Sign in to checkout"}

@@ -67,8 +67,6 @@ function getDefaultValues({
       delivery_instructions: "",
     },
     preferred_payment: "card",
-    save_address: false,
-    set_as_default: false,
   };
 }
 
@@ -98,22 +96,22 @@ export function CheckoutForm({
     control: form.control,
     name: "preferred_payment",
   }) as PaymentPreference | undefined;
-  const saveAddress = useWatch({
-    control: form.control,
-    name: "save_address",
-  });
 
   useEffect(() => {
     if (items.length === 0) {
       router.replace("/shop");
-      return;
     }
+  }, [items.length, router]);
 
-    trackEvent("checkout.started", {
-      item_count: items.length,
-      total_value: totalPrice,
-    });
-  }, [items.length, router, totalPrice]);
+  useEffect(() => {
+    if (items.length > 0) {
+      trackEvent("checkout.started", {
+        item_count: items.length,
+        total_value: totalPrice,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const applyAddress = (address: SavedAddress) => {
     form.setValue(
@@ -406,28 +404,6 @@ export function CheckoutForm({
                       </FormItem>
                     )}
                   />
-
-                  {/* Address persistence is owned by the Address Book feature. */}
-                  <div className="space-y-3 rounded-xl bg-surface p-4">
-                    <label className="flex items-center gap-3 text-sm text-muted">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-brand"
-                        {...form.register("save_address")}
-                      />
-                      Save this address
-                    </label>
-                    {saveAddress ? (
-                      <label className="flex items-center gap-3 text-sm text-muted">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 accent-brand"
-                          {...form.register("set_as_default")}
-                        />
-                        Set as default shipping address
-                      </label>
-                    ) : null}
-                  </div>
                 </div>
               </div>
             </fieldset>

@@ -49,11 +49,16 @@ export function ProcessingScreen({ orderId }: ProcessingScreenProps) {
 
     const supabase = createClient();
     const interval = window.setInterval(async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("orders")
         .select("status, total_amount")
         .eq("id", orderId)
-        .single();
+        .maybeSingle();
+      if (error) {
+        console.error("Order status poll failed.", error);
+        return;
+      }
+
       const order = data as OrderStatusRow | null;
 
       if (order?.status === "confirmed") {

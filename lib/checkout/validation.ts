@@ -107,8 +107,6 @@ export const checkoutSchema = z.object({
 export const checkoutFormSchema = z.object({
   shipping: checkoutShippingSchema,
   preferred_payment: paymentPreferenceSchema.default("card"),
-  save_address: z.boolean().default(false),
-  set_as_default: z.boolean().default(false),
 });
 
 export type CheckoutInput = z.output<typeof checkoutSchema>;

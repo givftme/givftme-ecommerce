@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireEnv } from "@/lib/env";
+import {
+  getOrderIdFromFlutterwaveMeta,
+  getOrderIdFromFlutterwaveReference,
+} from "@/lib/flutterwave/paymentReference";
 import { createServiceClient } from "@/lib/supabase/server";
 
 interface FlutterwaveWebhookPayload {
@@ -8,12 +12,17 @@ interface FlutterwaveWebhookPayload {
     id?: string | number;
     tx_ref?: string;
     status?: string;
+    amount?: string | number;
+    currency?: string;
+    meta?: unknown;
   };
 }
 
 interface WebhookOrderRow {
   id: string;
   status: string;
+  total_amount: string | number;
+  currency: string;
   flutterwave_tx_ref: string | null;
   wishlist_item_id: string | null;
   buyer_id: string;
@@ -21,6 +30,36 @@ interface WebhookOrderRow {
 
 function ok() {
   return NextResponse.json({ received: true });
+}
+
+function normalizeAmount(value: string | number | null | undefined) {
+  const amount =
+    typeof value === "string" && value.trim()
+      ? Number(value.trim())
+      : value;
+
+  if (typeof amount !== "number" || !Number.isFinite(amount)) {
+    return null;
+  }
+
+  return Math.round(amount * 100);
+}
+
+function paymentMatchesOrder(
+  payment: FlutterwaveWebhookPayload["data"],
+  order: WebhookOrderRow
+) {
+  const paymentAmount = normalizeAmount(payment?.amount);
+  const orderAmount = normalizeAmount(order.total_amount);
+  const paymentCurrency = payment?.currency?.trim().toUpperCase();
+  const orderCurrency = order.currency.trim().toUpperCase();
+
+  return (
+    paymentAmount !== null &&
+    orderAmount !== null &&
+    paymentAmount === orderAmount &&
+    paymentCurrency === orderCurrency
+  );
 }
 
 export async function POST(request: Request) {
@@ -43,7 +82,9 @@ export async function POST(request: Request) {
     return ok();
   }
 
-  const orderId = payload.data?.tx_ref;
+  const orderId =
+    getOrderIdFromFlutterwaveMeta(payload.data?.meta) ??
+    getOrderIdFromFlutterwaveReference(payload.data?.tx_ref);
 
   if (!orderId) {
     return ok();
@@ -52,7 +93,9 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("orders")
-    .select("id, status, flutterwave_tx_ref, wishlist_item_id, buyer_id")
+    .select(
+      "id, status, total_amount, currency, flutterwave_tx_ref, wishlist_item_id, buyer_id"
+    )
     .eq("id", orderId)
     .maybeSingle();
 
@@ -70,6 +113,18 @@ export async function POST(request: Request) {
   const txId = payload.data?.id != null ? String(payload.data.id) : null;
 
   if (payload.data?.status === "successful") {
+    if (!paymentMatchesOrder(payload.data, order)) {
+      console.error("Rejected Flutterwave confirmation with mismatched amount or currency.", {
+        orderId: order.id,
+        expectedAmount: order.total_amount,
+        receivedAmount: payload.data.amount ?? null,
+        expectedCurrency: order.currency,
+        receivedCurrency: payload.data.currency ?? null,
+      });
+
+      return ok();
+    }
+
     const { error: updateError } = await supabase
       .from("orders")
       .update({

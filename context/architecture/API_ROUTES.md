@@ -96,14 +96,14 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Critical:** fetches prices from Sanity using `CART_PRICES_QUERY` and never trusts client-submitted prices. Creates `orders.status = 'pending_payment'` and `order_items.unit_price` before contacting Flutterwave. If Flutterwave initiation fails, returns 502 while leaving the order retryable.
 
 ## `/api/checkout/retry`
-**Method:** GET. **Auth:** required, must own order. **Purpose:** re-initiates Flutterwave payment for an existing `pending_payment` or `payment_failed` order without creating a new order.
+**Method:** POST. **Auth:** required, must own order. **Purpose:** re-initiates Flutterwave payment for an existing `pending_payment` or `payment_failed` order without creating a new order.
 **Query params:** `order` UUID.
 **Response:** `{ order_id, payment_link }`.
 **Failure shape:** non-owned/missing orders return 404; non-retryable statuses return `{ error: "This order cannot be retried" }` with 400.
 
 ## `/api/flutterwave/webhook`
 **Method:** POST. **Auth:** none via user session — verified via Flutterwave's `verif-hash` header before body parsing. **Purpose:** receives payment confirmation/failure events from Flutterwave and updates the corresponding `orders.status` to `confirmed` or `payment_failed`.
-**Behavior:** ignores unknown orders and duplicate/non-pending orders idempotently with 200. Successful catalog wishlist orders mark the linked `wishlist_items` row, and any linked `master_items` row, as `purchased`.
+**Behavior:** ignores unknown orders and duplicate/non-pending orders idempotently with 200. Successful events only confirm the order when the webhook amount and currency match the stored order total and currency. Successful catalog wishlist orders mark the linked `wishlist_items` row, and any linked `master_items` row, as `purchased`.
 **Critical:** makes zero database reads or writes before the signature check passes. See `THIRD_PARTY_INTEGRATIONS.md` for the verification mechanism.
 
 ## `/api/orders/[id]/status` (to be built)

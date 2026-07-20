@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { jsonError } from "@/lib/api/response";
 import { initiateFlutterwavePayment } from "@/lib/flutterwave";
+import { isAllowedFlutterwavePaymentLink } from "@/lib/flutterwave/paymentLink";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
 
@@ -18,7 +19,7 @@ interface RetryOrderRow {
   shipping_phone: string | null;
 }
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const user = await getAuthenticatedApiUser(supabase);
 
@@ -88,7 +89,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!payment.ok || !payment.paymentLink) {
+    if (
+      !payment.ok ||
+      !isAllowedFlutterwavePaymentLink(payment.paymentLink)
+    ) {
       return jsonError("Payment couldn't start - try again.", 502);
     }
 
