@@ -146,7 +146,7 @@ Light wrapper reserved for reorder list presentation. Current v1 reorder uses mo
 
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
-`cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
+`cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `isHydrated`, `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
 
 `cart/CartItem.tsx`, `cart/CartSummary.tsx`, `cart/EmptyCart.tsx`, and `cart/CartPageClient.tsx` implement the responsive catalog cart page, including GSAP removal animation, background Sanity price refresh, unavailable-item blocking, sticky mobile checkout CTA, desktop summary sidebar, and recommended product grid.
 

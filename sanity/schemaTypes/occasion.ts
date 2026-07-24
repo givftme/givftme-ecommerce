@@ -39,6 +39,17 @@ export const occasion = defineType({
       name: "occasionType",
       title: "Occasion type",
       type: "string",
+      options: {
+        list: [
+          { title: "Birthday", value: "birthday" },
+          { title: "Wedding", value: "wedding" },
+          { title: "Anniversary", value: "anniversary" },
+          { title: "Baby Shower", value: "baby_shower" },
+          { title: "Graduation", value: "graduation" },
+          { title: "Other", value: "other" },
+        ],
+      },
+      initialValue: "birthday",
       validation: (rule) => rule.required(),
     }),
     defineField({

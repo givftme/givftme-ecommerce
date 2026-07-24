@@ -77,7 +77,7 @@ export function CheckoutForm({
   savedAddresses,
 }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, totalPrice } = useCart();
+  const { isHydrated, items, totalPrice } = useCart();
   const { unavailableItems, priceNotice, isRefreshingPrices } =
     useCartPriceRefresh();
   const [globalError, setGlobalError] = useState("");
@@ -98,10 +98,10 @@ export function CheckoutForm({
   }) as PaymentPreference | undefined;
 
   useEffect(() => {
-    if (items.length === 0) {
+    if (isHydrated && items.length === 0) {
       router.replace("/shop");
     }
-  }, [items.length, router]);
+  }, [isHydrated, items.length, router]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -145,6 +145,10 @@ export function CheckoutForm({
 
   const onSubmit = async (values: CheckoutFormValues) => {
     setGlobalError("");
+
+    if (!isHydrated) {
+      return;
+    }
 
     if (items.length === 0) {
       router.replace("/shop");
@@ -232,13 +236,13 @@ export function CheckoutForm({
             className="mt-6 grid gap-8 lg:grid-cols-3"
           >
             <fieldset
-              disabled={submitting}
+              disabled={submitting || !isHydrated}
               className="space-y-6 lg:col-span-2 lg:col-start-1 lg:row-start-1"
             >
               <AddressSelector
                 addresses={savedAddresses}
                 onSelect={applyAddress}
-                disabled={submitting}
+                disabled={submitting || !isHydrated}
               />
 
               <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
@@ -426,7 +430,7 @@ export function CheckoutForm({
               <PaymentMethodSelector
                 value={preferredPayment || "card"}
                 onChange={handlePaymentChange}
-                disabled={submitting}
+                disabled={submitting || !isHydrated}
               />
 
               {globalError ? (
@@ -443,6 +447,7 @@ export function CheckoutForm({
                   submitting ||
                   isRefreshingPrices ||
                   hasUnavailableItems ||
+                  !isHydrated ||
                   items.length === 0 ||
                   totalPrice <= 0
                 }

@@ -22,6 +22,7 @@ export interface CartItem {
 }
 
 interface CartContextValue {
+  isHydrated: boolean;
   items: CartItem[];
   addItem: (item: CartItem) => void;
   removeItem: (
@@ -197,6 +198,7 @@ export function CartContextProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      isHydrated,
       items,
       addItem,
       removeItem,
@@ -208,6 +210,7 @@ export function CartContextProvider({ children }: { children: ReactNode }) {
       pulseKey,
     }),
     [
+      isHydrated,
       items,
       addItem,
       removeItem,
