@@ -9,7 +9,7 @@ export const DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER =
 export const DELETE_CONFIRMATION_TEXT = "DELETE";
 
 export const profileSchema = z.object({
-  full_name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  full_name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   phone: z.string().max(20).optional().or(z.literal("")),
   default_thank_you_msg: z.string().max(500).optional().or(z.literal("")),
 });
