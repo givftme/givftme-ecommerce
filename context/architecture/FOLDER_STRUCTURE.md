@@ -46,7 +46,7 @@ app/
     success/[itemId]/             claimed success + invitee reminder opt-in
 
   (dashboard)/                   requires auth — RECEIVER-FACING
-    wishlists/, wishlists/new/, wishlists/[id]/edit/
+    wishlists/, wishlists/[id]/    evergreen only — auto-created, one per user; title is edited inline, no separate new/edit routes
     my-occasions/, my-occasions/new/, my-occasions/[id]/
     dates/                        important dates (Flow 1 reminders)
     orders/[id]/                  receiver's own order history

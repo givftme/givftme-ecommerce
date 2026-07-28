@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { buildAffiliateUrl } from "@/lib/affiliate/transform";
 import { readJson, jsonError } from "@/lib/api/response";
+import { getActivePrice } from "@/lib/flutterwave/getActivePrice";
+import type { SanityCheckoutProduct } from "@/lib/flutterwave/getActivePrice";
+import { sanityFetch } from "@/lib/sanity/fetch";
+import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeWishlistImageRef } from "@/lib/wishlist/images";
 import {
@@ -14,6 +18,10 @@ import { wishlistItemCreateSchema } from "@/lib/wishlist/validation";
 
 interface WishlistItemsRouteContext {
   params: Promise<{ id: string }>;
+}
+
+interface CatalogPriceProduct extends SanityCheckoutProduct {
+  imageUrl?: string | null;
 }
 
 export async function GET(_request: Request, context: WishlistItemsRouteContext) {
@@ -66,12 +74,6 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     return jsonError("Check the item details and try again.", 400);
   }
 
-  const imageUrl = normalizeWishlistImageRef(parsed.data.image_url, user.id);
-
-  if (parsed.data.image_url && imageUrl === null) {
-    return jsonError("You cannot use that image.", 400);
-  }
-
   let nextSortOrder = 0;
 
   try {
@@ -80,20 +82,38 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     return jsonError("Couldn't prepare item order.", 500);
   }
 
-  if (parsed.data.origin === "catalog") {
+  const data = parsed.data;
+
+  if (data.origin === "catalog") {
+    const products = await sanityFetch<CatalogPriceProduct[]>(CART_PRICES_QUERY, {
+      ids: [data.catalog_product_id],
+    });
+    const product =
+      products.find((entry) => entry._id === data.catalog_product_id) ?? null;
+
+    if (!product || product.status !== "active") {
+      return jsonError("This product is no longer available.", 400);
+    }
+
+    const catalogImageUrl = normalizeWishlistImageRef(
+      product.imageUrl ?? null,
+      user.id
+    );
+    const catalogPrice = getActivePrice(product, null);
+
     const isExclusive =
-      owner.wishlist.type === "occasion" && parsed.data.is_exclusive;
+      owner.wishlist.type === "occasion" && data.is_exclusive;
     const insertPayload = {
       wishlist_id: id,
       origin: "catalog",
       master_item_id: null,
-      title: parsed.data.title,
-      image_url: imageUrl,
+      title: product.title || data.title,
+      image_url: catalogImageUrl,
       product_url: null,
       affiliate_url: null,
-      price: parsed.data.price,
-      description: parsed.data.description,
-      catalog_product_id: parsed.data.catalog_product_id,
+      price: catalogPrice,
+      description: data.description,
+      catalog_product_id: data.catalog_product_id,
       is_exclusive: isExclusive,
       sort_order: nextSortOrder,
     };
@@ -142,12 +162,12 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     if (owner.wishlist.type === "evergreen") {
       const masterPayload = {
         user_id: user.id,
-        title: parsed.data.title,
-        image_url: imageUrl,
+        title: product.title || data.title,
+        image_url: catalogImageUrl,
         product_url: null,
-        price: parsed.data.price,
+        price: catalogPrice,
         origin: "catalog",
-        catalog_product_id: parsed.data.catalog_product_id,
+        catalog_product_id: data.catalog_product_id,
         sort_order: nextSortOrder,
       };
 
@@ -180,18 +200,24 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     return NextResponse.json({ item }, { status: 201 });
   }
 
-  const { affiliateUrl } = buildAffiliateUrl(parsed.data.product_url);
-  const isExclusive = owner.wishlist.type === "occasion" && parsed.data.is_exclusive;
+  const imageUrl = normalizeWishlistImageRef(data.image_url, user.id);
+
+  if (data.image_url && imageUrl === null) {
+    return jsonError("You cannot use that image.", 400);
+  }
+
+  const { affiliateUrl } = buildAffiliateUrl(data.product_url);
+  const isExclusive = owner.wishlist.type === "occasion" && data.is_exclusive;
   const insertPayload = {
     wishlist_id: id,
     origin: "external",
     master_item_id: null,
-    title: parsed.data.title,
+    title: data.title,
     image_url: imageUrl,
-    product_url: parsed.data.product_url,
+    product_url: data.product_url,
     affiliate_url: affiliateUrl,
-    price: parsed.data.price,
-    description: parsed.data.description,
+    price: data.price,
+    description: data.description,
     is_exclusive: isExclusive,
     sort_order: nextSortOrder,
   };
@@ -232,10 +258,10 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
   if (owner.wishlist.type === "evergreen") {
     const masterPayload = {
       user_id: user.id,
-      title: parsed.data.title,
+      title: data.title,
       image_url: imageUrl,
-      product_url: parsed.data.product_url,
-      price: parsed.data.price,
+      product_url: data.product_url,
+      price: data.price,
       origin: "external",
       sort_order: nextSortOrder,
     };

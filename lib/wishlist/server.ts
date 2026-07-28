@@ -416,6 +416,84 @@ export async function assertWishlistOwner(
   return { ok: true as const, wishlist };
 }
 
+interface EvergreenMasterSyncSource {
+  origin: string;
+  catalog_product_id: string | null;
+  product_url: string | null;
+  created_at: string | null;
+}
+
+/**
+ * Evergreen wishlist_items have no FK back to their paired master_items row
+ * (master_item_id is reserved for occasion-pull links, see migration 005).
+ * Correlate by user_id + origin + product identifier, disambiguating
+ * duplicates by closest created_at.
+ */
+export async function syncMasterItemFromWishlistItem(
+  supabase: SupabaseClient,
+  userId: string,
+  source: EvergreenMasterSyncSource,
+  updates: Partial<{ title: string; image_url: string | null; price: number | null }>
+) {
+  if (Object.keys(updates).length === 0) {
+    return { ok: true as const, matched: false };
+  }
+
+  let query = supabase
+    .from("master_items")
+    .select("id, created_at")
+    .eq("user_id", userId)
+    .eq("origin", source.origin);
+
+  if (source.origin === "catalog" && source.catalog_product_id) {
+    query = query.eq("catalog_product_id", source.catalog_product_id);
+  } else if (source.origin === "external" && source.product_url) {
+    query = query.eq("product_url", source.product_url);
+  } else {
+    return { ok: true as const, matched: false };
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+
+  const candidates = (data || []) as Array<{ id: string; created_at: string | null }>;
+
+  if (candidates.length === 0) {
+    return { ok: true as const, matched: false };
+  }
+
+  const targetTime = source.created_at ? new Date(source.created_at).getTime() : null;
+  let matchedId = candidates[0].id;
+  let closestDiff = Infinity;
+
+  for (const candidate of candidates) {
+    if (targetTime === null || !candidate.created_at) {
+      continue;
+    }
+
+    const diff = Math.abs(new Date(candidate.created_at).getTime() - targetTime);
+
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      matchedId = candidate.id;
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("master_items")
+    .update(updates)
+    .eq("id", matchedId);
+
+  if (updateError) {
+    return { ok: false as const, error: updateError.message };
+  }
+
+  return { ok: true as const, matched: true };
+}
+
 export async function getNextSortOrder(
   supabase: SupabaseClient,
   wishlistId: string
