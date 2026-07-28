@@ -41,16 +41,21 @@ export function DeleteAccountDialog({
 
     setIsDeleting(true);
 
-    const result = await deleteAccountAction(confirmation);
+    try {
+      const result = await deleteAccountAction(confirmation);
 
-    if (!result.success) {
-      toast({ title: result.error, variant: "danger" });
+      if (!result.success) {
+        toast({ title: result.error, variant: "danger" });
+        setIsDeleting(false);
+        return;
+      }
+
+      trackEvent("account.deleted");
+      router.push(result.redirectTo);
+    } catch {
+      toast({ title: "Something went wrong. Please try again.", variant: "danger" });
       setIsDeleting(false);
-      return;
     }
-
-    trackEvent("account.deleted");
-    router.push(result.redirectTo);
   };
 
   return (
