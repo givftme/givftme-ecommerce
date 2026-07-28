@@ -6,6 +6,7 @@ import {
   assertWishlistOwner,
   getAuthenticatedApiUser,
   signWishlistImage,
+  syncMasterItemFromWishlistItem,
 } from "@/lib/wishlist/server";
 import { editWishlistItemSchema } from "@/lib/wishlist/validation";
 
@@ -80,6 +81,42 @@ export async function PATCH(request: Request, context: WishlistItemRouteContext)
 
   if (error) {
     return jsonError("Couldn't save changes. Try again.", 500);
+  }
+
+  const updatedRow = data as {
+    origin: string;
+    catalog_product_id: string | null;
+    product_url: string | null;
+    created_at: string | null;
+  };
+
+  if (owner.wishlist.type === "evergreen") {
+    const masterUpdates: Partial<{
+      title: string;
+      image_url: string | null;
+      price: number | null;
+    }> = {};
+
+    if ("title" in updates) masterUpdates.title = updates.title as string;
+    if ("image_url" in updates)
+      masterUpdates.image_url = updates.image_url as string | null;
+    if ("price" in updates) masterUpdates.price = updates.price as number | null;
+
+    const sync = await syncMasterItemFromWishlistItem(
+      supabase,
+      user.id,
+      {
+        origin: updatedRow.origin,
+        catalog_product_id: updatedRow.catalog_product_id,
+        product_url: updatedRow.product_url,
+        created_at: updatedRow.created_at,
+      },
+      masterUpdates
+    );
+
+    if (!sync.ok) {
+      console.error("Couldn't sync evergreen master_items row on item edit.", sync.error);
+    }
   }
 
   const item = await signWishlistImage(

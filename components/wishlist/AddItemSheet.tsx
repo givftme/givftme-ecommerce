@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -27,6 +27,7 @@ import { Sheet, SheetContent } from "@/components/ui/Sheet";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
+import type { ScrapedProduct } from "@/lib/scraper/microlink";
 import { isWishlistStoragePath } from "@/lib/wishlist/images";
 import type { WishlistItem } from "@/lib/wishlist/types";
 import {
@@ -35,6 +36,16 @@ import {
   type ExternalWishlistItemInput,
 } from "@/lib/wishlist/validation";
 import { uploadWishlistImage } from "@/components/wishlist/uploadWishlistImage";
+
+const FETCH_SLOW_THRESHOLD_MS = 5000;
+
+function hostnameOf(url: string) {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "";
+  }
+}
 
 function makeWishlistItem(data: Partial<WishlistItem> & { id: string }): WishlistItem {
   return {
@@ -83,6 +94,12 @@ export function AddItemSheet({
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(0);
   const [allowGroupPayment, setAllowGroupPayment] = useState(true);
+  const [activeTab, setActiveTab] = useState<"url" | "manual">("url");
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchSlow, setFetchSlow] = useState(false);
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [hasFetchedPreview, setHasFetchedPreview] = useState(false);
+  const scrapeAbortRef = useRef<AbortController | null>(null);
 
   const form = useForm<
     ExternalWishlistItemFormValues,
@@ -103,6 +120,7 @@ export function AddItemSheet({
   });
 
   const watchedImage = useWatch({ control: form.control, name: "image_url" });
+  const watchedProductUrl = useWatch({ control: form.control, name: "product_url" });
 
   const resetSheet = () => {
     setDuplicateItem(null);
@@ -110,6 +128,11 @@ export function AddItemSheet({
     setUploadPreview(null);
     setQuantity(0);
     setAllowGroupPayment(true);
+    setActiveTab("url");
+    setIsFetching(false);
+    setFetchSlow(false);
+    setScrapeError(null);
+    setHasFetchedPreview(false);
     form.reset({
       origin: "external",
       title: "",
@@ -148,6 +171,84 @@ export function AddItemSheet({
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const skipToManual = (reason: "user_skipped" | "scrape_failed") => {
+    scrapeAbortRef.current?.abort();
+    setIsFetching(false);
+    setFetchSlow(false);
+    setActiveTab("manual");
+    trackEvent("wishlist.item.manual_fallback_used", { reason });
+  };
+
+  const switchToManualTab = () => {
+    scrapeAbortRef.current?.abort();
+    setIsFetching(false);
+    setFetchSlow(false);
+    setActiveTab("manual");
+  };
+
+  const switchToUrlTab = () => {
+    setActiveTab("url");
+  };
+
+  const handleFetch = async () => {
+    const url = form.getValues("product_url");
+    const domain = hostnameOf(url || "");
+
+    if (!domain) {
+      form.setError("product_url", { message: "Enter a valid product URL" });
+      return;
+    }
+
+    const controller = new AbortController();
+    scrapeAbortRef.current = controller;
+    setScrapeError(null);
+    setIsFetching(true);
+    setFetchSlow(false);
+
+    const slowTimer = setTimeout(() => setFetchSlow(true), FETCH_SLOW_THRESHOLD_MS);
+
+    try {
+      const response = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+        signal: controller.signal,
+      });
+      const payload = (await response.json()) as {
+        product?: ScrapedProduct;
+        error?: string;
+      };
+
+      if (!response.ok || !payload.product) {
+        throw new Error(payload.error || "We couldn't read that page automatically.");
+      }
+
+      form.setValue("title", payload.product.title, { shouldDirty: true });
+      form.setValue("image_url", payload.product.image_url, { shouldDirty: true });
+      form.setValue("price", payload.product.price, { shouldDirty: true });
+      form.setValue("product_url", payload.product.product_url, { shouldDirty: true });
+      form.setValue("scraped_currency", payload.product.currency, {
+        shouldDirty: true,
+      });
+      setHasFetchedPreview(true);
+      setIsFetching(false);
+      setFetchSlow(false);
+      trackEvent("wishlist.item.scrape_succeeded", { domain });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      trackEvent("wishlist.item.scrape_failed", { domain });
+      setScrapeError(
+        error instanceof Error ? error.message : "We couldn't read that page automatically."
+      );
+      skipToManual("scrape_failed");
+    } finally {
+      clearTimeout(slowTimer);
     }
   };
 
@@ -208,7 +309,7 @@ export function AddItemSheet({
         origin: "external",
         has_price: Boolean(values.price),
         has_image: Boolean(values.image_url),
-        scraped: false,
+        scraped: hasFetchedPreview,
       });
       toast({ title: "Added to your wishlist.", variant: "success" });
       closeSheet();
@@ -258,150 +359,248 @@ export function AddItemSheet({
               <div>
                 <h3 className="text-xl font-bold leading-6 text-ink">New wishlist</h3>
                 <p className="mt-2 max-w-[330px] text-[13px] leading-5 text-ink">
-                  Add a new item to your wishlist. Copy-paste the product URL, or
-                  type the product name
+                  Add a new item to your wishlist.
                 </p>
               </div>
 
-              <label className="mt-4 block">
-                <span className="sr-only">Product URL</span>
-                <Input
-                  type="url"
-                  {...form.register("product_url")}
-                  placeholder="Product URL"
-                  className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
-                />
-                {form.formState.errors.product_url && (
-                  <span className="mt-1 block text-xs font-medium text-brand">
-                    {form.formState.errors.product_url.message}
-                  </span>
-                )}
-              </label>
+              <div className="mt-5 inline-flex rounded-xl bg-surface p-1">
+                <button
+                  type="button"
+                  onClick={switchToUrlTab}
+                  className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === "url" ? "bg-white text-ink shadow-sm" : "text-muted"
+                  }`}
+                >
+                  Add from URL
+                </button>
+                <button
+                  type="button"
+                  onClick={switchToManualTab}
+                  className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === "manual" ? "bg-white text-ink shadow-sm" : "text-muted"
+                  }`}
+                >
+                  Add manually
+                </button>
+              </div>
 
-              <div className="mt-4 text-sm text-ink">Or</div>
-
-              <label className="mt-4 block">
-                <span className="sr-only">Name</span>
-                <Input
-                  {...form.register("title")}
-                  placeholder="Name"
-                  className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
-                />
-                {form.formState.errors.title && (
-                  <span className="mt-1 block text-xs font-medium text-brand">
-                    {form.formState.errors.title.message}
-                  </span>
-                )}
-              </label>
-
-              <div className="mt-8">
-                <p className="text-sm text-ink">Upload a picture</p>
-                <div className="mt-2 rounded-xl border border-dashed border-[#c9d5e5] bg-white p-4">
-                  <input
-                    id="wishlist-screen-image-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleUpload}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="wishlist-screen-image-upload"
-                    className="flex min-h-[68px] cursor-pointer flex-col items-center justify-center text-center"
-                  >
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt=""
-                        className="h-16 w-16 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <>
-                        <Upload className="h-6 w-6 text-ink" strokeWidth={1.7} />
-                        <span className="mt-2 text-sm text-[#a9a9a9]">
-                          Click <span className="font-semibold text-brand">here</span> to
-                          upload a picture
-                        </span>
-                      </>
-                    )}
-                    {isUploading && (
-                      <span className="mt-2 text-xs font-medium text-muted">
-                        Uploading...
+              {activeTab === "url" && !hasFetchedPreview && (
+                <div className="mt-4">
+                  <label className="block">
+                    <span className="sr-only">Product URL</span>
+                    <Input
+                      type="url"
+                      {...form.register("product_url")}
+                      placeholder="Paste a product URL"
+                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                    />
+                    {form.formState.errors.product_url && (
+                      <span className="mt-1 block text-xs font-medium text-brand">
+                        {form.formState.errors.product_url.message}
                       </span>
                     )}
                   </label>
-                </div>
-              </div>
 
-              <div className="mt-9 inline-flex h-10 w-[138px] items-center justify-between rounded-lg border border-stone-200 bg-white px-5">
-                <button
-                  type="button"
-                  aria-label="Decrease quantity"
-                  onClick={() => setQuantity((current) => Math.max(0, current - 1))}
-                  className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="text-base font-bold text-ink">{quantity}</span>
-                <button
-                  type="button"
-                  aria-label="Increase quantity"
-                  onClick={() => setQuantity((current) => current + 1)}
-                  className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-
-              <label className="mt-5 block">
-                <span className="sr-only">Price</span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  {...form.register("price", {
-                    setValueAs: (value) =>
-                      value === "" ? null : Number.parseFloat(String(value)),
-                  })}
-                  placeholder="Price"
-                  className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
-                />
-              </label>
-
-              <label className="mt-4 block">
-                <span className="sr-only">Description</span>
-                <Textarea
-                  {...form.register("description")}
-                  maxLength={500}
-                  placeholder="Description"
-                  className="min-h-[116px] rounded-xl border-[#c9d5e5] px-4 py-4 text-sm placeholder:text-[#cbd6e6]"
-                />
-              </label>
-
-              <div className="mt-5">
-                <p className="text-sm text-ink">Allow Group payment</p>
-                <div className="mt-3 flex items-start gap-4">
-                  <button
+                  <Button
                     type="button"
-                    aria-pressed={allowGroupPayment}
-                    onClick={() => setAllowGroupPayment((current) => !current)}
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand text-white"
+                    variant="ghost"
+                    fullWidth
+                    disabled={isFetching}
+                    onClick={handleFetch}
+                    className="mt-3 h-12 rounded-xl text-sm"
                   >
-                    {allowGroupPayment && <Check className="h-5 w-5" strokeWidth={3} />}
-                  </button>
-                  <p className="max-w-[280px] text-sm leading-5 text-muted">
-                    This allows multiple people to contribute to this wish
-                  </p>
-                </div>
-              </div>
+                    {isFetching ? "Fetching..." : "Fetch"}
+                  </Button>
 
-              <Button
-                type="submit"
-                fullWidth
-                disabled={form.formState.isSubmitting || isUploading}
-                className="mt-6 h-[54px] rounded-2xl text-base font-medium"
-              >
-                {form.formState.isSubmitting ? "Saving..." : "Save"}
-              </Button>
+                  {scrapeError && (
+                    <p className="mt-2 text-xs font-medium text-brand">{scrapeError}</p>
+                  )}
+
+                  {fetchSlow && (
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted">
+                      <span>This is taking a while...</span>
+                      <button
+                        type="button"
+                        onClick={() => skipToManual("user_skipped")}
+                        className="font-semibold text-brand"
+                      >
+                        Skip to manual entry
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(activeTab === "manual" || hasFetchedPreview) && (
+                <>
+                  {activeTab === "url" && hasFetchedPreview && (
+                    <div className="mt-4 flex items-center justify-between rounded-xl bg-surface px-4 py-3">
+                      <p className="text-xs text-muted">
+                        Auto-filled from {hostnameOf(watchedProductUrl || "")}. Review and
+                        edit below.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHasFetchedPreview(false);
+                          setScrapeError(null);
+                           form.setValue("title", "");
+                          form.setValue("image_url", null);
+                          form.setValue("price", null);
+                          form.setValue("scraped_currency", null);
+                        }}
+                        className="shrink-0 pl-3 text-xs font-semibold text-brand"
+                      >
+                        Start over
+                      </button>
+                    </div>
+                  )}
+
+                  {activeTab === "manual" && scrapeError && (
+                    <p className="mt-4 text-xs font-medium text-brand">{scrapeError}</p>
+                  )}
+
+                  {activeTab === "manual" && (
+                    <label className="mt-4 block">
+                      <span className="sr-only">Product URL</span>
+                      <Input
+                        type="url"
+                        {...form.register("product_url")}
+                        placeholder="Product URL"
+                        className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                      />
+                      {form.formState.errors.product_url && (
+                        <span className="mt-1 block text-xs font-medium text-brand">
+                          {form.formState.errors.product_url.message}
+                        </span>
+                      )}
+                    </label>
+                  )}
+
+                  <label className="mt-4 block">
+                    <span className="sr-only">Name</span>
+                    <Input
+                      {...form.register("title")}
+                      placeholder="Name"
+                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                    />
+                    {form.formState.errors.title && (
+                      <span className="mt-1 block text-xs font-medium text-brand">
+                        {form.formState.errors.title.message}
+                      </span>
+                    )}
+                  </label>
+
+                  <div className="mt-8">
+                    <p className="text-sm text-ink">Upload a picture</p>
+                    <div className="mt-2 rounded-xl border border-dashed border-[#c9d5e5] bg-white p-4">
+                      <input
+                        id="wishlist-screen-image-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleUpload}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="wishlist-screen-image-upload"
+                        className="flex min-h-[68px] cursor-pointer flex-col items-center justify-center text-center"
+                      >
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt=""
+                            className="h-16 w-16 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 text-ink" strokeWidth={1.7} />
+                            <span className="mt-2 text-sm text-[#a9a9a9]">
+                              Click <span className="font-semibold text-brand">here</span> to
+                              upload a picture
+                            </span>
+                          </>
+                        )}
+                        {isUploading && (
+                          <span className="mt-2 text-xs font-medium text-muted">
+                            Uploading...
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-9 inline-flex h-10 w-[138px] items-center justify-between rounded-lg border border-stone-200 bg-white px-5">
+                    <button
+                      type="button"
+                      aria-label="Decrease quantity"
+                      onClick={() => setQuantity((current) => Math.max(0, current - 1))}
+                      className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="text-base font-bold text-ink">{quantity}</span>
+                    <button
+                      type="button"
+                      aria-label="Increase quantity"
+                      onClick={() => setQuantity((current) => current + 1)}
+                      className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <label className="mt-5 block">
+                    <span className="sr-only">Price</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1"
+                      {...form.register("price", {
+                        setValueAs: (value) =>
+                          value === "" ? null : Number.parseFloat(String(value)),
+                      })}
+                      placeholder="Price"
+                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                    />
+                  </label>
+
+                  <label className="mt-4 block">
+                    <span className="sr-only">Description</span>
+                    <Textarea
+                      {...form.register("description")}
+                      maxLength={500}
+                      placeholder="Description"
+                      className="min-h-[116px] rounded-xl border-[#c9d5e5] px-4 py-4 text-sm placeholder:text-[#cbd6e6]"
+                    />
+                  </label>
+
+                  <div className="mt-5">
+                    <p className="text-sm text-ink">Allow Group payment</p>
+                    <div className="mt-3 flex items-start gap-4">
+                      <button
+                        type="button"
+                        aria-pressed={allowGroupPayment}
+                        onClick={() => setAllowGroupPayment((current) => !current)}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand text-white"
+                      >
+                        {allowGroupPayment && <Check className="h-5 w-5" strokeWidth={3} />}
+                      </button>
+                      <p className="max-w-[280px] text-sm leading-5 text-muted">
+                        This allows multiple people to contribute to this wish
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    disabled={form.formState.isSubmitting || isUploading}
+                    className="mt-6 h-[54px] rounded-2xl text-base font-medium"
+                  >
+                    {form.formState.isSubmitting ? "Saving..." : "Save"}
+                  </Button>
+                </>
+              )}
             </form>
           </div>
         </SheetContent>

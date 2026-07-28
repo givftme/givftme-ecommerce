@@ -24,7 +24,7 @@ This file should be updated frequently — at minimum every time a feature moves
 - Sanity catalog schema files — supplier, occasion, collection, product, attribute option, variant attribute, product variant, including flash sale fields
 - Affiliate URL transformer (Jumia, Amazon, Konga)
 - Microlink scraping integration (`/api/scrape`)
-- Evergreen wishlist core — dashboard auto-creation, wishlist list/detail screens, add/edit/archive/reorder external items, manual image upload wiring, title editing, and owner-checked wishlist APIs
+- Evergreen wishlist core — dashboard auto-creation, wishlist list/detail screens, add/edit/archive/reorder external items, manual image upload wiring, title editing, and owner-checked wishlist APIs. Add-item dialog now has URL/Manual tabs wired to `/api/scrape` (Fetch → editable preview → auto fallback to manual on failure/timeout); catalog adds re-fetch title/image/price from Sanity server-side rather than trusting the client; item edits now sync evergreen `master_items` in addition to `wishlist_items`.
 - Supabase schema migration 003 file — adds `sort_order` to `wishlist_items` and `master_items` (must still be applied to the Supabase project)
 - Sharing and giver flow core — receiver share settings sheet, visibility/price auto-save, invite management with Resend email fallback, `/w/[id]` shared wishlist view, giver item detail, external purchase confirmation, claimed success, intent flagging, invitee reminder opt-in, `/api/purchases`, and `/api/reminders`
 - Supabase schema migration 006 file — adds intent flags, invite helper policies/functions, and shared wishlist resolver (must still be applied to the Supabase project)

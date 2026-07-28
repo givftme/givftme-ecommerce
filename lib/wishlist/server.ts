@@ -6,7 +6,11 @@ import {
   getWishlistStoragePathFromImageRef,
   WISHLIST_IMAGES_BUCKET,
 } from "@/lib/wishlist/images";
-import type { WishlistDetail, WishlistItem, WishlistSummary } from "@/lib/wishlist/types";
+import type {
+  WishlistDetail,
+  WishlistItem,
+  WishlistSummary,
+} from "@/lib/wishlist/types";
 
 type EvergreenWishlist = Omit<WishlistSummary, "item_count">;
 
@@ -30,7 +34,7 @@ function isRlsViolation(error: { code?: string; message?: string } | null) {
 
 function assertEvergreenWishlist(
   wishlist: Partial<EvergreenWishlist> | null,
-  message: string
+  message: string,
 ): EvergreenWishlist {
   if (!wishlist?.id) {
     throw new Error(message);
@@ -54,7 +58,7 @@ export async function requireDashboardUser(redirectTo = "/wishlists") {
 
 export async function ensureEvergreenWishlist(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ) {
   const { data: existing, error: existingError } = await supabase
     .from("wishlists")
@@ -70,7 +74,7 @@ export async function ensureEvergreenWishlist(
   if (existing) {
     return assertEvergreenWishlist(
       existing as EvergreenWishlist,
-      "Evergreen wishlist exists but did not include a valid ID."
+      "Evergreen wishlist exists but did not include a valid ID.",
     );
   }
 
@@ -89,7 +93,7 @@ export async function ensureEvergreenWishlist(
   if (!createError) {
     return assertEvergreenWishlist(
       created as EvergreenWishlist | null,
-      "Could not create a valid evergreen wishlist."
+      "Could not create a valid evergreen wishlist.",
     );
   }
 
@@ -107,22 +111,24 @@ export async function ensureEvergreenWishlist(
 
     return assertEvergreenWishlist(
       racedWishlist as EvergreenWishlist | null,
-      "Evergreen wishlist already exists but could not be loaded."
+      "Evergreen wishlist already exists but could not be loaded.",
     );
   }
 
   if (isRlsViolation(createError)) {
     throw new Error(
-      "Supabase RLS rejected evergreen wishlist creation. Apply gifvtme_migration_004_wishlist_rls.sql so authenticated owners can insert their own wishlists."
+      "Supabase RLS rejected evergreen wishlist creation. Apply gifvtme_migration_004_wishlist_rls.sql so authenticated owners can insert their own wishlists.",
     );
   }
 
-  throw new Error(createError?.message || "Could not create evergreen wishlist.");
+  throw new Error(
+    createError?.message || "Could not create evergreen wishlist.",
+  );
 }
 
 export async function getWishlistSummaries(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ) {
   const { data, error } = await supabase
     .from("wishlists")
@@ -161,7 +167,7 @@ function bySortOrderThenCreatedAt(a: WishlistItem, b: WishlistItem) {
 export async function signWishlistImage<T extends { image_url: string | null }>(
   supabase: SupabaseClient,
   userId: string,
-  item: T
+  item: T,
 ): Promise<T & { image_storage_path?: string | null }> {
   const storagePath = getWishlistStoragePathFromImageRef(item.image_url);
 
@@ -189,18 +195,15 @@ export async function signWishlistImage<T extends { image_url: string | null }>(
   };
 }
 
-export async function signWishlistImages<T extends { image_url: string | null }>(
-  supabase: SupabaseClient,
-  userId: string,
-  items: T[]
-) {
-  return Promise.all(items.map((item) => signWishlistImage(supabase, userId, item)));
+export async function signWishlistImages<
+  T extends { image_url: string | null },
+>(supabase: SupabaseClient, userId: string, items: T[]) {
+  return Promise.all(
+    items.map((item) => signWishlistImage(supabase, userId, item)),
+  );
 }
 
-function isMissingColumn(
-  error: { message?: string } | null,
-  column: string
-) {
+function isMissingColumn(error: { message?: string } | null, column: string) {
   return error?.message?.toLowerCase().includes(column.toLowerCase()) ?? false;
 }
 
@@ -246,7 +249,7 @@ ${itemColumns.map((column) => `      ${column}`).join(",\n")}
 export async function getOwnedWishlistDetail(
   supabase: SupabaseClient,
   userId: string,
-  wishlistId: string
+  wishlistId: string,
 ): Promise<WishlistDetail | null> {
   const selectOptions: WishlistDetailSelectOptions = {
     includeDescription: true,
@@ -286,7 +289,7 @@ export async function getOwnedWishlistDetail(
       isMissingColumn(response.error, "description")
     ) {
       console.error(
-        "wishlist_items_with_status.description is missing. Re-run gifvtme_migration_004_wishlist_rls.sql to repair the view."
+        "wishlist_items_with_status.description is missing. Re-run gifvtme_migration_004_wishlist_rls.sql to repair the view.",
       );
       selectOptions.includeDescription = false;
       shouldRetry = true;
@@ -297,7 +300,7 @@ export async function getOwnedWishlistDetail(
       isMissingColumn(response.error, "sort_order")
     ) {
       console.error(
-        "wishlist_items.sort_order is missing. Run gifvtme_migration_003.sql before using reorder."
+        "wishlist_items.sort_order is missing. Run gifvtme_migration_003.sql before using reorder.",
       );
       selectOptions.includeSortOrder = false;
       shouldRetry = true;
@@ -308,7 +311,7 @@ export async function getOwnedWishlistDetail(
       isMissingColumn(response.error, "master_item_id")
     ) {
       console.error(
-        "wishlist_items_with_status.master_item_id is missing. Run gifvtme_migration_005_occasion_wishlist.sql before using occasion wishlist pulls."
+        "wishlist_items_with_status.master_item_id is missing. Run gifvtme_migration_005_occasion_wishlist.sql before using occasion wishlist pulls.",
       );
       selectOptions.includeMasterItemId = false;
       shouldRetry = true;
@@ -319,7 +322,7 @@ export async function getOwnedWishlistDetail(
       isMissingColumn(response.error, "intent_flagged")
     ) {
       console.error(
-        "wishlist_items_with_status intent fields are missing. Run gifvtme_migration_006_sharing_giver_flow.sql before using giver intent flags."
+        "wishlist_items_with_status intent fields are missing. Run gifvtme_migration_006_sharing_giver_flow.sql before using giver intent flags.",
       );
       selectOptions.includeIntentFields = false;
       shouldRetry = true;
@@ -391,7 +394,7 @@ export async function getAuthenticatedApiUser(supabase: SupabaseClient) {
 export async function assertWishlistOwner(
   supabase: SupabaseClient,
   wishlistId: string,
-  userId: string
+  userId: string,
 ) {
   const { data, error } = await supabase
     .from("wishlists")
@@ -416,9 +419,103 @@ export async function assertWishlistOwner(
   return { ok: true as const, wishlist };
 }
 
+interface EvergreenMasterSyncSource {
+  origin: string;
+  catalog_product_id: string | null;
+  product_url: string | null;
+  created_at: string | null;
+}
+
+/**
+ * Evergreen wishlist_items have no FK back to their paired master_items row
+ * (master_item_id is reserved for occasion-pull links, see migration 005).
+ * Correlate by user_id + origin + product identifier, disambiguating
+ * duplicates by closest created_at.
+ */
+export async function syncMasterItemFromWishlistItem(
+  supabase: SupabaseClient,
+  userId: string,
+  source: EvergreenMasterSyncSource,
+  updates: Partial<{
+    title: string;
+    image_url: string | null;
+    price: number | null;
+  }>,
+) {
+  if (Object.keys(updates).length === 0) {
+    return { ok: true as const, matched: false };
+  }
+
+  let query = supabase
+    .from("master_items")
+    .select("id, created_at")
+    .eq("user_id", userId)
+    .eq("origin", source.origin)
+    .neq("status", "purchased")
+    .neq("status", "archived");
+
+  if (source.origin === "catalog" && source.catalog_product_id) {
+    query = query.eq("catalog_product_id", source.catalog_product_id);
+  } else if (source.origin === "external" && source.product_url) {
+    query = query.eq("product_url", source.product_url);
+  } else {
+    return { ok: true as const, matched: false };
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return { ok: false as const, error: error.message };
+  }
+
+  const candidates = (data || []) as Array<{
+    id: string;
+    created_at: string | null;
+  }>;
+
+  if (candidates.length === 0) {
+    return { ok: true as const, matched: false };
+  }
+
+  const targetTime = source.created_at
+    ? new Date(source.created_at).getTime()
+    : null;
+  if (targetTime === null && candidates.length > 1) {
+    return { ok: true as const, matched: false };
+  }
+  let matchedId = candidates[0].id;
+  let closestDiff = Infinity;
+
+  for (const candidate of candidates) {
+    if (targetTime === null || !candidate.created_at) {
+      continue;
+    }
+
+    const diff = Math.abs(
+      new Date(candidate.created_at).getTime() - targetTime,
+    );
+
+    if (diff < closestDiff) {
+      closestDiff = diff;
+      matchedId = candidate.id;
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from("master_items")
+    .update(updates)
+    .eq("id", matchedId);
+
+  if (updateError) {
+    return { ok: false as const, error: updateError.message };
+  }
+
+  return { ok: true as const, matched: true };
+}
+
 export async function getNextSortOrder(
   supabase: SupabaseClient,
-  wishlistId: string
+  wishlistId: string,
 ) {
   const { data, error } = await supabase
     .from("wishlist_items")
@@ -430,7 +527,7 @@ export async function getNextSortOrder(
 
   if (error?.message.toLowerCase().includes("sort_order")) {
     console.error(
-      "wishlist_items.sort_order is missing. Run gifvtme_migration_003.sql before adding reorderable items."
+      "wishlist_items.sort_order is missing. Run gifvtme_migration_003.sql before adding reorderable items.",
     );
 
     return 0;

@@ -36,7 +36,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Methods:** GET, POST. **Auth:** required, must own wishlist. **Purpose:** lists or creates wishlist items.
 **GET response:** `{ items }` from `wishlist_items_with_status`, excluding archived items in the page-level helper.
 **POST request:** either external `{ origin: "external", title, product_url, image_url?, price?, description?, scraped_currency? }` or catalog `{ origin: "catalog", catalog_product_id, title, image_url?, price, description?, is_exclusive? }`.
-**Behavior:** external items build `affiliate_url`; catalog items set `catalog_product_id` and leave `product_url`/`affiliate_url` null. Both insert `wishlist_items` and mirror evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
+**Behavior:** external items build `affiliate_url`; catalog items set `catalog_product_id` and leave `product_url`/`affiliate_url` null. For catalog adds, `title`/`image_url`/`price` in the request are accepted for schema compatibility but ignored — the route re-fetches the product from Sanity via `CART_PRICES_QUERY` by `catalog_product_id` and uses that (title, image, `getActivePrice()` result honoring an active flash sale) as the source of truth, rejecting with 400 if the product is missing or not `status: "active"`. Both insert `wishlist_items` and mirror evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/newsletter`
@@ -56,7 +56,8 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/wishlists/[id]/items/[itemId]`
 **Methods:** PATCH, DELETE. **Auth:** required, must own wishlist. **Purpose:** edit an item or soft-delete it.
-**PATCH request:** partial `{ title?, image_url?, price?, description? }`. **DELETE behavior:** sets `wishlist_items.status = 'archived'`; never hard-deletes.
+**PATCH request:** partial `{ title?, image_url?, price?, description? }`. For evergreen wishlists, also best-effort syncs the same `title`/`image_url`/`price` fields to the matching `master_items` row — matched by `user_id` + `origin` + `catalog_product_id`/`product_url` (closest `created_at` breaks ties), since evergreen `wishlist_items` have no FK back to their own `master_items` row (`master_item_id` is reserved for occasion-pull links, see migration 005). `description` is not mirrored — `master_items` has no such column.
+**DELETE behavior:** sets `wishlist_items.status = 'archived'`; never hard-deletes.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
 ## `/api/wishlists/[id]/items/reorder`
