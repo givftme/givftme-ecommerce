@@ -115,7 +115,7 @@ export async function PATCH(request: Request, context: WishlistItemRouteContext)
     );
 
     if (!sync.ok) {
-      return jsonError("Item updated, but couldn't sync the evergreen pool.", 500);
+      console.error("Couldn't sync evergreen master_items row on item edit.", sync.error);
     }
   }
 

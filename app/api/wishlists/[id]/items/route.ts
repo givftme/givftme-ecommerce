@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildAffiliateUrl } from "@/lib/affiliate/transform";
 import { readJson, jsonError } from "@/lib/api/response";
-import { getActivePrice } from "@/lib/flutterwave/getActivePrice";
+import { getActivePrice, isFlashSaleWindowActive } from "@/lib/flutterwave/getActivePrice";
 import type { SanityCheckoutProduct } from "@/lib/flutterwave/getActivePrice";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
@@ -22,6 +22,25 @@ interface WishlistItemsRouteContext {
 
 interface CatalogPriceProduct extends SanityCheckoutProduct {
   imageUrl?: string | null;
+}
+
+// No combination_key is collected at wishlist-add time, so variant products
+// price as "from the cheapest available variant" rather than falling through
+// to getActivePrice's unset basePrice (which would silently save price: 0).
+function getFromPrice(product: CatalogPriceProduct): number | null {
+  if (!product.hasVariants) {
+    return getActivePrice(product, null);
+  }
+
+  if (isFlashSaleWindowActive(product) && product.salePrice != null) {
+    return product.salePrice;
+  }
+
+  const availablePrices = (product.variants || [])
+    .filter((variant) => variant.available !== false && variant.price != null)
+    .map((variant) => variant.price as number);
+
+  return availablePrices.length > 0 ? Math.min(...availablePrices) : null;
 }
 
 export async function GET(_request: Request, context: WishlistItemsRouteContext) {
@@ -85,11 +104,16 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
   const data = parsed.data;
 
   if (data.origin === "catalog") {
-    const products = await sanityFetch<CatalogPriceProduct[]>(CART_PRICES_QUERY, {
-      ids: [data.catalog_product_id],
-    });
-    const product =
-      products.find((entry) => entry._id === data.catalog_product_id) ?? null;
+    let products: CatalogPriceProduct[];
+
+    try {
+      products = await sanityFetch<CatalogPriceProduct[]>(CART_PRICES_QUERY, {
+        ids: [data.catalog_product_id],
+      });
+    } catch {
+      return jsonError("Couldn't check that product right now. Try again.", 502);
+    }
+    const product = products.find((entry) => entry._id === data.catalog_product_id) ?? null;
 
     if (!product || product.status !== "active") {
       return jsonError("This product is no longer available.", 400);
@@ -99,15 +123,18 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
       product.imageUrl ?? null,
       user.id
     );
-    const catalogPrice = getActivePrice(product, null);
+    const catalogPrice = getFromPrice(product);
 
-    const isExclusive =
-      owner.wishlist.type === "occasion" && data.is_exclusive;
+    if (catalogPrice === null) {
+      return jsonError("This product is currently unavailable.", 400);
+    }
+
+    const isExclusive = owner.wishlist.type === "occasion" && data.is_exclusive;
     const insertPayload = {
       wishlist_id: id,
       origin: "catalog",
       master_item_id: null,
-      title: product.title || data.title,
+      title: product.title,
       image_url: catalogImageUrl,
       product_url: null,
       affiliate_url: null,
@@ -162,7 +189,7 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     if (owner.wishlist.type === "evergreen") {
       const masterPayload = {
         user_id: user.id,
-        title: product.title || data.title,
+        title: product.title,
         image_url: catalogImageUrl,
         product_url: null,
         price: catalogPrice,

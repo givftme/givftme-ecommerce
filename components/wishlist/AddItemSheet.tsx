@@ -444,12 +444,20 @@ export function AddItemSheet({
                         onClick={() => {
                           setHasFetchedPreview(false);
                           setScrapeError(null);
+                           form.setValue("title", "");
+                          form.setValue("image_url", null);
+                          form.setValue("price", null);
+                          form.setValue("scraped_currency", null);
                         }}
                         className="shrink-0 pl-3 text-xs font-semibold text-brand"
                       >
                         Start over
                       </button>
                     </div>
+                  )}
+
+                  {activeTab === "manual" && scrapeError && (
+                    <p className="mt-4 text-xs font-medium text-brand">{scrapeError}</p>
                   )}
 
                   {activeTab === "manual" && (
