@@ -77,3 +77,7 @@ Catalog items are different — Gifvtme curates and owns the relationship with t
 ## Currency
 
 **Decision: Nigerian Naira (₦) only for v1.** No multi-currency support. This should be assumed everywhere price is displayed, stored, or calculated.
+
+## Account management
+
+**Decision: account deletion is blocked while the user has an order in `confirmed`, `under_review`, `forwarded`, or `shipped` status.** The DB cascade on `auth.admin.deleteUser` would silently delete the order row, but the internal Retool ops team would lose visibility into an in-flight fulfillment. This was an open question in the Profile Management spec (`02-PROFILE-MANAGEMENT.md`) flagged for a decision; resolved by taking the spec's own recommendation — surface "You have an active order. Please wait for it to be delivered before deleting your account." and block the deletion server-side. See `BUSINESS_RULES.md` rule 25.

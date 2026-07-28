@@ -55,3 +55,7 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 22. **Do not build a wallet or stored balance feature.** No financial holding of customer funds beyond the immediate Flutterwave transaction.
 23. **Do not build a social feed.** Out of scope entirely for v1.
 24. **Do not build automated supplier API integration.** Order forwarding to suppliers is a manual, human-driven step in v1.
+
+## Account management
+
+25. **Account deletion must be blocked while the user has an order with status `confirmed`, `under_review`, `forwarded`, or `shipped`.** Deleting the account cascades and would delete the order row, losing ops visibility into an in-flight fulfillment. See `PRD.md` "Account management" for the decision context.

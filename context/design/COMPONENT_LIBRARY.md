@@ -43,7 +43,7 @@ Local toast provider and `useToast()` hook used for dashboard/wishlist success a
 ## `layout/`
 
 ### `Navbar`
-Props: `cartCount` (optional), `userName` (optional). One component handling both desktop (full bar + secondary nav row) and mobile (collapsed bar + hamburger) — see the component for the `hidden md:flex` / `flex md:hidden` pattern used throughout.
+Props: `cartCount` (optional), `userName` (optional), `avatarUrl` (optional — renders as a 24px circular image in the desktop account link when set, falling back to a `userName`-initial circle, then a generic user icon). One component handling both desktop (full bar + secondary nav row) and mobile (collapsed bar + hamburger) — see the component for the `hidden md:flex` / `flex md:hidden` pattern used throughout.
 
 ### `MobileBottomNav`
 No props. Renders only on mobile (`flex md:hidden`). Exactly three tabs: Home, Wishlist, Account — see `design/DESIGN_SYSTEM.md` for why Feed is intentionally absent.

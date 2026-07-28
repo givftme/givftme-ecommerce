@@ -9,7 +9,7 @@ This is a readable companion to the two SQL migration files (`gifvtme_migration.
 ## Supabase tables
 
 ### `users`
-Extends `auth.users` with profile data. `default_thank_you_msg` lives here so it's reusable across every purchase without duplication. Auto-created via the `handle_new_user` trigger on signup.
+Extends `auth.users` with profile data. `default_thank_you_msg` lives here so it's reusable across every purchase without duplication. Auto-created via the `handle_new_user` trigger on signup. `phone` (added by migration 008) is deliberately not readable by `anon` — it's never shown in a shared/giver-facing context, unlike `full_name`/`avatar_url`. Column-level `GRANT`s (not just RLS) restrict which columns `authenticated`/`anon` can select/update — check migrations 004/006/008 before assuming a new column is writable by the client SDK.
 
 ### `master_items`
 The evergreen wishlist pool. `origin` + `catalog_product_id` mirror `wishlist_items`. `status` (`active`/`purchased`/`archived`) tracks whether an evergreen item is currently "claimed" — this is what the occasion-archive reactivation flow (see `PRD.md`) reads and writes. Migration 003 adds `sort_order` for evergreen ordering.
@@ -71,6 +71,9 @@ Migration 006 adds narrow security-definer functions used through the regular Su
 
 ### Bucket: `wishlist-images`
 Used by manual wishlist item image upload. Must be created in Supabase Storage as a private bucket, with a 5MB file size limit and allowed MIME types `image/jpeg`, `image/png`, and `image/webp`. The app stores object paths on wishlist rows and creates short-lived signed URLs only after the viewer is authorized to read the wishlist.
+
+### Bucket: `avatars`
+Created by migration 008. Public bucket (avatars display in shared/giver-facing contexts like the wishlist header and navbar), 5MB file size limit, allowed MIME types `image/jpeg`, `image/png`, `image/webp`. Objects live at `<user_id>/<filename>`; `storage.objects` RLS policies restrict insert/update/delete to the owner's own folder (`(storage.foldername(name))[1] = auth.uid()::text`) while allowing public `SELECT`. The full public URL (not a signed URL) is written to `public.users.avatar_url`.
 
 ## Sanity documents
 

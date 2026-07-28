@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -34,6 +36,7 @@ export interface NavbarProps {
   cartCount?: number;
   cartPulseKey?: number;
   userName?: string;
+  avatarUrl?: string;
   isAuthenticated?: boolean;
   searchQuery?: string;
 }
@@ -42,6 +45,7 @@ export function Navbar({
   cartCount = 0,
   cartPulseKey = 0,
   userName,
+  avatarUrl,
   isAuthenticated = false,
   searchQuery,
 }: NavbarProps) {
@@ -127,7 +131,19 @@ export function Navbar({
             href={accountHref}
             className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
           >
-            <User className="h-6 w-6" strokeWidth={1.5} />
+            {isAuthenticated && avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                className="h-6 w-6 rounded-full object-cover"
+              />
+            ) : isAuthenticated && userName ? (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-light text-[11px] font-semibold text-brand">
+                {userName.charAt(0).toUpperCase()}
+              </span>
+            ) : (
+              <User className="h-6 w-6" strokeWidth={1.5} />
+            )}
             <span className="text-left leading-tight">
               {accountPrimaryLabel}
               <br />

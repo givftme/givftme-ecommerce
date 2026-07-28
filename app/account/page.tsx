@@ -57,10 +57,20 @@ export default async function AccountPage() {
     <PageWrapper isAuthenticated>
       <section className="bg-surface py-10">
         <div className="mx-auto max-w-4xl px-4 md:px-6">
-          <h1 className="text-3xl font-bold text-ink">My orders</h1>
-          <p className="mt-2 text-sm text-muted">
-            Recent catalog orders and payment status.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-bold text-ink">My orders</h1>
+              <p className="mt-2 text-sm text-muted">
+                Recent catalog orders and payment status.
+              </p>
+            </div>
+            <Link
+              href="/account/profile"
+              className="text-sm font-semibold text-brand hover:underline"
+            >
+              Edit profile
+            </Link>
+          </div>
 
           {orders.length === 0 ? (
             <div className="mt-8 rounded-2xl border border-stone-100 bg-white p-6 text-center shadow-sm">

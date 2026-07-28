@@ -11,6 +11,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 interface PublicPageShellProps {
   children: ReactNode;
   userName?: string;
+  avatarUrl?: string;
   isAuthenticated?: boolean;
   searchQuery?: string;
 }
@@ -18,6 +19,7 @@ interface PublicPageShellProps {
 function CartAwareChrome({
   children,
   userName,
+  avatarUrl,
   isAuthenticated,
   searchQuery,
 }: PublicPageShellProps) {
@@ -29,6 +31,7 @@ function CartAwareChrome({
         cartCount={totalItems}
         cartPulseKey={pulseKey}
         userName={userName}
+        avatarUrl={avatarUrl}
         isAuthenticated={isAuthenticated}
         searchQuery={searchQuery}
       />
