@@ -45,11 +45,27 @@ export async function PageWrapper({
     data: { user },
   } = await supabase.auth.getUser();
   const resolvedIsAuthenticated = isAuthenticated ?? Boolean(user);
-  const resolvedUserName = userName ?? getUserDisplayName(user);
+
+  let profileName: string | undefined;
+  let avatarUrl: string | undefined;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    profileName = profile?.full_name?.trim().split(/\s+/)[0] || undefined;
+    avatarUrl = profile?.avatar_url || undefined;
+  }
+
+  const resolvedUserName = userName ?? profileName ?? getUserDisplayName(user);
 
   return (
     <PublicPageShell
       userName={resolvedUserName}
+      avatarUrl={avatarUrl}
       isAuthenticated={resolvedIsAuthenticated}
       searchQuery={searchQuery}
     >
