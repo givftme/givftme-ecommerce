@@ -17,6 +17,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/Form";
+import { trackEvent } from "@/lib/analytics";
 import {
   type ResetPasswordValues,
   resetPasswordSchema,
@@ -48,6 +49,7 @@ export function ResetPasswordForm() {
         return;
       }
 
+      trackEvent("auth.password_reset.completed");
       window.sessionStorage.removeItem("reset_email");
       router.push("/success");
     });

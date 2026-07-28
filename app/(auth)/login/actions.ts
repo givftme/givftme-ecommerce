@@ -33,6 +33,7 @@ export async function loginAction(
     return {
       success: false,
       error: "Incorrect email or password.",
+      errorCode: "invalid_credentials",
     };
   }
 

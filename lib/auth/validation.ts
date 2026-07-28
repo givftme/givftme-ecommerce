@@ -45,5 +45,6 @@ export type AuthActionResult = {
   success: boolean;
   message?: string;
   error?: string;
+  errorCode?: string;
   redirectTo?: string;
 };
