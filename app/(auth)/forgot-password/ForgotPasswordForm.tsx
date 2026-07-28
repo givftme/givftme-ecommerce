@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/Form";
+import { trackEvent } from "@/lib/analytics";
 import {
   type ForgotPasswordValues,
   forgotPasswordSchema,
@@ -46,6 +47,7 @@ export function ForgotPasswordForm() {
         return;
       }
 
+      trackEvent("auth.password_reset.requested");
       window.sessionStorage.setItem("reset_email", values.email);
       router.push("/verify-otp");
     });

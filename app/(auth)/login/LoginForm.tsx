@@ -23,6 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/Form";
+import { trackEvent } from "@/lib/analytics";
 import { withRedirect } from "@/lib/auth/redirect";
 import { type LoginValues, loginSchema } from "@/lib/auth/validation";
 
@@ -52,10 +53,12 @@ export function LoginForm({
       const result = await loginAction({ ...values, redirectTo });
 
       if (!result.success) {
+        trackEvent("auth.login.failed", { error_code: result.errorCode ?? "unknown" });
         setGlobalError(result.error ?? "Incorrect email or password.");
         return;
       }
 
+      trackEvent("auth.login.completed", { method: "email" });
       router.push(result.redirectTo ?? "/wishlists");
       router.refresh();
     });
@@ -122,6 +125,7 @@ export function LoginForm({
 
           <GoogleOAuthButton
             label="Continue with Google"
+            flow="login"
             redirectTo={redirectTo}
             onError={setGlobalError}
           />

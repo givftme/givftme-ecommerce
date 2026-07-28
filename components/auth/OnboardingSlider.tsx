@@ -106,12 +106,12 @@ export function OnboardingSlider({
               </div>
 
               <div className="mb-6 flex justify-center gap-2">
-                {[0, 1, 2].map((dot) => (
+                {[0, 1].map((dot) => (
                   <button
                     key={dot}
                     type="button"
                     aria-label={`Go to onboarding slide ${dot + 1}`}
-                    onClick={() => (dot < 2 ? goToSlide(dot) : undefined)}
+                    onClick={() => goToSlide(dot)}
                     className={cn(
                       "h-2 rounded-full transition-all",
                       dot === activeSlide ? "w-8 bg-brand" : "w-2 bg-stone-300"

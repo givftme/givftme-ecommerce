@@ -47,12 +47,14 @@ export async function signupAction(
       return {
         success: false,
         error: "An account with this email already exists. Try logging in.",
+        errorCode: "email_already_registered",
       };
     }
 
     return {
       success: false,
       error: "Something went wrong. Please try again.",
+      errorCode: "unknown",
     };
   }
 

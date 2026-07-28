@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -23,6 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/Form";
+import { trackEvent } from "@/lib/analytics";
 import { withRedirect } from "@/lib/auth/redirect";
 import { type SignupValues, signupSchema } from "@/lib/auth/validation";
 
@@ -42,6 +43,10 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
     },
   });
 
+  useEffect(() => {
+    trackEvent("auth.signup.started");
+  }, []);
+
   const onSubmit = (values: SignupValues) => {
     setGlobalError("");
     setSuccessMessage("");
@@ -50,12 +55,14 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
       const result = await signupAction({ ...values, redirectTo });
 
       if (!result.success) {
+        trackEvent("auth.signup.failed", { error_code: result.errorCode ?? "unknown" });
         setGlobalError(
           result.error ?? "Something went wrong. Please try again.",
         );
         return;
       }
 
+      trackEvent("auth.signup.completed", { method: "email" });
       setSuccessMessage(
         result.message ?? "Check your email to verify your account",
       );
@@ -142,6 +149,7 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
 
           <GoogleOAuthButton
             label="Signup with Google"
+            flow="signup"
             redirectTo={redirectTo}
             onError={setGlobalError}
           />
