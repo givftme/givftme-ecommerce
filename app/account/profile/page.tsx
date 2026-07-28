@@ -16,12 +16,23 @@ export default async function ProfilePage() {
 
   const { data: profile, error } = await supabase
     .from("users")
-    .select("id, full_name, avatar_url, phone, default_thank_you_msg")
+    .select("id, full_name, avatar_url, default_thank_you_msg")
     .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // phone has no table-level SELECT grant (see migration 008) since the RLS
+  // policy on public.users also admits a purchase/gift counterparty, not just
+  // the row owner — read it through the owner-scoped RPC instead.
+  const { data: phone, error: phoneError } = await supabase.rpc(
+    "gifvtme_get_own_phone"
+  );
+
+  if (phoneError) {
+    throw new Error(phoneError.message);
   }
 
   return (
@@ -39,7 +50,7 @@ export default async function ProfilePage() {
               email={user.email ?? ""}
               fullName={profile?.full_name ?? null}
               avatarUrl={profile?.avatar_url ?? null}
-              phone={profile?.phone ?? null}
+              phone={phone ?? null}
               defaultThankYouMsg={profile?.default_thank_you_msg ?? null}
             />
           </div>
