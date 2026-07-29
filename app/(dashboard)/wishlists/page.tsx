@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { CalendarHeart, Plus } from "lucide-react";
+import { CalendarHeart, ChevronDown, Plus } from "lucide-react";
 import { OccasionCard } from "@/components/occasion/OccasionCard";
+import { ReactivationPromptsBanner } from "@/components/occasion/ReactivationPromptsBanner";
 import { buttonVariants } from "@/components/ui/Button";
 import { WishlistCard } from "@/components/wishlist/WishlistCard";
-import { getOccasionSummaries } from "@/lib/occasion/server";
+import {
+  getOccasionSummaries,
+  getUnresolvedOccasionPrompts,
+} from "@/lib/occasion/server";
 import {
   ensureEvergreenWishlist,
   getWishlistSummaries,
   requireDashboardUser,
 } from "@/lib/wishlist/server";
+import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 export default async function DashboardWishlistsPage() {
@@ -16,7 +21,16 @@ export default async function DashboardWishlistsPage() {
   await ensureEvergreenWishlist(supabase, user.id);
   const wishlists = await getWishlistSummaries(supabase, user.id);
   const occasions = await getOccasionSummaries(supabase, user.id);
+  const reactivationPrompts = await getUnresolvedOccasionPrompts(supabase, user.id);
   const evergreenSummary = wishlists.find((wishlist) => wishlist.type === "evergreen");
+  const activeOccasions = occasions.filter((occasion) => occasion.status === "active");
+  const pastOccasions = occasions.filter((occasion) => occasion.status === "archived");
+
+  if (reactivationPrompts.length > 0) {
+    trackEvent("occasion.reactivation_prompt.shown", {
+      occasion_count: reactivationPrompts.length,
+    });
+  }
 
   return (
     <main className="min-h-dvh bg-surface px-4 py-6">
@@ -34,6 +48,10 @@ export default async function DashboardWishlistsPage() {
             Create occasion
           </Link>
         </header>
+
+        {reactivationPrompts.length > 0 && (
+          <ReactivationPromptsBanner prompts={reactivationPrompts} />
+        )}
 
         {evergreenSummary && <WishlistCard wishlist={evergreenSummary} />}
 
@@ -66,15 +84,41 @@ export default async function DashboardWishlistsPage() {
               </Link>
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
-              {occasions.map((occasion, index) => (
-                <OccasionCard
-                  key={occasion.id}
-                  occasion={occasion}
-                  index={index}
-                />
-              ))}
-            </div>
+            <>
+              {activeOccasions.length === 0 ? (
+                <p className="mt-5 text-sm text-muted">
+                  No active occasions right now.
+                </p>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {activeOccasions.map((occasion, index) => (
+                    <OccasionCard
+                      key={occasion.id}
+                      occasion={occasion}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {pastOccasions.length > 0 && (
+                <details className="group mt-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-1 py-2 text-sm font-medium text-muted hover:text-ink">
+                    Past occasions ({pastOccasions.length})
+                    <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    {pastOccasions.map((occasion, index) => (
+                      <OccasionCard
+                        key={occasion.id}
+                        occasion={occasion}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
           )}
         </section>
       </div>

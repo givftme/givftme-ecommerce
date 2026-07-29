@@ -4,8 +4,10 @@ import { isFutureDateOnly } from "@/lib/occasion/date";
 import type {
   MasterItem,
   OccasionDetail,
+  OccasionPromptSummary,
   OccasionRecord,
   OccasionSummary,
+  OccasionType,
 } from "@/lib/occasion/types";
 import type { CreateOccasionInput } from "@/lib/occasion/validation";
 import {
@@ -481,4 +483,128 @@ export async function rescheduleOccasionReminders({
   } catch (error) {
     console.error("Occasion reminder rescheduling failed.", error);
   }
+}
+
+interface PurchasedPulledItemRow {
+  master_item_id: string | null;
+}
+
+// Best-effort: both the manual archive route and the daily cron call this when an
+// occasion archives. The unresolved-per-occasion unique index makes a duplicate
+// call a harmless no-op (23505), so failures here should never block archiving.
+export async function createReactivationPromptIfNeeded({
+  supabase,
+  userId,
+  occasionId,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+  occasionId: string;
+}) {
+  try {
+    const wishlistId = await getOccasionWishlistId(supabase, occasionId, userId);
+
+    if (!wishlistId) {
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("wishlist_items_with_status")
+      .select("master_item_id")
+      .eq("wishlist_id", wishlistId)
+      .eq("status", "purchased")
+      .eq("is_exclusive", false)
+      .not("master_item_id", "is", null)
+      .returns<PurchasedPulledItemRow[]>();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const masterItemIds = [
+      ...new Set((data || []).map((row) => row.master_item_id).filter(Boolean)),
+    ];
+
+    if (masterItemIds.length === 0) {
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("occasion_prompts").insert({
+      user_id: userId,
+      occasion_id: occasionId,
+      prompt_type: "reactivation",
+      payload: { master_item_ids: masterItemIds },
+    });
+
+    if (insertError && insertError.code !== "23505") {
+      throw new Error(insertError.message);
+    }
+  } catch (error) {
+    console.error("Reactivation prompt creation failed.", error);
+  }
+}
+
+export async function resolveReactivationPrompt({
+  supabase,
+  userId,
+  occasionId,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+  occasionId: string;
+}) {
+  const { error } = await supabase
+    .from("occasion_prompts")
+    .update({ resolved_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("occasion_id", occasionId)
+    .is("resolved_at", null);
+
+  if (error) {
+    console.error("Reactivation prompt resolution failed.", error);
+  }
+}
+
+interface OccasionPromptRow {
+  id: string;
+  occasion_id: string;
+  payload: { master_item_ids?: string[] } | null;
+  occasions?: { title: string; occasion_type: string } | { title: string; occasion_type: string }[] | null;
+}
+
+export async function getUnresolvedOccasionPrompts(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<OccasionPromptSummary[]> {
+  const { data, error } = await supabase
+    .from("occasion_prompts")
+    .select(
+      `
+        id,
+        occasion_id,
+        payload,
+        occasions ( title, occasion_type )
+      `
+    )
+    .eq("user_id", userId)
+    .is("resolved_at", null)
+    .order("created_at", { ascending: true })
+    .returns<OccasionPromptRow[]>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []).map((row) => {
+    const occasion = Array.isArray(row.occasions) ? row.occasions[0] : row.occasions;
+    const masterItemIds = row.payload?.master_item_ids || [];
+
+    return {
+      id: row.id,
+      occasion_id: row.occasion_id,
+      occasion_title: occasion?.title || "",
+      occasion_type: (occasion?.occasion_type as OccasionType) || "other",
+      item_count: masterItemIds.length,
+    };
+  });
 }

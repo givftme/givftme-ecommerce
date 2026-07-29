@@ -63,6 +63,7 @@ export async function GET(_request: Request, context: WishlistInvitesRouteContex
     .order("created_at", { ascending: true });
 
   if (error) {
+    console.error("Couldn't load invites.", error);
     return jsonError("Couldn't load invites.", 500);
   }
 
@@ -108,6 +109,7 @@ export async function POST(request: Request, context: WishlistInvitesRouteContex
     : await duplicateQuery.eq("invitee_phone", phone).maybeSingle();
 
   if (duplicateError) {
+    console.error("Couldn't check existing invites.", duplicateError);
     return jsonError("Couldn't check existing invites.", 500);
   }
 

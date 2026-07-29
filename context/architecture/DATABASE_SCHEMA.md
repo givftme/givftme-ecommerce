@@ -47,6 +47,9 @@ The receiver's personal calendar of *other* people's occasions (Flow 1 reminders
 ### `reminders`
 Generic reminder queue. `reminder_type` (`occasion_owner`/`invitee`) plus exactly one of `important_date_id`, `invite_id`, or `occasion_id` set, enforced by a check constraint. `occasion_id` links owner reminders created for a user-created occasion so rescheduling or archiving one occasion only deletes that occasion's unsent reminders. `channel` (`email`/`push`), `scheduled_at`, `sent` flag.
 
+### `occasion_prompts`
+Added by migration 009. Dashboard-wide nudge for the occasion reactivation flow — when an occasion archives (manually or via the daily cron) with purchased evergreen items still pulled onto it, a row is inserted with `payload.master_item_ids` listing the eligible items. `resolved_at` is set when the user resolves the prompt via `/api/occasions/[id]/reactivate` (whether or not they chose to reactivate anything), or auto-dismissed by the same daily cron after 30 days unresolved (items are left as purchased either way). A partial unique index on `(occasion_id) WHERE resolved_at IS NULL` keeps at most one open prompt per occasion, since both archive paths attempt to create one.
+
 ### `newsletter_subscribers`
 Simple public email capture table for the gift museum/catalog discount CTA. Migration 007 adds `id`, unique `email`, and `created_at`. No email sending is attached in v1.
 

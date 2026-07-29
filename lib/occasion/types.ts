@@ -43,3 +43,11 @@ export interface OccasionDetail {
   evergreenItems: MasterItem[];
   reactivationItems: WishlistItem[];
 }
+
+export interface OccasionPromptSummary {
+  id: string;
+  occasion_id: string;
+  occasion_title: string;
+  occasion_type: OccasionType;
+  item_count: number;
+}
