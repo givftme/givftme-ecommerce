@@ -21,10 +21,19 @@ export default async function DashboardWishlistsPage() {
   await ensureEvergreenWishlist(supabase, user.id);
   const wishlists = await getWishlistSummaries(supabase, user.id);
   const occasions = await getOccasionSummaries(supabase, user.id);
-  const reactivationPrompts = await getUnresolvedOccasionPrompts(supabase, user.id);
-  const evergreenSummary = wishlists.find((wishlist) => wishlist.type === "evergreen");
-  const activeOccasions = occasions.filter((occasion) => occasion.status === "active");
-  const pastOccasions = occasions.filter((occasion) => occasion.status === "archived");
+  const reactivationPrompts = await getUnresolvedOccasionPrompts({
+    supabase,
+    userId: user.id,
+  });
+  const evergreenSummary = wishlists.find(
+    (wishlist) => wishlist.type === "evergreen",
+  );
+  const activeOccasions = occasions.filter(
+    (occasion) => occasion.status === "active",
+  );
+  const pastOccasions = occasions.filter(
+    (occasion) => occasion.status === "archived",
+  );
 
   if (reactivationPrompts.length > 0) {
     trackEvent("occasion.reactivation_prompt.shown", {
@@ -38,11 +47,16 @@ export default async function DashboardWishlistsPage() {
         <header className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-ink">My Wishlists</h1>
-            <p className="mt-1 text-sm text-muted">Manage what you would love to receive.</p>
+            <p className="mt-1 text-sm text-muted">
+              Manage what you would love to receive.
+            </p>
           </div>
           <Link
             href="/my-occasions/new"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-10")}
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "h-10",
+            )}
           >
             <Plus className="h-4 w-4" />
             Create occasion
@@ -60,7 +74,10 @@ export default async function DashboardWishlistsPage() {
             <h2 className="text-lg font-semibold text-ink">Occasions</h2>
             <Link
               href="/my-occasions/new"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "h-9 px-3")}
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "h-9 px-3",
+              )}
             >
               <Plus className="h-4 w-4" />
               New occasion
@@ -70,14 +87,20 @@ export default async function DashboardWishlistsPage() {
           {occasions.length === 0 ? (
             <div className="mt-5 rounded-2xl bg-surface px-4 py-8 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white">
-                <CalendarHeart className="h-8 w-8 text-brand" strokeWidth={1.7} />
+                <CalendarHeart
+                  className="h-8 w-8 text-brand"
+                  strokeWidth={1.7}
+                />
               </div>
               <p className="mx-auto mt-5 max-w-sm text-sm leading-6 text-muted">
                 No occasions yet - create one for your next big moment
               </p>
               <Link
                 href="/my-occasions/new"
-                className={cn(buttonVariants({ variant: "filled", size: "md" }), "mt-5")}
+                className={cn(
+                  buttonVariants({ variant: "filled", size: "md" }),
+                  "mt-5",
+                )}
               >
                 <Plus className="h-4 w-4" />
                 Create occasion

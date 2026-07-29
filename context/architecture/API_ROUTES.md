@@ -39,6 +39,10 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Behavior:** external items build `affiliate_url`; catalog items set `catalog_product_id` and leave `product_url`/`affiliate_url` null. For catalog adds, `title`/`image_url`/`price` in the request are accepted for schema compatibility but ignored — the route re-fetches the product from Sanity via `CART_PRICES_QUERY` by `catalog_product_id` and uses that (title, image, `getActivePrice()` result honoring an active flash sale) as the source of truth, rejecting with 400 if the product is missing or not `status: "active"`. Both insert `wishlist_items` and mirror evergreen additions into `master_items`. If `sort_order` is missing, add falls back to insert without it and logs that migration 003 must be applied.
 **Failure shape:** unauthenticated requests return `{ error }` with 401; missing or non-owned wishlist IDs return `{ error: "Wishlist not found." }` with 404, never 403.
 
+## `/api/analytics`
+**Method:** POST. **Auth:** none. **Purpose:** server-side landing point for client-side `trackEvent()` calls (`lib/analytics.ts`) in production, so they reach the same log output as server-side calls instead of only the visitor's own browser console. No real analytics vendor is wired up yet — this just logs the event server-side via `console.log`.
+**Request:** `{ event: string, properties?: Record<string, boolean | number | string | null> }`. **Response:** always `204`, even on a malformed body — analytics must never surface an error to the UI.
+
 ## `/api/newsletter`
 **Method:** POST. **Auth:** none. **Purpose:** stores catalog/homepage newsletter subscription emails in `newsletter_subscribers`.
 **Request:** `{ email: string }`, validated by Zod email format.
@@ -90,7 +94,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/occasions/archive` (cron route)
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to run daily via a scheduled job.
-**Purpose:** archives occasions whose `occasion_date` is 7+ days past, using the service-role client. For each newly archived occasion, best-effort inserts an `occasion_prompts` row if it has purchased evergreen items. Also auto-resolves any `occasion_prompts` row older than 30 days that's still unresolved (items are left as purchased — this only stops the dashboard nudge).
+**Purpose:** archives occasions whose `occasion_date` is more than 7 days past, using the service-role client. For each newly archived occasion, best-effort inserts an `occasion_prompts` row if it has purchased evergreen items. Also auto-resolves any `occasion_prompts` row older than 30 days that's still unresolved (items are left as purchased — this only stops the dashboard nudge).
 **Response:** `{ archived: number }`.
 
 ## `/api/reminders`

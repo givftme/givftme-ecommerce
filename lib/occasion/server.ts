@@ -572,10 +572,13 @@ interface OccasionPromptRow {
   occasions?: { title: string; occasion_type: string } | { title: string; occasion_type: string }[] | null;
 }
 
-export async function getUnresolvedOccasionPrompts(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<OccasionPromptSummary[]> {
+export async function getUnresolvedOccasionPrompts({
+  supabase,
+  userId,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+}): Promise<OccasionPromptSummary[]> {
   const { data, error } = await supabase
     .from("occasion_prompts")
     .select(
@@ -592,7 +595,8 @@ export async function getUnresolvedOccasionPrompts(
     .returns<OccasionPromptRow[]>();
 
   if (error) {
-    throw new Error(error.message);
+    console.error("Failed to load reactivation prompts.", error);
+    return [];
   }
 
   return (data || []).map((row) => {
