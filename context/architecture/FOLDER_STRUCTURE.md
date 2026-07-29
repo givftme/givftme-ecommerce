@@ -75,7 +75,7 @@ components/
   wishlist/      WishlistItem, WishlistGrid, ShareSettingsSheet, SharedWishlistHeader, SharedWishlistItem, ClaimedBadge, IntentFlagBadge, ReminderOptIn, AuthGateSheet
   review/        ReviewCard, ReviewsList, StarRating, RatingBreakdown
   flash-sale/    FlashSaleBanner, FlashSaleTimer
-  occasion/      occasion-museum-specific display components
+  occasion/      user-created occasion wishlist UI (creation flow, detail page, reactivation) plus occasion-museum display cards
   reminders/     reminder opt-in UI components
   shared/        cross-domain components that don't fit elsewhere, e.g. CopyLinkButton
 ```

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readJson, jsonError } from "@/lib/api/response";
 import {
   assertOccasionOwner,
+  createReactivationPromptIfNeeded,
   getOwnedOccasionDetail,
   rescheduleOccasionReminders,
 } from "@/lib/occasion/server";
@@ -131,6 +132,7 @@ export async function DELETE(_request: Request, context: OccasionRouteContext) {
   }
 
   await deleteUnsentOccasionReminders({ supabase, userId: user.id, occasionId: id });
+  await createReactivationPromptIfNeeded({ supabase, userId: user.id, occasionId: id });
 
   return new NextResponse(null, { status: 204 });
 }

@@ -9,6 +9,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { trackEvent } from "@/lib/analytics";
 import type { WishlistItem } from "@/lib/wishlist/types";
 
 gsap.registerPlugin(useGSAP);
@@ -75,6 +76,9 @@ export function ReactivationPrompt({
         throw new Error("Reactivate failed.");
       }
 
+      trackEvent("occasion.reactivation_prompt.resolved", {
+        items_reactivated: selectedIds.length,
+      });
       toast({ title: "Main wishlist updated.", variant: "success" });
       setDismissed(true);
       router.refresh();

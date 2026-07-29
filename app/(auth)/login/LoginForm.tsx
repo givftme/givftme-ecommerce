@@ -98,7 +98,7 @@ export function LoginForm({
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <AuthFormPasswordInput
-                  placeholder="Enter your email address"
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                   {...field}
                 />
@@ -132,7 +132,7 @@ export function LoginForm({
         </form>
       </Form>
 
-      <p className="mt-auto pt-10 text-center text-sm text-muted">
+      <p className="pt-10 text-center text-sm text-muted">
         Already have an account?{" "}
         <Link
           href={withRedirect("/signup", redirectTo)}

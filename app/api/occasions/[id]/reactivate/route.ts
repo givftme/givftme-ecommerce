@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readJson, jsonError } from "@/lib/api/response";
-import { assertOccasionOwner } from "@/lib/occasion/server";
+import { assertOccasionOwner, resolveReactivationPrompt } from "@/lib/occasion/server";
 import { reactivateItemsSchema } from "@/lib/occasion/validation";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
@@ -81,21 +81,23 @@ export async function POST(request: Request, context: ReactivateRouteContext) {
       ...new Set((candidates || []).map((item) => item.master_item_id).filter(Boolean)),
     ] as string[];
 
-    if (eligibleMasterItemIds.length === 0) {
-      return NextResponse.json({ ok: true });
-    }
+    if (eligibleMasterItemIds.length > 0) {
+      const { error } = await supabase
+        .from("master_items")
+        .update({ status: "available" })
+        .in("id", eligibleMasterItemIds)
+        .eq("user_id", user.id)
+        .eq("status", "purchased");
 
-    const { error } = await supabase
-      .from("master_items")
-      .update({ status: "available" })
-      .in("id", eligibleMasterItemIds)
-      .eq("user_id", user.id)
-      .eq("status", "purchased");
-
-    if (error) {
-      return jsonError("Couldn't reactivate items. Try again.", 500);
+      if (error) {
+        return jsonError("Couldn't reactivate items. Try again.", 500);
+      }
     }
   }
+
+  // Reaching here means the user made a decision (reactivate some, or keep the
+  // rest as purchased) — either way the prompt is resolved, not just an empty selection.
+  await resolveReactivationPrompt({ supabase, userId: user.id, occasionId: id });
 
   return NextResponse.json({ ok: true });
 }

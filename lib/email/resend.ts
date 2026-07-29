@@ -41,7 +41,7 @@ export async function sendWishlistInviteEmail({
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
-        "'": "&`#39`;",
+        "'": "&#39;",
       })[char] as string,
   );
 }

@@ -144,6 +144,20 @@ Animated empty state used for empty and all-gifted wishlist states.
 ### `ReorderableList`
 Light wrapper reserved for reorder list presentation. Current v1 reorder uses move up/down controls rather than `@dnd-kit`.
 
+## `occasion/`
+
+### `CreateOccasionForm` / `CreateOccasionStepper` / `OccasionTypeSelector` / `PullFromEvergreen`
+The 3-step occasion creation flow at `/my-occasions/new`: occasion basics, pull-from-evergreen selection (with select all/clear all and an empty-evergreen skip state), then exclusive items via the shared `AddItemSheet` (`isExclusive`/`draftMode`).
+
+### `OccasionDetailClient` / `OccasionHero` / `OccasionCard`
+`/my-occasions/[id]` detail page controller (edit dialog, share, archive, add-more-items for both the pulled and exclusive sections, all-gifted banner), its header/countdown hero, and the compact summary card used in the dashboard occasions list.
+
+### `ReactivationPrompt` / `ReactivationPromptsBanner`
+`ReactivationPrompt` is the full per-item reactivate/keep-as-purchased toggle shown inline on an archived occasion's own detail page. `ReactivationPromptsBanner` is the dashboard-wide nudge on `/wishlists` linking out to each occasion with an unresolved `occasion_prompts` row — it doesn't duplicate the per-item toggle UI, just surfaces that one exists.
+
+### `MuseumOccasionCard` / `MuseumOccasionGrid`
+Public gift-museum occasion browsing cards — unrelated to the user-created occasions above; these render Sanity `occasion` documents on `/occasions`.
+
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
 `cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `isHydrated`, `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.

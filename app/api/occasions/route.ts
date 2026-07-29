@@ -56,6 +56,7 @@ export async function POST(request: Request) {
       return jsonError("Run the occasion wishlist migration before creating occasions.", 409);
     }
 
+    console.error("Occasion creation failed.", error);
     return jsonError("Couldn't create occasion. Try again.", 500);
   }
 }

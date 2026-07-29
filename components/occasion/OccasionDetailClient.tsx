@@ -103,6 +103,11 @@ function EditOccasionDialog({
     control: form.control,
     name: "occasion_type",
   }) as OccasionType | undefined;
+  const selectedDate = useWatch({
+    control: form.control,
+    name: "occasion_date",
+  }) as string | undefined;
+  const dateChanged = selectedDate !== undefined && selectedDate !== occasion.occasion_date;
 
   const save = async (values: OccasionBasics) => {
     try {
@@ -163,6 +168,11 @@ function EditOccasionDialog({
             {form.formState.errors.occasion_date && (
               <span className="text-xs font-medium text-brand">
                 {form.formState.errors.occasion_date.message}
+              </span>
+            )}
+            {dateChanged && !form.formState.errors.occasion_date && (
+              <span className="block text-xs font-medium text-muted">
+                Reminders will be rescheduled to match the new date.
               </span>
             )}
           </label>
@@ -232,6 +242,7 @@ export function OccasionDetailClient({
     [alreadyPulledIds, evergreenItems]
   );
   const reactivationItems = detail.reactivationItems;
+  const allGifted = items.length > 0 && items.every((item) => item.status === "purchased");
 
   const archiveOccasion = async () => {
     try {
@@ -430,6 +441,12 @@ export function OccasionDetailClient({
               occasionLabel={OCCASION_LABELS[occasion.occasion_type]}
               items={reactivationItems}
             />
+          </div>
+        )}
+
+        {!archived && allGifted && (
+          <div className="mt-5 rounded-2xl border border-stone-100 bg-white px-4 py-3 text-center text-sm font-medium text-ink shadow-sm">
+            Everything on this list has been gifted! 🎉
           </div>
         )}
 
