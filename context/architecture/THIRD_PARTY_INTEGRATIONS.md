@@ -6,6 +6,7 @@
 **Integration point:** `lib/scraper/microlink.ts`, called from `/api/scrape`.
 **Auth:** `MICROLINK_API_KEY` env var, sent as `x-api-key` header. Works without a key at lower rate limits, but production should always have a key set.
 **Known constraint:** Microlink can fail to scrape certain sites (heavy JS rendering, aggressive bot blocking — Amazon is a known difficult case). The scrape route returns a 422 in this case; the frontend must always offer a manual-entry fallback (title/image/price typed in directly) — never make scraping the only path to adding an external item.
+**Amazon pre-block (deliberate deviation from `05-ITEM-SCRAPING.md`):** `/api/scrape` (`app/api/scrape/route.ts`) checks the hostname for `amazon.` and returns the 422 immediately, without ever calling Microlink. The spec describes a "try Microlink, then fall back" sequence for all domains; Amazon is skipped ahead of the attempt because it reliably blocks scrapers, so calling Microlink first only adds latency before the user reaches the manual-entry fallback anyway. This is an intentional perf/UX shortcut, not a bug — do not "fix" it to match the spec's literal try-then-fallback wording without checking with the developer first.
 **Price parsing:** Microlink returns price as `{ amount, currency }` — the integration code parses `amount` as a float and defaults currency to NGN if Microlink doesn't detect one, since the scraped currency field is unreliable for non-Nigerian sites and we don't support multi-currency anyway.
 
 ## Flutterwave (payments)

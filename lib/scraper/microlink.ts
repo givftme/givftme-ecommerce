@@ -30,7 +30,7 @@ interface MicrolinkResponse {
 
 const SCRAPE_TIMEOUT_MS = 3500;
 
-function parsePrice(amount: number | string | undefined) {
+export function parsePrice(amount: number | string | undefined) {
   if (amount == null) {
     return null;
   }
