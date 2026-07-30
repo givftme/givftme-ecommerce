@@ -124,6 +124,7 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
       .select("id")
       .eq("wishlist_id", id)
       .eq("catalog_product_id", data.catalog_product_id)
+      .neq("status", "archived")
       .limit(1)
       .maybeSingle();
 
@@ -197,6 +198,10 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
         .insert(payloadToInsert)
         .select()
         .single();
+    }
+
+    if (insert.error?.code === "23505") {
+      return jsonError("Already on this wishlist.", 409);
     }
 
     if (insert.error || !insert.data) {

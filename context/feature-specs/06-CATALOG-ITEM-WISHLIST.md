@@ -43,19 +43,19 @@ Lets authenticated users add a Gifvtme catalog product directly to their wishlis
 
 ## UI Requirements
 
-### Product card — "Add to wishlist" heart icon
+### Product card — "Add to wishlist" heart icon (as shipped)
 - Top-right corner of the product image.
 - Default: empty heart (`Heart` from lucide-react, stroke only).
-- Wishlisted state: filled heart (`Heart` with fill, brand red).
-- On hover (desktop): tooltip "Add to wishlist" (empty) or "On your wishlist" (filled).
-- On click (empty state): opens wishlist picker.
-- On click (filled state): navigates to the wishlist or opens a "remove from wishlist?" confirmation.
+- Wishlisted state: filled heart (`Heart` with fill, brand red), driven by `wishlistedIds`.
+- `aria-label` toggles between "Add to wishlist" / "Remove from wishlist" for accessibility — there is no visible hover tooltip.
+- On click, **regardless of current state** (empty or filled): opens the same `WishlistPickerSheet` add flow. A filled heart does not navigate to the wishlist or offer a removal confirmation.
+- **Not implemented (future):** hover tooltip copy, click-filled-heart-to-navigate/remove.
 
-### Product detail page — "Add to wishlist" button
+### Product detail page — "Add to wishlist" button (as shipped)
 - Below the "Add to cart" button.
 - Ghost variant, full width on mobile.
-- Label: "Add to wishlist" (empty heart icon + text).
-- After adding: changes to "On your wishlist ✓" with a filled heart.
+- Label: "Add to wishlist" (empty heart icon + text) — this label is static and does not change after a successful add; there is no wishlisted-state tracking on this surface.
+- **Not implemented (future):** the "On your wishlist ✓" / filled-heart button-state change.
 
 ### Wishlist picker — as shipped (`WishlistPickerSheet`)
 
@@ -114,12 +114,16 @@ const product = products.find((p) => p._id === catalog_product_id) ?? null
 if (!product || product.status !== 'active') return 400 { error: 'This product is no longer available.' }
 
 // 2. Check for existing item (duplicate prevention) — 409, not part of the original build,
-//    added as a follow-up gap-close; application-level check only, no DB unique constraint
+//    added as a follow-up gap-close. Excludes archived rows so removing an item and
+//    re-adding it later works. Backed by a DB-level partial unique index
+//    (wishlist_items_live_catalog_unique, migration 011) for race-safety under concurrent
+//    requests — this pre-check is the fast path, the insert's 23505 catch below is the guarantee.
 const { data: duplicate } = await supabase
   .from('wishlist_items')
   .select('id')
   .eq('wishlist_id', wishlist_id)
   .eq('catalog_product_id', catalog_product_id)
+  .neq('status', 'archived')
   .limit(1)
   .maybeSingle()
 
@@ -133,12 +137,16 @@ if (price === null) return 400 { error: 'This product is currently unavailable.'
 // 4. Get next sort_order (getNextSortOrder helper)
 
 // 5. Create wishlist_items row (master_item_id: null — occasion pulls set this, not catalog adds)
-const { data: item } = await supabase.from('wishlist_items').insert({
+const { data: item, error } = await supabase.from('wishlist_items').insert({
   wishlist_id, origin: 'catalog', master_item_id: null,
   title: product.title, image_url: catalogImageUrl, price, catalog_product_id,
   is_exclusive: owner.wishlist.type === 'occasion' && data.is_exclusive,
   sort_order: nextSortOrder,
 }).select().single()
+
+// 5b. Unique-violation race guard: two concurrent requests can both pass step 2's
+//     check before either insert lands. The DB index rejects the second with 23505.
+if (error?.code === '23505') return 409 { error: 'Already on this wishlist.' }
 
 // 6. Mirror into master_items — evergreen wishlists ONLY. master_items is the evergreen pool
 //    (see DATABASE_SCHEMA.md); occasion-wishlist adds do not touch it.
@@ -161,6 +169,8 @@ The picker uses plain `GET /api/wishlists` (see `API_ROUTES.md`) — a `for_pick
 No new tables. Uses existing `wishlist_items`, `master_items`, `wishlists`.
 
 Confirm `wishlist_items` has `catalog_product_id TEXT` (Sanity _id, not a FK — Sanity docs aren't in Supabase).
+
+`gifvtme_migration_011_catalog_wishlist_dedupe.sql` adds a partial unique index, `wishlist_items_live_catalog_unique`, on `(wishlist_id, catalog_product_id)` where `origin = 'catalog' AND catalog_product_id IS NOT NULL AND status <> 'archived'` — must be applied for the 409 duplicate guard to be race-safe (see Backend Logic step 5b).
 
 ---
 
@@ -245,7 +255,7 @@ const catalogItemSchema = z.object({
 
 ### Integration tests
 - Add catalog item: `wishlist_items` row has `origin='catalog'`, correct `catalog_product_id`, snapshotted title/image/price.
-- Duplicate detection: adding same product to same wishlist returns 409, no second row created. (Shipped 2026-07-30.)
+- Duplicate detection: adding same product to same wishlist returns 409, no second row created. (Shipped 2026-07-30; hardened same day with `wishlist_items_live_catalog_unique` + a 23505 catch so concurrent requests can't both slip past the pre-check.)
 - Archived/inactive Sanity product: returns 400, no row created.
 - Evergreen add mirrors into `master_items`; occasion add does not.
 

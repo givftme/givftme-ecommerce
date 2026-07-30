@@ -40,7 +40,10 @@ export function CatalogProductGrid({
   useEffect(() => {
     let isActive = true;
 
-    fetch("/api/wishlists/catalog-items", { headers: { Accept: "application/json" } })
+    fetch("/api/wishlists/catalog-items", {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: { catalogProductIds?: string[] } | null) => {
         if (isActive && payload?.catalogProductIds) {

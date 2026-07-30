@@ -115,7 +115,9 @@ export function WishlistPickerSheet({
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(payload?.error || "Could not save item.");
+           throw new Error(
+          payload?.error || "Couldn't add to wishlist. Try again."
+        );
       }
 
       trackEvent("museum.product.add_to_wishlist", {

@@ -537,7 +537,8 @@ export async function getWishlistedCatalogProductIds(
     .select("catalog_product_id")
     .in("wishlist_id", wishlistIds)
     .eq("origin", "catalog")
-    .not("catalog_product_id", "is", null);
+    .not("catalog_product_id", "is", null)
+    .neq("status", "archived");
 
   if (itemsError) {
     throw new Error(itemsError.message);
