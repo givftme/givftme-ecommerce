@@ -513,6 +513,46 @@ export async function syncMasterItemFromWishlistItem(
   return { ok: true as const, matched: true };
 }
 
+export async function getWishlistedCatalogProductIds(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string[]> {
+  const { data: wishlists, error: wishlistsError } = await supabase
+    .from("wishlists")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (wishlistsError) {
+    throw new Error(wishlistsError.message);
+  }
+
+  const wishlistIds = (wishlists || []).map((wishlist) => wishlist.id as string);
+
+  if (wishlistIds.length === 0) {
+    return [];
+  }
+
+  const { data: items, error: itemsError } = await supabase
+    .from("wishlist_items")
+    .select("catalog_product_id")
+    .in("wishlist_id", wishlistIds)
+    .eq("origin", "catalog")
+    .not("catalog_product_id", "is", null)
+    .neq("status", "archived");
+
+  if (itemsError) {
+    throw new Error(itemsError.message);
+  }
+
+  return Array.from(
+    new Set(
+      (items || [])
+        .map((item) => item.catalog_product_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+}
+
 export async function getNextSortOrder(
   supabase: SupabaseClient,
   wishlistId: string,
