@@ -47,7 +47,9 @@ function hostnameOf(url: string) {
   }
 }
 
-function makeWishlistItem(data: Partial<WishlistItem> & { id: string }): WishlistItem {
+function makeWishlistItem(
+  data: Partial<WishlistItem> & { id: string },
+): WishlistItem {
   return {
     wishlist_id: data.wishlist_id || "",
     master_item_id: data.master_item_id || null,
@@ -55,7 +57,9 @@ function makeWishlistItem(data: Partial<WishlistItem> & { id: string }): Wishlis
     image_url: data.image_url || null,
     image_storage_path:
       data.image_storage_path ||
-      (data.image_url && isWishlistStoragePath(data.image_url) ? data.image_url : null),
+      (data.image_url && isWishlistStoragePath(data.image_url)
+        ? data.image_url
+        : null),
     product_url: data.product_url || null,
     affiliate_url: data.affiliate_url || null,
     price: data.price ?? null,
@@ -90,7 +94,8 @@ export function AddItemSheet({
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [duplicateItem, setDuplicateItem] = useState<WishlistItem | null>(null);
-  const [pendingSave, setPendingSave] = useState<ExternalWishlistItemInput | null>(null);
+  const [pendingSave, setPendingSave] =
+    useState<ExternalWishlistItemInput | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(0);
   const [allowGroupPayment, setAllowGroupPayment] = useState(true);
@@ -120,7 +125,17 @@ export function AddItemSheet({
   });
 
   const watchedImage = useWatch({ control: form.control, name: "image_url" });
-  const watchedProductUrl = useWatch({ control: form.control, name: "product_url" });
+  const watchedProductUrl = useWatch({
+    control: form.control,
+    name: "product_url",
+  });
+  const watchedCurrency = useWatch({
+    control: form.control,
+    name: "scraped_currency",
+  });
+  const isForeignCurrency = Boolean(
+    watchedCurrency && watchedCurrency !== "NGN",
+  );
 
   const resetSheet = () => {
     setDuplicateItem(null);
@@ -163,6 +178,7 @@ export function AddItemSheet({
     try {
       const imagePath = await uploadWishlistImage(file);
       form.setValue("image_url", imagePath, { shouldDirty: true });
+      trackEvent("wishlist.item.image_uploaded", { source: "upload" });
     } catch (error) {
       toast({
         title: "Couldn't upload photo. Try again.",
@@ -207,8 +223,12 @@ export function AddItemSheet({
     setScrapeError(null);
     setIsFetching(true);
     setFetchSlow(false);
+    trackEvent("wishlist.item.scrape_attempted", { domain });
 
-    const slowTimer = setTimeout(() => setFetchSlow(true), FETCH_SLOW_THRESHOLD_MS);
+    const slowTimer = setTimeout(
+      () => setFetchSlow(true),
+      FETCH_SLOW_THRESHOLD_MS,
+    );
 
     try {
       const response = await fetch("/api/scrape", {
@@ -223,13 +243,19 @@ export function AddItemSheet({
       };
 
       if (!response.ok || !payload.product) {
-        throw new Error(payload.error || "We couldn't read that page automatically.");
+        throw new Error(
+          payload.error || "We couldn't read that page automatically.",
+        );
       }
 
       form.setValue("title", payload.product.title, { shouldDirty: true });
-      form.setValue("image_url", payload.product.image_url, { shouldDirty: true });
+      form.setValue("image_url", payload.product.image_url, {
+        shouldDirty: true,
+      });
       form.setValue("price", payload.product.price, { shouldDirty: true });
-      form.setValue("product_url", payload.product.product_url, { shouldDirty: true });
+      form.setValue("product_url", payload.product.product_url, {
+        shouldDirty: true,
+      });
       form.setValue("scraped_currency", payload.product.currency, {
         shouldDirty: true,
       });
@@ -242,19 +268,24 @@ export function AddItemSheet({
         return;
       }
 
-      trackEvent("wishlist.item.scrape_failed", { domain });
-      setScrapeError(
-        error instanceof Error ? error.message : "We couldn't read that page automatically."
-      );
+      const reason =
+        error instanceof Error
+          ? error.message
+          : "We couldn't read that page automatically.";
+      trackEvent("wishlist.item.scrape_failed", { domain, reason });
+      setScrapeError(reason);
       skipToManual("scrape_failed");
     } finally {
       clearTimeout(slowTimer);
     }
   };
 
-  const saveItem = async (values: ExternalWishlistItemInput, allowDuplicate = false) => {
+  const saveItem = async (
+    values: ExternalWishlistItemInput,
+    allowDuplicate = false,
+  ) => {
     const duplicate = existingItems.find(
-      (item) => item.product_url && item.product_url === values.product_url
+      (item) => item.product_url && item.product_url === values.product_url,
     );
 
     if (duplicate && !allowDuplicate) {
@@ -279,10 +310,15 @@ export function AddItemSheet({
           is_exclusive: isExclusive,
           sort_order: existingItems.length,
           created_at: new Date().toISOString(),
-        })
+        }),
       );
+      if (!values.image_url) {
+        trackEvent("wishlist.item.image_skipped");
+      }
       toast({
-        title: isExclusive ? "Added to this occasion." : "Added to your wishlist.",
+        title: isExclusive
+          ? "Added to this occasion."
+          : "Added to your wishlist.",
         variant: "success",
       });
       closeSheet();
@@ -304,13 +340,20 @@ export function AddItemSheet({
         throw new Error(payload.error || "Couldn't save item.");
       }
 
-      onItemAdded(makeWishlistItem(payload.item as Partial<WishlistItem> & { id: string }));
+      onItemAdded(
+        makeWishlistItem(
+          payload.item as Partial<WishlistItem> & { id: string },
+        ),
+      );
       trackEvent("wishlist.item.added", {
         origin: "external",
         has_price: Boolean(values.price),
         has_image: Boolean(values.image_url),
         scraped: hasFetchedPreview,
       });
+      if (!values.image_url) {
+        trackEvent("wishlist.item.image_skipped");
+      }
       toast({ title: "Added to your wishlist.", variant: "success" });
       closeSheet();
     } catch {
@@ -347,7 +390,10 @@ export function AddItemSheet({
               </button>
               <h2 className="text-lg font-medium text-ink">Wishlist</h2>
               <div className="flex items-center gap-3">
-                <ShoppingCart className="h-5 w-5 text-brand" strokeWidth={1.8} />
+                <ShoppingCart
+                  className="h-5 w-5 text-brand"
+                  strokeWidth={1.8}
+                />
                 <Menu className="h-6 w-6 text-muted" strokeWidth={1.8} />
               </div>
             </header>
@@ -355,9 +401,23 @@ export function AddItemSheet({
             <form
               className="flex flex-1 flex-col px-4 pb-5 md:px-6 md:pb-6"
               onSubmit={form.handleSubmit((values) => saveItem(values))}
+              onKeyDown={(event) => {
+                const target = event.target as HTMLElement;
+
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  target.tagName !== "TEXTAREA" &&
+                  target.tagName !== "BUTTON"
+                ) {
+                  event.preventDefault();
+                }
+              }}
             >
               <div>
-                <h3 className="text-xl font-bold leading-6 text-ink">New wishlist</h3>
+                <h3 className="text-xl font-bold leading-6 text-ink">
+                  New wishlist
+                </h3>
                 <p className="mt-2 max-w-[330px] text-[13px] leading-5 text-ink">
                   Add a new item to your wishlist.
                 </p>
@@ -368,7 +428,9 @@ export function AddItemSheet({
                   type="button"
                   onClick={switchToUrlTab}
                   className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "url" ? "bg-white text-ink shadow-sm" : "text-muted"
+                    activeTab === "url"
+                      ? "bg-white text-ink shadow-sm"
+                      : "text-muted"
                   }`}
                 >
                   Add from URL
@@ -377,7 +439,9 @@ export function AddItemSheet({
                   type="button"
                   onClick={switchToManualTab}
                   className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "manual" ? "bg-white text-ink shadow-sm" : "text-muted"
+                    activeTab === "manual"
+                      ? "bg-white text-ink shadow-sm"
+                      : "text-muted"
                   }`}
                 >
                   Add manually
@@ -413,7 +477,9 @@ export function AddItemSheet({
                   </Button>
 
                   {scrapeError && (
-                    <p className="mt-2 text-xs font-medium text-brand">{scrapeError}</p>
+                    <p className="mt-2 text-xs font-medium text-brand">
+                      {scrapeError}
+                    </p>
                   )}
 
                   {fetchSlow && (
@@ -436,15 +502,15 @@ export function AddItemSheet({
                   {activeTab === "url" && hasFetchedPreview && (
                     <div className="mt-4 flex items-center justify-between rounded-xl bg-surface px-4 py-3">
                       <p className="text-xs text-muted">
-                        Auto-filled from {hostnameOf(watchedProductUrl || "")}. Review and
-                        edit below.
+                        Auto-filled from {hostnameOf(watchedProductUrl || "")}.
+                        Review and edit below.
                       </p>
                       <button
                         type="button"
                         onClick={() => {
                           setHasFetchedPreview(false);
                           setScrapeError(null);
-                           form.setValue("title", "");
+                          form.setValue("title", "");
                           form.setValue("image_url", null);
                           form.setValue("price", null);
                           form.setValue("scraped_currency", null);
@@ -457,7 +523,9 @@ export function AddItemSheet({
                   )}
 
                   {activeTab === "manual" && scrapeError && (
-                    <p className="mt-4 text-xs font-medium text-brand">{scrapeError}</p>
+                    <p className="mt-4 text-xs font-medium text-brand">
+                      {scrapeError}
+                    </p>
                   )}
 
                   {activeTab === "manual" && (
@@ -513,10 +581,16 @@ export function AddItemSheet({
                           />
                         ) : (
                           <>
-                            <Upload className="h-6 w-6 text-ink" strokeWidth={1.7} />
+                            <Upload
+                              className="h-6 w-6 text-ink"
+                              strokeWidth={1.7}
+                            />
                             <span className="mt-2 text-sm text-[#a9a9a9]">
-                              Click <span className="font-semibold text-brand">here</span> to
-                              upload a picture
+                              Click{" "}
+                              <span className="font-semibold text-brand">
+                                here
+                              </span>{" "}
+                              to upload a picture
                             </span>
                           </>
                         )}
@@ -533,12 +607,16 @@ export function AddItemSheet({
                     <button
                       type="button"
                       aria-label="Decrease quantity"
-                      onClick={() => setQuantity((current) => Math.max(0, current - 1))}
+                      onClick={() =>
+                        setQuantity((current) => Math.max(0, current - 1))
+                      }
                       className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="text-base font-bold text-ink">{quantity}</span>
+                    <span className="text-base font-bold text-ink">
+                      {quantity}
+                    </span>
                     <button
                       type="button"
                       aria-label="Increase quantity"
@@ -557,11 +635,19 @@ export function AddItemSheet({
                       step="1"
                       {...form.register("price", {
                         setValueAs: (value) =>
-                          value === "" ? null : Number.parseFloat(String(value)),
+                          value === ""
+                            ? null
+                            : Number.parseFloat(String(value)),
                       })}
                       placeholder="Price"
                       className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
                     />
+                    {isForeignCurrency && (
+                      <span className="mt-1 block text-xs font-medium text-amber-600">
+                        ⚠ Scraped price may be in a foreign currency (
+                        {watchedCurrency}) — verify before saving.
+                      </span>
+                    )}
                   </label>
 
                   <label className="mt-4 block">
@@ -580,10 +666,14 @@ export function AddItemSheet({
                       <button
                         type="button"
                         aria-pressed={allowGroupPayment}
-                        onClick={() => setAllowGroupPayment((current) => !current)}
+                        onClick={() =>
+                          setAllowGroupPayment((current) => !current)
+                        }
                         className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand text-white"
                       >
-                        {allowGroupPayment && <Check className="h-5 w-5" strokeWidth={3} />}
+                        {allowGroupPayment && (
+                          <Check className="h-5 w-5" strokeWidth={3} />
+                        )}
                       </button>
                       <p className="max-w-[280px] text-sm leading-5 text-muted">
                         This allows multiple people to contribute to this wish
@@ -606,17 +696,26 @@ export function AddItemSheet({
         </SheetContent>
       </Sheet>
 
-      <Dialog open={Boolean(duplicateItem)} onOpenChange={() => setDuplicateItem(null)}>
+      <Dialog
+        open={Boolean(duplicateItem)}
+        onOpenChange={() => setDuplicateItem(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>This might already be on your list</DialogTitle>
             <DialogDescription>
-              {duplicateItem?.title ? `"${duplicateItem.title}" is already saved.` : ""}
+              {duplicateItem?.title
+                ? `"${duplicateItem.title}" is already saved.`
+                : ""}
               Add it anyway?
             </DialogDescription>
           </DialogHeader>
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button type="button" variant="ghost" onClick={() => setDuplicateItem(null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDuplicateItem(null)}
+            >
               No
             </Button>
             <Button
