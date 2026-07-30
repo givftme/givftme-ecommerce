@@ -11,11 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
 import { daysFromToday } from "@/lib/occasion/date";
-import {
-  getDaysToGoCopy,
-  getDisplayName,
-  getOccasionLabel,
-} from "@/lib/wishlist/display";
+import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import type { SharedWishlist, WishlistItemStatus } from "@/lib/wishlist/types";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +35,34 @@ function itemMatchesFilter(status: WishlistItemStatus, filter: Filter) {
   return true;
 }
 
+function getFilterEmptyCopy({
+  filter,
+  itemCount,
+  isOwner,
+  receiverName,
+}: {
+  filter: Filter;
+  itemCount: number;
+  isOwner: boolean;
+  receiverName: string;
+}) {
+  if (itemCount === 0) {
+    return isOwner
+      ? "Add items to your wishlist"
+      : `${receiverName} hasn't added any wishes yet.`;
+  }
+
+  if (filter === "available") {
+    return "All items have been claimed! 🎉";
+  }
+
+  if (filter === "claimed") {
+    return "Nothing's been claimed yet — be the first!";
+  }
+
+  return `${receiverName} hasn't added any wishes yet.`;
+}
+
 export function SharedWishlistClient({
   wishlist,
   isAuthenticated,
@@ -54,8 +78,10 @@ export function SharedWishlistClient({
   const [savingReminder, setSavingReminder] = useState(false);
   const receiverName = getDisplayName(wishlist.owner.full_name);
   const occasionTitle = getOccasionLabel(wishlist.occasion?.title);
-  const countdown = getDaysToGoCopy(wishlist.occasion?.occasion_date);
-  const canRemind = Boolean(countdown && wishlist.occasion?.occasion_date);
+  const daysRemaining = wishlist.occasion?.occasion_date
+    ? daysFromToday(wishlist.occasion.occasion_date)
+    : null;
+  const canRemind = daysRemaining !== null && daysRemaining > 0;
   const availableCount = wishlist.items.filter(
     (item) => item.status === "available"
   ).length;
@@ -73,11 +99,15 @@ export function SharedWishlistClient({
       available_count: availableCount,
       claimed_count: claimedCount,
       is_occasion: Boolean(wishlist.occasion),
-      days_remaining: wishlist.occasion?.occasion_date
-        ? daysFromToday(wishlist.occasion.occasion_date)
-        : null,
+      days_remaining: daysRemaining,
     });
-  }, [availableCount, claimedCount, wishlist.items.length, wishlist.occasion]);
+  }, [
+    availableCount,
+    claimedCount,
+    daysRemaining,
+    wishlist.items.length,
+    wishlist.occasion,
+  ]);
 
   const handleBuy = (redirectPath: string) => {
     if (!isAuthenticated) {
@@ -118,10 +148,15 @@ export function SharedWishlistClient({
     }
   };
 
-  const emptyCopy =
-    wishlist.items.length === 0
-      ? "This wishlist is empty - check back soon."
-      : "Everything on this list has been gifted!";
+  const emptyCopy = getFilterEmptyCopy({
+    filter,
+    itemCount: wishlist.items.length,
+    isOwner: wishlist.viewer_is_owner,
+    receiverName,
+  });
+  const showAllClaimedBanner =
+    wishlist.items.length > 0 && availableCount === 0;
+  const showCreateOwnCta = isAuthenticated && !wishlist.viewer_is_owner;
 
   return (
     <main className="min-h-dvh bg-surface pb-24 md:pb-10">
@@ -176,6 +211,12 @@ export function SharedWishlistClient({
           </aside>
 
           <section className="min-w-0 bg-white md:rounded-2xl md:border md:border-stone-100 md:p-5 md:shadow-sm">
+            {showAllClaimedBanner && (
+              <div className="mx-4 mt-4 rounded-2xl bg-brand-light px-4 py-3 text-center text-sm font-semibold text-brand md:mx-0 md:mt-0">
+                🎁 Everything on this list has been gifted!
+              </div>
+            )}
+
             <div className="overflow-x-auto border-b border-stone-100 bg-white px-4 py-3 md:rounded-t-2xl md:px-0 md:pt-0">
               <div className="flex min-w-max gap-2">
                 {filters.map((item) => {
@@ -233,6 +274,33 @@ export function SharedWishlistClient({
             )}
           </section>
         </div>
+
+        <footer className="mt-8 space-y-2 px-4 pb-4 text-center md:px-0">
+          {wishlist.visibility === "public" && (
+            <Link
+              href="/"
+              onClick={() =>
+                trackEvent("shared_wishlist.cta_clicked", { cta: "powered_by" })
+              }
+              className="block text-xs font-medium text-muted hover:text-brand"
+            >
+              Powered by Gifvtme · gifvtme.com
+            </Link>
+          )}
+          {showCreateOwnCta && (
+            <Link
+              href="/wishlists"
+              onClick={() =>
+                trackEvent("shared_wishlist.cta_clicked", {
+                  cta: "create_wishlist",
+                })
+              }
+              className="block text-sm font-semibold text-brand hover:text-brand-dark"
+            >
+              Create your own wishlist
+            </Link>
+          )}
+        </footer>
       </div>
 
       {canRemind && (

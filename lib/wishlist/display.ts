@@ -53,6 +53,36 @@ export function getOccasionLabel(title: string | null | undefined) {
   return title?.trim() || "wishlist";
 }
 
+export type CountdownTone = "green" | "amber" | "red" | "today" | "passed";
+
+export function getCountdownTone(
+  occasionDate: string | null | undefined
+): CountdownTone | null {
+  if (!occasionDate) {
+    return null;
+  }
+
+  const days = daysFromToday(occasionDate);
+
+  if (days < 0) {
+    return "passed";
+  }
+
+  if (days === 0) {
+    return "today";
+  }
+
+  if (days <= 3) {
+    return "red";
+  }
+
+  if (days <= 7) {
+    return "amber";
+  }
+
+  return "green";
+}
+
 export function getDaysToGoCopy(occasionDate: string | null | undefined) {
   if (!occasionDate) {
     return null;
@@ -60,8 +90,12 @@ export function getDaysToGoCopy(occasionDate: string | null | undefined) {
 
   const days = daysFromToday(occasionDate);
 
-  if (days <= 0) {
-    return null;
+  if (days < 0) {
+    return "Passed";
+  }
+
+  if (days === 0) {
+    return "Today!";
   }
 
   return days === 1 ? "1 day to go" : `${days} days to go`;

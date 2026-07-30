@@ -52,6 +52,7 @@ export function SharedWishlistItem({
 }) {
   const ref = useRef<HTMLElement>(null);
   const claimed = item.status === "purchased";
+  const unavailable = !claimed && item.catalog_unavailable === true;
   const domain = getSourceDomain(item.product_url);
   const detailPath = `/w/${shareId}/item/${item.id}`;
 
@@ -77,22 +78,28 @@ export function SharedWishlistItem({
       ref={ref}
       className={cn(
         "rounded-2xl border border-stone-100 bg-white p-4 shadow-sm",
-        claimed && "opacity-50"
+        (claimed || unavailable) && "opacity-50"
       )}
     >
       <div className="flex items-start gap-3">
         <SharedItemImage item={item} />
 
         <div className="min-w-0 flex-1">
-          <Link
-            href={detailPath}
-            className={cn(
-              "line-clamp-2 text-sm font-medium leading-5 text-ink hover:text-brand",
-              claimed && "line-through"
-            )}
-          >
-            {item.title}
-          </Link>
+          {unavailable ? (
+            <span className="line-clamp-2 text-sm font-medium leading-5 text-ink">
+              {item.title}
+            </span>
+          ) : (
+            <Link
+              href={detailPath}
+              className={cn(
+                "line-clamp-2 text-sm font-medium leading-5 text-ink hover:text-brand",
+                claimed && "line-through"
+              )}
+            >
+              {item.title}
+            </Link>
+          )}
 
           {pricesVisible && item.price != null && item.price > 0 && (
             <p className="mt-1 text-sm font-semibold text-ink">
@@ -106,14 +113,14 @@ export function SharedWishlistItem({
                 ? "Gifvtme store"
                 : `From ${domain || "store"}`}
             </span>
-            {!claimed && (
+            {!claimed && !unavailable && (
               <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
                 Available
               </span>
             )}
           </div>
 
-          {!claimed && item.intent_flagged_by && (
+          {!claimed && !unavailable && item.intent_flagged_by && (
             <div className="mt-2">
               <IntentFlagBadge />
             </div>
@@ -122,6 +129,10 @@ export function SharedWishlistItem({
 
         {claimed ? (
           <ClaimedBadge className="shrink-0" />
+        ) : unavailable ? (
+          <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
+            No longer available
+          </span>
         ) : (
           <Button
             type="button"

@@ -7,6 +7,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import {
   getAvatarColorClass,
+  getCountdownTone,
   getDaysToGoCopy,
   getDisplayName,
   getInitials,
@@ -15,6 +16,14 @@ import type { SharedWishlistOccasion, SharedWishlistOwner } from "@/lib/wishlist
 import { cn } from "@/lib/utils";
 
 gsap.registerPlugin(useGSAP);
+
+const countdownToneClass: Record<string, string> = {
+  green: "bg-emerald-500/90 text-white",
+  amber: "bg-amber-500/90 text-white",
+  red: "bg-red-500/90 text-white",
+  today: "bg-red-600 text-white",
+  passed: "bg-white/15 text-white/70",
+};
 
 const occasionEmoji: Record<string, string> = {
   birthday: "🎂",
@@ -69,6 +78,7 @@ export function SharedWishlistHeader({
 }) {
   const ref = useRef<HTMLElement>(null);
   const countdown = getDaysToGoCopy(occasion?.occasion_date);
+  const countdownTone = getCountdownTone(occasion?.occasion_date);
   const emoji = occasion?.occasion_type
     ? occasionEmoji[occasion.occasion_type] || "🎁"
     : null;
@@ -106,7 +116,16 @@ export function SharedWishlistHeader({
           <p className="text-sm font-semibold">
             {occasion.title} {emoji}
           </p>
-          {countdown && <p className="text-sm text-white">{countdown}</p>}
+          {countdown && (
+            <span
+              className={cn(
+                "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                countdownToneClass[countdownTone ?? "green"]
+              )}
+            >
+              {countdown}
+            </span>
+          )}
         </div>
       )}
     </header>

@@ -34,6 +34,7 @@ export interface WishlistItem {
   affiliate_purchased_at?: string | null;
   order_status?: string | null;
   buyer_name?: string | null;
+  catalog_unavailable?: boolean;
 }
 
 export interface WishlistDetail {
@@ -69,6 +70,7 @@ export interface SharedWishlistOccasion {
   title: string;
   occasion_type: string | null;
   occasion_date: string | null;
+  status: "active" | "archived" | null;
 }
 
 export interface SharedWishlist {
