@@ -119,6 +119,23 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
       return jsonError("This product is no longer available.", 400);
     }
 
+    const { data: duplicate, error: duplicateError } = await supabase
+      .from("wishlist_items")
+      .select("id")
+      .eq("wishlist_id", id)
+      .eq("catalog_product_id", data.catalog_product_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (duplicateError) {
+      console.error("Couldn't check existing wishlist items.", duplicateError);
+      return jsonError("Couldn't check existing wishlist items.", 500);
+    }
+
+    if (duplicate) {
+      return jsonError("Already on this wishlist.", 409);
+    }
+
     const catalogImageUrl = normalizeWishlistImageRef(
       product.imageUrl ?? null,
       user.id

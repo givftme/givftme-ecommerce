@@ -27,6 +27,7 @@ interface WishlistPickerSheetProps {
   product: ProductCardData | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAdded?: (catalogProductId: string) => void;
 }
 
 async function fetchWishlists() {
@@ -70,6 +71,7 @@ export function WishlistPickerSheet({
   product,
   open,
   onOpenChange,
+  onAdded,
 }: WishlistPickerSheetProps) {
   const [wishlists, setWishlists] = useState<WishlistSummary[]>([]);
   const [isPreparing, setIsPreparing] = useState(false);
@@ -110,7 +112,10 @@ export function WishlistPickerSheet({
       });
 
       if (!response.ok) {
-        throw new Error("Could not save item.");
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error || "Could not save item.");
       }
 
       trackEvent("museum.product.add_to_wishlist", {
@@ -118,10 +123,14 @@ export function WishlistPickerSheet({
         wishlist_type: wishlist.type,
       });
       toast({ title: "Added to your wishlist ✓", variant: "success" });
+      onAdded?.(product.catalogProductId);
       onOpenChange(false);
-    } catch {
+    } catch (error) {
       toast({
-        title: "Couldn't add to wishlist. Try again.",
+        title:
+          error instanceof Error && error.message
+            ? error.message
+            : "Couldn't add to wishlist. Try again.",
         variant: "danger",
       });
     } finally {

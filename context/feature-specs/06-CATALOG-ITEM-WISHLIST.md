@@ -1,5 +1,7 @@
 # Feature: Catalog Item Addition to Wishlist
 
+> **Status note (2026-07-30):** This feature is shipped. Several details below (query name, error codes, `master_items` scope, picker UI) originally described in this spec diverged from what was actually built, per [[feedback-spec-vs-architecture-precedence]] — this file has been corrected to match `app/api/wishlists/[id]/items/route.ts`, `components/shared/WishlistPickerSheet.tsx`, and `context/architecture/API_ROUTES.md`, which are the source of truth. Treat this as documentation of shipped behavior, not a build target.
+
 ## Overview
 Lets authenticated users add a Gifvtme catalog product directly to their wishlist from any product card or detail page. Creates a `wishlist_items` row with `origin='catalog'` and snapshotted display data. If the product has variants, variant selection timing follows the "select at purchase time, not at add-to-wishlist time" decision — the wishlist item stores only the `catalog_product_id`, not a specific variant. A wishlist picker lets the user choose which list (evergreen or an active occasion) to add to.
 
@@ -22,14 +24,14 @@ Lets authenticated users add a Gifvtme catalog product directly to their wishlis
 ---
 
 ## Functional Requirements
-1. "Add to wishlist" (heart icon or button) on `ProductCard` and on the product detail page.
-2. Requires auth — unauthenticated click redirects to `/auth/login?redirect=[current_path]`.
-3. A **wishlist picker** appears: shows the user's evergreen wishlist + all active occasion wishlists. User selects one.
-4. On confirm: `POST /api/wishlists/[id]/items` with `origin='catalog'` and `catalog_product_id`.
-5. Snapshot at add-time: `title`, `image_url`, `price` are fetched from Sanity and stored on the `wishlist_items` row as a display snapshot — used for fast rendering without re-querying Sanity every time. Live price is still checked at purchase/checkout time.
+1. "Add to wishlist" (heart icon or button) on `ProductCard` and on the product detail page. On `ProductCard` the heart is hidden when `product.isNew` is true (an existing, undocumented-until-now UI decision — not something this feature should change without a separate conversation).
+2. Requires auth — an unauthenticated click opens `AuthGateSheet` with a `redirectPath` back to the current page (not a hard redirect to `/auth/login`).
+3. A **wishlist picker** (`WishlistPickerSheet`, Sheet only — no separate desktop Dialog variant) shows the user's wishlists. If the user has exactly one wishlist, the picker skips straight to adding rather than showing a selection UI. If they have none, one is auto-created (`ensureEvergreenWishlist`) and used directly. The picker only surfaces a choice when 2+ wishlists exist.
+4. On confirm (or auto-select): `POST /api/wishlists/[id]/items` with `origin='catalog'` and `catalog_product_id`.
+5. Snapshot at add-time: `title`, `image_url`, `price` are re-fetched from Sanity server-side and stored on the `wishlist_items` row as a display snapshot — client-submitted values for these fields are accepted for schema compatibility but ignored. Live price is still checked at purchase/checkout time.
 6. No variant selection at add-to-wishlist time. The `variant_combination_key` on the `wishlist_items` row is null for catalog items added via wishlist (set at checkout time by the giver).
-7. If the product is already on the selected wishlist, show: "Already on this wishlist" — no duplicate row created.
-8. After adding: the heart icon on the product card fills (indicating wishlisted state). Hovering the filled heart shows a tooltip: "On your wishlist → View".
+7. If the product is already on the selected wishlist, the route returns 409 and the picker's toast shows the server's message ("Already on this wishlist.") — no duplicate row created.
+8. After adding: the heart icon on the product card fills (indicating wishlisted state), backed by `GET /api/wishlists/catalog-items` fetched client-side in `CatalogProductGrid` and updated locally on a successful add. The hover tooltip / "On your wishlist → View" navigation described below is not implemented — clicking a filled heart currently re-opens the same add flow rather than navigating or offering removal.
 
 ---
 
@@ -55,120 +57,103 @@ Lets authenticated users add a Gifvtme catalog product directly to their wishlis
 - Label: "Add to wishlist" (empty heart icon + text).
 - After adding: changes to "On your wishlist ✓" with a filled heart.
 
-### Wishlist picker (shadcn Sheet on mobile, Dialog on desktop)
+### Wishlist picker — as shipped (`WishlistPickerSheet`)
+
+Sheet only (all breakpoints) — no desktop Dialog variant exists.
 
 **Title:** "Add to which wishlist?"
 
-**Options list:**
-Each option as a selectable row:
-- Icon (gift box for evergreen, occasion-type icon for occasions)
-- Wishlist name
-- Item count ("12 items")
-- For occasions: date badge ("Jul 15" or "In 23 days")
-- Checkmark on the currently selected row
+**Behavior, not a static options list:**
+- 0 wishlists: auto-creates an evergreen wishlist and adds directly — no UI shown beyond a brief loading state.
+- 1 wishlist: adds directly, no selection step.
+- 2+ wishlists: shows each as a row (gift icon, "My Wishlist" for evergreen or the wishlist's title, and its `type`). Clicking a row adds immediately — there is no separate "confirm" step, no item counts, no occasion date badges, and no "Create new occasion" link.
 
-**Footer:**
-- "Add to [Selected Wishlist]" CTA (filled, disabled until a selection is made)
-- "Create new occasion" text link
+**Cancel:** a text-button "Cancel" closes the sheet without adding.
 
-**Empty state** (no wishlists — should never happen due to auto-create, but defensive):
-"Create a wishlist first" + CTA.
+**Future improvement (not yet built):** item counts, occasion date badges, a confirm-footer step, and "Create new occasion" from the picker — these remain the original spec's intent but are not implemented.
 
 ---
 
 ## Backend Logic
 
 ### Check if already wishlisted (for heart state on product cards)
-On the server component rendering the product grid, fetch the current user's wishlisted catalog product IDs:
+`CatalogProductGrid` fetches `GET /api/wishlists/catalog-items` client-side on mount (unauthenticated users get `{ catalogProductIds: [] }`, not a 401 — this is a passive display check on a public browsing surface, not a gated action). The route calls `getWishlistedCatalogProductIds()` in `lib/wishlist/server.ts`:
 
 ```typescript
-// If authenticated:
-const { data } = await supabase
-  .from('wishlist_items')
-  .select('catalog_product_id, wishlist_id')
-  .eq('wishlists.user_id', userId) // via join
-  .eq('origin', 'catalog')
-  .not('catalog_product_id', 'is', null)
+// lib/wishlist/server.ts
+export async function getWishlistedCatalogProductIds(supabase, userId) {
+  const { data: wishlists } = await supabase
+    .from('wishlists')
+    .select('id')
+    .eq('user_id', userId)
 
-const wishlistedIds = new Set(data.map(item => item.catalog_product_id))
+  const wishlistIds = (wishlists || []).map((w) => w.id)
+  if (wishlistIds.length === 0) return []
+
+  const { data: items } = await supabase
+    .from('wishlist_items')
+    .select('catalog_product_id')
+    .in('wishlist_id', wishlistIds)
+    .eq('origin', 'catalog')
+    .not('catalog_product_id', 'is', null)
+
+  return [...new Set(items.map((item) => item.catalog_product_id))]
+}
 ```
 
-Pass `wishlistedIds` to `ProductGrid` → `ProductCard`.
+`CatalogProductGrid` holds the result in local state, passes it to `ProductGrid` as `wishlistedIds`, and adds the new ID locally the moment `WishlistPickerSheet`'s `onAdded` callback fires — no refetch needed after an add.
 
-### Add catalog item to wishlist (`POST /api/wishlists/[id]/items`)
+### Add catalog item to wishlist (`POST /api/wishlists/[id]/items`, origin='catalog' branch)
+As implemented in `app/api/wishlists/[id]/items/route.ts`:
+
 ```typescript
-// origin = 'catalog' branch:
+// 1. Fetch current product data from Sanity — CART_PRICES_QUERY, not a PRODUCT_BY_ID_QUERY
+//    (that query name never existed; CART_PRICES_QUERY is shared with the cart price-refresh route)
+const products = await sanityFetch(CART_PRICES_QUERY, { ids: [catalog_product_id] })
+const product = products.find((p) => p._id === catalog_product_id) ?? null
+if (!product || product.status !== 'active') return 400 { error: 'This product is no longer available.' }
 
-// 1. Fetch current product data from Sanity
-const product = await sanity.fetch(PRODUCT_BY_ID_QUERY, { id: catalog_product_id })
-if (!product) return 422 { error: 'Product not found in catalog' }
-
-// 2. Check for existing item (duplicate prevention)
-const existing = await supabase
+// 2. Check for existing item (duplicate prevention) — 409, not part of the original build,
+//    added as a follow-up gap-close; application-level check only, no DB unique constraint
+const { data: duplicate } = await supabase
   .from('wishlist_items')
   .select('id')
   .eq('wishlist_id', wishlist_id)
   .eq('catalog_product_id', catalog_product_id)
-  .single()
-
-if (existing.data) return 409 { error: 'already_on_wishlist', message: 'Already on this wishlist' }
-
-// 3. Get current display price
-const { price } = getActivePrice(product)
-
-// 4. Get next sort_order
-const { data: maxSort } = await supabase
-  .from('wishlist_items')
-  .select('sort_order')
-  .eq('wishlist_id', wishlist_id)
-  .order('sort_order', { ascending: false })
   .limit(1)
-  .single()
+  .maybeSingle()
 
-const sort_order = (maxSort?.sort_order ?? 0) + 1
+if (duplicate) return 409 { error: 'Already on this wishlist.' }
 
-// 5. Create master_items row (for evergreen tracking)
-const { data: master } = await supabase.from('master_items').insert({
-  user_id: auth.uid(),
-  title: product.title,
-  image_url: urlFor(product.images[0]).width(400).url(),
-  price: price,
-  origin: 'catalog',
-  catalog_product_id: catalog_product_id,
-}).select().single()
+// 3. Price: getFromPrice() — for variant products, cheapest available variant price
+//    (not a flat getActivePrice() call, which would silently save price: 0 for variant products)
+const price = getFromPrice(product)
+if (price === null) return 400 { error: 'This product is currently unavailable.' }
 
-// 6. Create wishlist_items row
+// 4. Get next sort_order (getNextSortOrder helper)
+
+// 5. Create wishlist_items row (master_item_id: null — occasion pulls set this, not catalog adds)
 const { data: item } = await supabase.from('wishlist_items').insert({
-  wishlist_id: wishlist_id,
-  master_item_id: master.id,
-  title: product.title,
-  image_url: urlFor(product.images[0]).width(400).url(),
-  price: price,
-  origin: 'catalog',
-  catalog_product_id: catalog_product_id,
-  sort_order: sort_order,
-  is_exclusive: false,
+  wishlist_id, origin: 'catalog', master_item_id: null,
+  title: product.title, image_url: catalogImageUrl, price, catalog_product_id,
+  is_exclusive: owner.wishlist.type === 'occasion' && data.is_exclusive,
+  sort_order: nextSortOrder,
 }).select().single()
+
+// 6. Mirror into master_items — evergreen wishlists ONLY. master_items is the evergreen pool
+//    (see DATABASE_SCHEMA.md); occasion-wishlist adds do not touch it.
+if (owner.wishlist.type === 'evergreen') {
+  await supabase.from('master_items').insert({
+    user_id, title: product.title, image_url: catalogImageUrl, price,
+    origin: 'catalog', catalog_product_id, sort_order: nextSortOrder,
+  })
+}
 
 return 201 { item }
 ```
 
-### Wishlist picker data (`GET /api/wishlists?for_picker=true`)
-```typescript
-const wishlists = await supabase
-  .from('wishlists')
-  .select('id, title, type, occasion_id, occasions(occasion_type, occasion_date)')
-  .eq('user_id', auth.uid())
-  .in('type', ['evergreen', 'occasion'])
-  .order('type', { ascending: false }) // evergreen first
-
-// Get item counts:
-const counts = await supabase
-  .from('wishlist_items')
-  .select('wishlist_id, count')
-  .in('wishlist_id', wishlists.data.map(w => w.id))
-  .group('wishlist_id')
-```
+### Wishlist picker data
+The picker uses plain `GET /api/wishlists` (see `API_ROUTES.md`) — a `for_picker=true` param and occasion-joined response shape were never built and would duplicate this endpoint. It returns `{ id, title, type, visibility, prices_visible, item_count }[]`, which is all the picker's row rendering needs.
 
 ---
 
@@ -182,12 +167,17 @@ Confirm `wishlist_items` has `catalog_product_id TEXT` (Sanity _id, not a FK —
 ## API Endpoints
 
 ### `POST /api/wishlists/[id]/items` (catalog branch)
-Already specified in `02-wishlist-core/01-EVERGREEN-WISHLIST.md`. This spec documents the `origin='catalog'` code path within the same route.
+Already specified in `02-wishlist-core/01-EVERGREEN-WISHLIST.md`. This spec documents the `origin='catalog'` code path within the same route. See `API_ROUTES.md` for the current, authoritative contract (status codes, `master_items` scoping, duplicate handling).
 
-### `GET /api/wishlists?for_picker=true`
-Returns the user's wishlists formatted for the picker UI.
+### `GET /api/wishlists`
+The picker reuses this existing endpoint (see `API_ROUTES.md`) rather than a dedicated `for_picker=true` variant — that param was never built.
 **Auth:** required.
-**Response:** `{ wishlists: WishlistPickerOption[] }`
+**Response:** `{ wishlists: { id, title, type, visibility, prices_visible, item_count }[] }`
+
+### `GET /api/wishlists/catalog-items`
+New in this pass. Backs the filled-heart state on `ProductCard`.
+**Auth:** optional — unauthenticated requests get `{ catalogProductIds: [] }` with 200.
+**Response:** `{ catalogProductIds: string[] }`
 
 ---
 
@@ -214,9 +204,9 @@ const catalogItemSchema = z.object({
 
 | Scenario | Message |
 |---|---|
-| Product not found in Sanity | "This product is no longer available." |
-| Already on wishlist | "Already on this wishlist." (show link to the wishlist) |
-| Add fails (network) | "Couldn't add to wishlist. Please try again." |
+| Product not found or inactive in Sanity | "This product is no longer available." (400, not 422) |
+| Already on wishlist | "Already on this wishlist." (409; shown via toast — no link to the wishlist yet) |
+| Add fails (network) | "Couldn't add to wishlist. Try again." |
 | No wishlists to pick from | "Create a wishlist first." + CTA (defensive — auto-create prevents this) |
 
 ---
@@ -255,8 +245,9 @@ const catalogItemSchema = z.object({
 
 ### Integration tests
 - Add catalog item: `wishlist_items` row has `origin='catalog'`, correct `catalog_product_id`, snapshotted title/image/price.
-- Duplicate detection: adding same product to same wishlist returns 409, no second row created.
-- Archived Sanity product: returns 422, no row created.
+- Duplicate detection: adding same product to same wishlist returns 409, no second row created. (Shipped 2026-07-30.)
+- Archived/inactive Sanity product: returns 400, no row created.
+- Evergreen add mirrors into `master_items`; occasion add does not.
 
 ### Manual QA
 - Click the heart icon on a product card (authenticated). Verify the picker opens.
@@ -268,12 +259,12 @@ const catalogItemSchema = z.object({
 ---
 
 ## Acceptance Criteria
-- [ ] "Add to wishlist" on product cards and detail pages opens a wishlist picker for authenticated users.
-- [ ] Unauthenticated users are redirected to login with a `redirect` param.
-- [ ] A catalog item added to a wishlist creates a `wishlist_items` row with `origin='catalog'` and a snapshot of current title/image/price.
-- [ ] Adding the same product to the same wishlist twice shows "Already on this wishlist" and creates no duplicate row.
-- [ ] The heart icon on the product card fills to indicate wishlisted state.
-- [ ] After adding, the user sees a confirmation toast or the button changes to "On your wishlist ✓".
+- [x] "Add to wishlist" on product cards and detail pages opens a wishlist picker for authenticated users (auto-adding directly when there are 0 or 1 wishlists).
+- [x] Unauthenticated users see `AuthGateSheet` with a `redirectPath` back to the current page (not a hard redirect to `/auth/login`).
+- [x] A catalog item added to a wishlist creates a `wishlist_items` row with `origin='catalog'` and a snapshot of current title/image/price.
+- [x] Adding the same product to the same wishlist twice returns 409 "Already on this wishlist." and creates no duplicate row.
+- [x] The heart icon on the product card fills to indicate wishlisted state (via `GET /api/wishlists/catalog-items`, hydrated client-side in `CatalogProductGrid`).
+- [x] After adding, the user sees a confirmation toast. The product-detail "On your wishlist ✓" button-state change described in UI Requirements is not implemented — the button always reads "Add to wishlist".
 
 ---
 

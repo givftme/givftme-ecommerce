@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -32,9 +32,27 @@ export function CatalogProductGrid({
   );
   const gridRef = useRef<HTMLDivElement>(null);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
   const { addItem } = useCart();
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch("/api/wishlists/catalog-items", { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { catalogProductIds?: string[] } | null) => {
+        if (isActive && payload?.catalogProductIds) {
+          setWishlistedIds(new Set(payload.catalogProductIds));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   useGSAP(
     () => {
@@ -111,6 +129,7 @@ export function CatalogProductGrid({
           emptyMessage={emptyMessage}
           onAddToCart={handleAddToCart}
           onAddToWishlist={handleAddToWishlist}
+          wishlistedIds={wishlistedIds}
           className={className}
         />
       </div>
@@ -118,6 +137,9 @@ export function CatalogProductGrid({
         product={wishlistProduct}
         open={isWishlistOpen}
         onOpenChange={setIsWishlistOpen}
+        onAdded={(catalogProductId) =>
+          setWishlistedIds((current) => new Set(current).add(catalogProductId))
+        }
       />
     </>
   );
