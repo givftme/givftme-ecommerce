@@ -1,6 +1,6 @@
 # Memory — Evergreen Wishlist Gap-Closing + Review Fixes
 
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 ## What was built
 

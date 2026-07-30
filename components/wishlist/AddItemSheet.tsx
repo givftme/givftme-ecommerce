@@ -121,6 +121,8 @@ export function AddItemSheet({
 
   const watchedImage = useWatch({ control: form.control, name: "image_url" });
   const watchedProductUrl = useWatch({ control: form.control, name: "product_url" });
+  const watchedCurrency = useWatch({ control: form.control, name: "scraped_currency" });
+  const isForeignCurrency = Boolean(watchedCurrency && watchedCurrency !== "NGN");
 
   const resetSheet = () => {
     setDuplicateItem(null);
@@ -163,6 +165,7 @@ export function AddItemSheet({
     try {
       const imagePath = await uploadWishlistImage(file);
       form.setValue("image_url", imagePath, { shouldDirty: true });
+      trackEvent("wishlist.item.image_uploaded", { source: "upload" });
     } catch (error) {
       toast({
         title: "Couldn't upload photo. Try again.",
@@ -207,6 +210,7 @@ export function AddItemSheet({
     setScrapeError(null);
     setIsFetching(true);
     setFetchSlow(false);
+    trackEvent("wishlist.item.scrape_attempted", { domain });
 
     const slowTimer = setTimeout(() => setFetchSlow(true), FETCH_SLOW_THRESHOLD_MS);
 
@@ -242,10 +246,10 @@ export function AddItemSheet({
         return;
       }
 
-      trackEvent("wishlist.item.scrape_failed", { domain });
-      setScrapeError(
-        error instanceof Error ? error.message : "We couldn't read that page automatically."
-      );
+      const reason =
+        error instanceof Error ? error.message : "We couldn't read that page automatically.";
+      trackEvent("wishlist.item.scrape_failed", { domain, reason });
+      setScrapeError(reason);
       skipToManual("scrape_failed");
     } finally {
       clearTimeout(slowTimer);
@@ -311,6 +315,9 @@ export function AddItemSheet({
         has_image: Boolean(values.image_url),
         scraped: hasFetchedPreview,
       });
+      if (!values.image_url) {
+        trackEvent("wishlist.item.image_skipped");
+      }
       toast({ title: "Added to your wishlist.", variant: "success" });
       closeSheet();
     } catch {
@@ -355,6 +362,17 @@ export function AddItemSheet({
             <form
               className="flex flex-1 flex-col px-4 pb-5 md:px-6 md:pb-6"
               onSubmit={form.handleSubmit((values) => saveItem(values))}
+              onKeyDown={(event) => {
+                const target = event.target as HTMLElement;
+
+                if (
+                  event.key === "Enter" &&
+                  target.tagName !== "TEXTAREA" &&
+                  target.tagName !== "BUTTON"
+                ) {
+                  event.preventDefault();
+                }
+              }}
             >
               <div>
                 <h3 className="text-xl font-bold leading-6 text-ink">New wishlist</h3>
@@ -562,6 +580,12 @@ export function AddItemSheet({
                       placeholder="Price"
                       className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
                     />
+                    {isForeignCurrency && (
+                      <span className="mt-1 block text-xs font-medium text-amber-600">
+                        ⚠ Scraped price may be in a foreign currency ({watchedCurrency}) — verify
+                        before saving.
+                      </span>
+                    )}
                   </label>
 
                   <label className="mt-4 block">
