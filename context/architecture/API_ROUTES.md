@@ -75,8 +75,8 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/wishlists/items/[itemId]/flag-intent`
 **Methods:** POST, DELETE. **Auth:** required. **Purpose:** giver advisory intent flag.
-**POST behavior:** calls the narrow DB helper `gifvtme_flag_wishlist_item_intent`, which only sets `intent_flagged_by` and `intent_flagged_at` when the item is available, readable by the giver, and not already flagged. Already-flagged items return 409.
-**DELETE behavior:** clears the flag only when the current user is the flagger.
+**POST behavior:** calls the DB helper `gifvtme_flag_wishlist_item_intent` (migration 014), which sets `intent_flagged_by`/`intent_flagged_at` when the item is available, readable by the giver, and either unflagged, flagged by the caller, or flagged by someone else more than 24h ago (expiring last-write-wins). Returns `{ flagged: true }` on success. If another user has an active flag younger than 24h, returns 200 `{ warning: "already_flagged", flagged_at }` instead of overwriting — the frontend shows the "someone else is planning to buy this" state with a "Buy anyway" reveal. Purchased items return 409 `{ error }`; missing/inaccessible items return 404.
+**DELETE behavior:** clears the flag only when the current user is the flagger (silent no-op otherwise — `{ cleared: true }` either way, per the spec's own "just refresh" guidance for that case).
 
 ## `/api/occasions`
 **Methods:** GET, POST. **Auth:** required. **Purpose:** lists the current user's occasions and creates occasion wishlists.

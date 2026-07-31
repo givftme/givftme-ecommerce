@@ -8,15 +8,16 @@ interface FlagIntentRouteContext {
 }
 
 function intentErrorMessage(message?: string) {
-  if (message?.includes("already_flagged")) {
-    return {
-      error: "Someone else has flagged this - you can still buy it",
-      status: 409,
-    };
+  if (message?.includes("already_purchased")) {
+    return { error: "This item has already been purchased.", status: 409 };
+  }
+
+  if (message?.includes("not_found")) {
+    return { error: "This item doesn't exist or was removed.", status: 404 };
   }
 
   if (message?.includes("not_available")) {
-    return { error: "This item is no longer available", status: 404 };
+    return { error: "This item is no longer available", status: 409 };
   }
 
   return { error: "Couldn't update intent.", status: 500 };
@@ -31,7 +32,7 @@ export async function POST(_request: Request, context: FlagIntentRouteContext) {
     return jsonError("You need to sign in first.", 401);
   }
 
-  const { error } = await supabase.rpc("gifvtme_flag_wishlist_item_intent", {
+  const { data, error } = await supabase.rpc("gifvtme_flag_wishlist_item_intent", {
     p_item_id: itemId,
   });
 
@@ -40,7 +41,16 @@ export async function POST(_request: Request, context: FlagIntentRouteContext) {
     return jsonError(mapped.error, mapped.status);
   }
 
-  return NextResponse.json({ ok: true });
+  const result = data as { warning?: string; flagged_at?: string } | null;
+
+  if (result?.warning === "already_flagged") {
+    return NextResponse.json({
+      warning: "already_flagged",
+      flagged_at: result.flagged_at,
+    });
+  }
+
+  return NextResponse.json({ flagged: true });
 }
 
 export async function DELETE(_request: Request, context: FlagIntentRouteContext) {
@@ -60,5 +70,5 @@ export async function DELETE(_request: Request, context: FlagIntentRouteContext)
     return jsonError("Couldn't clear intent.", 500);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ cleared: true });
 }

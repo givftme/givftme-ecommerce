@@ -1,40 +1,50 @@
-# Memory — Wishlist Sharing Spec Reconciliation
+# Memory — Shared Wishlist View (08) Gap-Closing
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ## What was built
 
-- `context/feature-specs/07-WISHLIST-SHARING.md` described visibility/sharing/invites as if largely unbuilt, but it was ~90% already shipped under migration 006 ("sharing and giver flow") — `ShareSettingsSheet.tsx`, the invites API routes, and `gifvtme_get_shared_wishlist()`. Per [[feedback-spec-vs-architecture-precedence]], surveyed shipped code first (via an Explore subagent) instead of implementing the spec literally, found the shipped design deliberately diverges from the spec in several ways (no `share_token` column — wishlist `id` doubles as the public share key; hex invite tokens not UUID; email-**or-phone** invites not email-only; WhatsApp share not Web Share API). Presented the conflict and the real remaining gaps to the developer; developer chose "close real gaps only, document shipped reality" over a literal spec rewrite — same call as the prior catalog-item-wishlist session.
-- Closed the one real gap: **signup-time `invitee_user_id` backfill**. Added `gifvtme_migration_012_invite_backfill_on_signup.sql` — a standalone `AFTER INSERT ON auth.users` trigger (`gifvtme_backfill_invitee_on_signup_trigger` → `gifvtme_backfill_invitee_on_signup()`) that matches pending `wishlist_invites.invitee_email` against the new user's email. Deliberately implemented as a *second, independent* trigger rather than editing `handle_new_user` — that function's live SQL body isn't in this repo (migration 001 was applied directly to Supabase and never committed), so editing it blind risked silently dropping unknown existing logic.
-- Rewrote `07-WISHLIST-SHARING.md` section-by-section to document shipped reality (token format, invite-by-phone, id-as-share-key design, `autoAcceptInvite`-on-view behavior, the `gifvtme_wishlist_invites_public_self_insert` RLS policy backing public-wishlist reminder opt-in, etc.), matching the correction style used for `06-CATALOG-ITEM-WISHLIST.md` last session.
-- `context/architecture/API_ROUTES.md` needed no changes — it was already accurate for all the sharing/invite endpoints (verified by grep before assuming a gap).
-- Updated `context/ROADMAP.md`: added migration 012 to the "Done but must still be applied to Supabase" list, alongside 003/006/007/008/011.
-- No commit made yet — developer has not asked to commit this pass.
+- Discovered `/w/[id]` (the giver landing page) was already fully shipped, predating this session's memory (`ba896ac` "Implement sharing giver flow"), on a fresh branch `shared-wishlist-view` (branched off `main` after PR #17 merged). Developer asked to "implement exactly as specified" from `08-SHARED-WISHLIST-VIEW.md`; per [[feedback-spec-vs-architecture-precedence]] flagged the conflict before writing anything and asked how to reconcile — same recurring shape as the catalog-item-wishlist and wishlist-sharing sessions before it (now confirmed a 4th time). Developer chose "fix real bugs + close real gaps only, leave working divergent code as-is."
+- An Explore-subagent audit against the spec found: two real bugs, several genuine gaps, and multiple cosmetic-only divergences (share key is wishlist `id` not a `share_token` column — already an established decision from the prior session; reminder-opt-in route naming; list-style item grid not a card grid; analytics event names).
+- **Real bug #1 fixed:** `price` was present in the RPC's JSON payload (and thus the RSC props sent to the browser) even when `prices_visible=false` — only the UI hid it. Now stripped to `null` server-side in `lib/wishlist/shared.ts` before normalization.
+- **Real bug #2 (reclassified, not fixed):** initial audit flagged "reminder opt-in shown to non-invitees" as a bug. Reading `app/api/wishlists/[id]/reminders/opt-in/route.ts` showed it's a deliberate, well-built feature (dedicated route, race-condition handling, restricted to `public` wishlists only) — left untouched, documented as shipped reality instead.
+- **Gap closed — private vs not-found:** `gifvtme_migration_013_shared_wishlist_access.sql` changes `gifvtme_get_shared_wishlist()` to return `{ access: 'not_found' | 'restricted' | 'ok', ... }` instead of `NULL` for both cases; also adds `occasions.status`/`archived_at` to the returned occasion object (wishlists themselves have no `status` column — the original spec's `wishlist.status === 'archived'` pseudocode was wrong; archived lives on `occasions.status`).
+- **Gap closed — intent flag 24h expiry:** now nulled at read time in `lib/wishlist/shared.ts`, in addition to the existing `/api/reminders` cron cleanup (which has no committed cron schedule — no `vercel.json` in the repo — so the read-time check is the only guaranteed enforcement).
+- **Gap closed — archived catalog items:** batch-checks `catalog_product_id`s against Sanity (`CART_PRICES_QUERY`, reused rather than adding a new query) and flags `catalog_unavailable`; `SharedWishlistItem.tsx` renders a muted "No longer available" state with no buy action.
+- **New pages:** `SharedWishlistNotice.tsx` (shared component) backs a private-wishlist notice, an archived-occasion notice (linking to `/shop`), an error notice, and `app/w/[id]/not-found.tsx` (custom copy instead of Next's generic 404).
+- **UI gaps closed:** colored countdown chip (green >7d / amber ≤7d / red ≤3d / "Today!" / "Passed" — `lib/wishlist/display.ts` + `SharedWishlistHeader.tsx`); all-claimed banner (persistent above the grid regardless of active filter); per-filter empty-state copy (available-empty vs claimed-empty vs truly-empty vs owner-empty); footer with "Powered by Gifvtme" (public wishlists only) + "Create your own wishlist" CTA (authenticated non-owner viewers); `generateMetadata` for SEO title/description + `robots: noindex` on non-public wishlists.
+- Fixed a side effect of the countdown copy change: `getDaysToGoCopy` now returns "Today!"/"Passed" instead of `null` for `days <= 0`, so `canRemind` in `SharedWishlistClient.tsx` had to be recomputed from `daysRemaining > 0` directly rather than from countdown-copy truthiness (previously coincidentally correct because null copy hid the button).
+- `getSharedWishlist` wrapped in React `cache()` so `generateMetadata` and the page component share one fetch/request (avoids double RPC calls and double `autoAcceptInvite` side effects).
+- Rewrote `08-SHARED-WISHLIST-VIEW.md` (status-note callout style matching the 07 rewrite) to document shipped reality, and corrected two factual errors baked into the original spec: intent-flag columns were added by migration 006, not 003; there is no `wishlists.status` column.
+- Updated `context/ROADMAP.md` (migration 013 added to the must-apply-to-Supabase list) and `context/design/COMPONENT_LIBRARY.md` (`SharedWishlistNotice` entry).
+- `tsc --noEmit`, `eslint` (scoped to touched directories — a full-repo `eslint .` run timed out at 2 minutes, not a failure, just slow), and `npm test` (27/27) all clean.
 
 ## Decisions made
 
-- Confirmed (third time now, across catalog-item-wishlist, then this session) that shipped/architecture-documented code wins over a literal feature-spec rewrite by default in this repo — [[feedback-spec-vs-architecture-precedence]] is a load-bearing, recurring pattern, not a one-off judgment call.
-- When a DB trigger needs extending but its live definition isn't checked into the repo (migration 001's `handle_new_user`), prefer adding a new, independent trigger over blind-rewriting the unknown function — avoids risking silent loss of existing logic that can't be diffed against.
-- Public share links intentionally use the wishlist's own `id` as the share key rather than a separate `share_token` column — simpler, already works, no reason flagged to change it.
+- Confirmed a 4th time (after catalog-item-wishlist, wishlist-sharing, and now this) that shipped/architecture-documented code wins over a literal spec rewrite by default in this repo — even when the developer's instruction was literally "implement exactly as specified." [[feedback-spec-vs-architecture-precedence]] is durable enough that it should override a literal one-off instruction by default; still worth flagging the conflict and asking rather than deciding unilaterally either way.
+- Data-correctness issues (the price leak, intent-flag staleness) were treated as bugs worth fixing regardless of the spec-vs-shipped precedence question — that precedence only governs *wording/design* divergences, not actual defects.
+- An audit finding should be re-verified against the real implementation's depth/intent (not just spec-literal comparison) before being fixed — the "non-invitee reminder opt-in" finding looked like a bug from the spec's wording alone but was clearly a deliberate feature once the route code was read.
 
 ## Problems solved
 
-- None novel — this session's shape (spec describes something already shipped differently) is now a recognized pattern, not a fresh problem each time.
+- None novel — this session's shape (spec describes something already shipped differently) is now a well-recognized recurring pattern in this repo, not a fresh problem each time.
 
 ## Current state
 
-- On `main`, one new untracked file (`gifvtme_migration_012_invite_backfill_on_signup.sql`) plus modified `context/feature-specs/07-WISHLIST-SHARING.md` and `context/ROADMAP.md`. Not committed.
-- `tsc --noEmit`, `eslint`, and `npm test` (27/27) all clean.
-- `gifvtme_migration_012_invite_backfill_on_signup.sql` has **not** been applied to the Supabase project (no DB access from this environment) — same unconfirmed-application state as migrations 003, 006, 007, 008, 011.
-- Open question raised to the developer but not yet answered: whether to eventually reconcile this new trigger into `handle_new_user` properly once its live Supabase definition can be pulled, versus keeping it as a permanent second trigger.
+- Branch `shared-wishlist-view` (branched off `main` after PR #17 merged), changes not yet committed.
+- Changed: `app/w/[id]/page.tsx`, `components/wishlist/{SharedWishlistClient,SharedWishlistHeader,SharedWishlistItem}.tsx`, `lib/wishlist/{display,shared,types}.ts`, `context/ROADMAP.md`, `context/design/COMPONENT_LIBRARY.md`, `context/feature-specs/08-SHARED-WISHLIST-VIEW.md`.
+- New: `app/w/[id]/not-found.tsx`, `components/wishlist/SharedWishlistNotice.tsx`, `gifvtme_migration_013_shared_wishlist_access.sql`.
+- `gifvtme_migration_013_shared_wishlist_access.sql` has **not** been applied to the Supabase project (no DB access from this environment) — same unconfirmed-application state as migrations 003/004/005/006/008/011/012, now unresolved across 5+ sessions.
+- Not committed yet — developer hasn't asked to commit this pass.
 
 ## Next session starts with
 
 Run `/remember restore`. Ask the developer:
-1. Whether to commit the migration 012 file + doc updates now.
-2. Whether migrations 006/011/012 have been applied to the Supabase project yet (recurring open item across sessions — consider resolving definitively rather than re-asking each time).
+1. Whether to commit this pass now.
+2. Whether migration 013 (and the still-outstanding 003/004/005/006/008/011/012) have been applied to Supabase yet.
+3. Whether to finally set up a definitive way to track migration-apply state (e.g. a `schema_migrations` marker table) instead of re-asking this every session — it's been open since session 1.
 
 ## Open questions
 
-- Whether the signup-backfill trigger should stay a permanent standalone trigger, or get folded into `handle_new_user` once its live definition is retrievable from Supabase directly (`pg_get_functiondef`).
-- The broader "is migration N applied to Supabase yet" question keeps recurring across sessions (003, 006, 007, 008, 011, now 012) with no resolution mechanism — worth the developer setting up a way to track this (e.g. a `schema_migrations` marker table, or just applying the backlog) rather than it staying an open question indefinitely.
+- The migration-apply tracking problem is still unresolved after 5+ sessions (003, 004, 005, 006, 008, 011, 012, now 013) — worth the developer resolving definitively rather than it staying a recurring open item.
+- `09-ITEM-DETAIL-GIVER.md` and the purchase/confirm/success pages under `app/w/[id]/item`, `/confirm`, `/success` were explicitly out of scope this session and not audited — they may have similar spec-vs-shipped gaps given the pattern established across three specs so far.

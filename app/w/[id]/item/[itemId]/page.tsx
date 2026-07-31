@@ -5,9 +5,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Gift, ShoppingCart } from "lucide-react";
 import { ClaimedBadge } from "@/components/wishlist/ClaimedBadge";
 import { GiverItemActions } from "@/components/wishlist/GiverItemActions";
-import { IntentFlagBadge } from "@/components/wishlist/IntentFlagBadge";
 import { ReceiverAvatar } from "@/components/wishlist/SharedWishlistHeader";
 import { trackEvent } from "@/lib/analytics";
+import { sanityFetch } from "@/lib/sanity/fetch";
+import { PRODUCT_BY_ID_QUERY } from "@/lib/sanity/queries";
+import type { ProductFullData } from "@/lib/sanity/types";
 import {
   getDisplayName,
   getOccasionLabel,
@@ -45,6 +47,15 @@ export default async function SharedWishlistItemPage({
   const domain = getSourceDomain(item.product_url);
   const externalUrl = buildExternalGiftUrl(item);
   const claimed = item.status === "purchased";
+
+  const catalogProduct =
+    item.origin === "catalog" &&
+    item.catalog_product_id &&
+    !item.catalog_unavailable
+      ? await sanityFetch<ProductFullData | null>(PRODUCT_BY_ID_QUERY, {
+          id: item.catalog_product_id,
+        })
+      : null;
 
   trackEvent("shared_wishlist.item.viewed", {
     item_id: item.id,
@@ -112,21 +123,16 @@ export default async function SharedWishlistItemPage({
             <p className="text-sm font-medium text-amber-700">Limited</p>
           )}
 
+          {item.description && (
+            <p className="text-sm leading-6 text-muted">{item.description}</p>
+          )}
+
           <div className="flex items-center gap-2 rounded-2xl bg-surface p-3">
             <ReceiverAvatar owner={wishlist.owner} size="sm" />
             <p className="text-sm text-muted">
               On {receiverName}&apos;s {occasionTitle} wishlist
             </p>
           </div>
-
-          {!claimed && item.intent_flagged_by && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <IntentFlagBadge />
-              <p className="mt-2 text-sm leading-6 text-amber-700">
-                You can still buy it.
-              </p>
-            </div>
-          )}
 
           {claimed ? (
             <div className="rounded-2xl bg-surface p-4 text-sm leading-6 text-muted">
@@ -138,7 +144,10 @@ export default async function SharedWishlistItemPage({
               shareId={id}
               receiverName={receiverName}
               isAuthenticated={Boolean(user)}
+              currentUserId={user?.id ?? null}
+              isOwner={wishlist.viewer_is_owner}
               externalUrl={externalUrl}
+              catalogProduct={catalogProduct}
             />
           )}
         </section>

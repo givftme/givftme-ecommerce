@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelect
 import { useCart } from "@/components/cart/CartContext";
 import { useCartPriceRefresh } from "@/components/cart/useCartPriceRefresh";
 import { Button } from "@/components/ui/Button";
+import { clearPendingWishlistItem, getPendingWishlistItem } from "@/lib/checkout/pendingWishlistItem";
 import {
   Form,
   FormField,
@@ -83,6 +84,22 @@ export function CheckoutForm({
   const [globalError, setGlobalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const hasUnavailableItems = unavailableItems.length > 0;
+  const wishlistItemId = useMemo(() => {
+    if (!isHydrated) {
+      return null;
+    }
+
+    const pending = getPendingWishlistItem();
+
+    if (
+      pending &&
+      items.some((item) => item.catalog_product_id === pending.catalogProductId)
+    ) {
+      return pending.wishlistItemId;
+    }
+
+    return null;
+  }, [isHydrated, items]);
   const form = useForm<CheckoutFormInput, unknown, CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     mode: "onBlur",
@@ -169,6 +186,7 @@ export function CheckoutForm({
       })),
       shipping: values.shipping,
       preferred_payment: values.preferred_payment,
+      wishlist_item_id: wishlistItemId ?? undefined,
     });
 
     if (!payload.success) {
@@ -204,6 +222,7 @@ export function CheckoutForm({
         total_value: totalPrice,
         item_count: items.length,
       });
+      clearPendingWishlistItem();
 
       if (data.payment_link) {
         window.location.assign(data.payment_link);
