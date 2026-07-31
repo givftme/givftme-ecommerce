@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
@@ -16,6 +18,8 @@ import type { SharedWishlist, WishlistItem } from "@/lib/wishlist/types";
 import { cn } from "@/lib/utils";
 
 gsap.registerPlugin(useGSAP);
+
+const SPARKLE_COUNT = 8;
 
 export function GiftClaimedSuccess({
   wishlist,
@@ -45,6 +49,24 @@ export function GiftClaimedSuccess({
         duration: 0.5,
         ease: "back.out(2)",
       });
+
+      const sparkles = gsap.utils.toArray<HTMLElement>(".sparkle", iconRef.current);
+      gsap
+        .timeline({ delay: 0.3 })
+        .fromTo(
+          sparkles,
+          { autoAlpha: 0, scale: 0, x: 0, y: 0 },
+          {
+            autoAlpha: 1,
+            scale: 1,
+            x: (i) => Math.cos((i / sparkles.length) * Math.PI * 2) * 60,
+            y: (i) => Math.sin((i / sparkles.length) * Math.PI * 2) * 60,
+            duration: 0.5,
+            stagger: 0.03,
+            ease: "power2.out",
+          }
+        )
+        .to(sparkles, { autoAlpha: 0, duration: 0.4 }, "+=0.3");
     },
     { scope: iconRef }
   );
@@ -60,9 +82,18 @@ export function GiftClaimedSuccess({
       <div className="w-full max-w-md space-y-6 text-center">
         <div
           ref={iconRef}
-          className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light text-brand"
+          className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light text-brand"
         >
           <CheckCircle className="h-10 w-10" />
+          {Array.from({ length: SPARKLE_COUNT }).map((_, i) => (
+            <span
+              key={i}
+              aria-hidden="true"
+              className="sparkle pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-base"
+            >
+              ✨
+            </span>
+          ))}
         </div>
 
         <section>
@@ -73,6 +104,21 @@ export function GiftClaimedSuccess({
             a thank you.
           </p>
         </section>
+
+        <div className="mx-auto flex max-w-xs items-center gap-3 rounded-xl border border-stone-100 bg-white p-3 text-left shadow-sm">
+          {item.image_url ? (
+            <img
+              src={item.image_url}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="h-12 w-12 shrink-0 rounded-lg bg-surface" />
+          )}
+          <p className="line-clamp-2 text-sm font-medium text-ink">
+            {item.title}
+          </p>
+        </div>
 
         {showReminder && occasionDate && (
           <ReminderOptIn

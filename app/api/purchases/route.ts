@@ -31,8 +31,12 @@ export async function POST(request: Request) {
 
   const row = item as { id: string; origin: string; status: string } | null;
 
-  if (!row || row.status !== "available") {
-    return jsonError("This item is no longer available", 404);
+  if (!row || row.status === "archived") {
+    return jsonError("This item doesn't exist or was removed.", 404);
+  }
+
+  if (row.status !== "available") {
+    return jsonError("Someone just claimed this - they got there first!", 409);
   }
 
   if (row.origin !== "external") {

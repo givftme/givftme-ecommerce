@@ -135,7 +135,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 ## `/api/purchases`
 **Method:** POST. **Auth:** required. **Purpose:** the external-flow "mark as purchased" action — creates a `purchases` row after a giver confirms they completed an affiliate purchase.
 **Request:** `{ wishlist_item_id: string }`.
-**Behavior:** verifies the item exists, is still available, and has `origin = "external"`; inserts `{ wishlist_item_id, buyer_id }`. The `on_purchase_created` DB trigger handles marking the item/master item purchased and creating the automated thank-you record. Unique-constraint races return 409 with a user-friendly message.
+**Behavior:** verifies the item exists, is still available, and has `origin = "external"`; inserts `{ wishlist_item_id, buyer_id }`. The `on_purchase_created` DB trigger handles marking the item/master item purchased and creating the automated thank-you record. Missing/archived items return 404; an item already marked `purchased` (read-time check or a unique-constraint race at insert time) returns 409 with a user-friendly "someone else just claimed this" message.
 
 ## `/api/reviews` (to be built)
 **Method:** POST. **Auth:** required. **Purpose:** create a review. Must verify the user has a completed order containing the referenced `catalog_product_id` before allowing the insert (business rule #13) — this check should happen in the route handler, not rely solely on RLS, since the verified-purchase logic is more complex than a simple ownership check.
