@@ -1,5 +1,8 @@
+import { cache } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getAppUrl } from "@/lib/env";
+import { sanityFetch } from "@/lib/sanity/fetch";
+import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { signWishlistImages } from "@/lib/wishlist/server";
 import type {
@@ -13,8 +16,17 @@ import type {
 
 type JsonRecord = Record<string, unknown>;
 
+export type SharedWishlistAccess = "ok" | "not_found" | "restricted" | "error";
+
+interface CatalogAvailabilityProduct {
+  _id: string;
+  status?: string | null;
+}
+
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const INTENT_FLAG_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -102,16 +114,39 @@ function normalizeOccasion(value: unknown): SharedWishlistOccasion | null {
     return null;
   }
 
+  const status = asString(row.status);
+
   return {
     id,
     title,
     occasion_type: asString(row.occasion_type),
     occasion_date: asString(row.occasion_date),
+    status: status === "active" || status === "archived" ? status : null,
   };
 }
 
-function normalizeItem(value: unknown, wishlistId: string): WishlistItem {
+function isIntentFlagExpired(intentFlaggedAt: string | null) {
+  if (!intentFlaggedAt) {
+    return false;
+  }
+
+  const flaggedAt = new Date(intentFlaggedAt).getTime();
+
+  if (Number.isNaN(flaggedAt)) {
+    return false;
+  }
+
+  return Date.now() - flaggedAt >= INTENT_FLAG_WINDOW_MS;
+}
+
+function normalizeItem(
+  value: unknown,
+  wishlistId: string,
+  pricesVisible: boolean
+): WishlistItem {
   const row = asRecord(value);
+  const intentFlaggedAt = asString(row.intent_flagged_at);
+  const intentExpired = isIntentFlagExpired(intentFlaggedAt);
 
   return {
     id: asString(row.id) || "",
@@ -121,7 +156,7 @@ function normalizeItem(value: unknown, wishlistId: string): WishlistItem {
     image_url: asString(row.image_url),
     product_url: asString(row.product_url),
     affiliate_url: asString(row.affiliate_url),
-    price: asNumber(row.price),
+    price: pricesVisible ? asNumber(row.price) : null,
     description: asString(row.description),
     origin: row.origin === "catalog" ? "catalog" : "external",
     catalog_product_id: asString(row.catalog_product_id),
@@ -129,8 +164,8 @@ function normalizeItem(value: unknown, wishlistId: string): WishlistItem {
     is_exclusive: asBoolean(row.is_exclusive),
     sort_order: asNumber(row.sort_order) ?? 0,
     created_at: asString(row.created_at),
-    intent_flagged_by: asString(row.intent_flagged_by),
-    intent_flagged_at: asString(row.intent_flagged_at),
+    intent_flagged_by: intentExpired ? null : asString(row.intent_flagged_by),
+    intent_flagged_at: intentExpired ? null : intentFlaggedAt,
     affiliate_purchased_at: asString(row.affiliate_purchased_at),
     order_status: asString(row.order_status),
     buyer_name: asString(row.buyer_name),
@@ -152,21 +187,60 @@ function normalizeSharedWishlist(
   }
 
   const itemValues = Array.isArray(wishlist.items) ? wishlist.items : [];
+  const pricesVisible = asBoolean(wishlist.prices_visible, true);
 
   return {
     id,
     title: asString(wishlist.title) || "Wishlist",
     visibility: asVisibility(wishlist.visibility),
-    prices_visible: asBoolean(wishlist.prices_visible, true),
+    prices_visible: pricesVisible,
     owner,
     occasion: normalizeOccasion(wishlist.occasion),
     items: itemValues
-      .map((item) => normalizeItem(item, id))
+      .map((item) => normalizeItem(item, id, pricesVisible))
       .filter((item) => item.id),
     invite: normalizeInvite(root.invite),
     share_id: shareId,
     viewer_is_owner: owner.id === viewerId,
   };
+}
+
+async function attachCatalogAvailability(
+  wishlist: SharedWishlist
+): Promise<SharedWishlist> {
+  const catalogIds = Array.from(
+    new Set(
+      wishlist.items
+        .filter((item) => item.origin === "catalog" && item.catalog_product_id)
+        .map((item) => item.catalog_product_id as string)
+    )
+  );
+
+  if (catalogIds.length === 0) {
+    return wishlist;
+  }
+
+  try {
+    const products = await sanityFetch<CatalogAvailabilityProduct[]>(
+      CART_PRICES_QUERY,
+      { ids: catalogIds }
+    );
+    const activeIds = new Set(
+      products.filter((product) => product.status === "active").map((product) => product._id)
+    );
+
+    return {
+      ...wishlist,
+      items: wishlist.items.map((item) =>
+        item.origin === "catalog" && item.catalog_product_id
+          ? { ...item, catalog_unavailable: !activeIds.has(item.catalog_product_id) }
+          : item
+      ),
+    };
+  } catch (error) {
+    console.error("Could not check catalog item availability.", error);
+    return wishlist;
+  }
 }
 
 async function signSharedImages(wishlist: SharedWishlist) {
@@ -206,7 +280,7 @@ async function autoAcceptInvite({
   }
 }
 
-export async function getSharedWishlist(shareId: string) {
+export const getSharedWishlist = cache(async (shareId: string) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -216,27 +290,38 @@ export async function getSharedWishlist(shareId: string) {
     p_share_key: shareId,
   });
 
-  if (error || !data) {
-    if (error) {
-      console.error("Could not resolve shared wishlist.", error);
-    }
+  if (error) {
+    console.error("Could not resolve shared wishlist.", error);
+    return { user, wishlist: null, status: "error" as SharedWishlistAccess };
+  }
 
-    return { user, wishlist: null };
+  const access = asString(asRecord(data).access);
+
+  if (access === "restricted") {
+    return { user, wishlist: null, status: "restricted" as SharedWishlistAccess };
+  }
+
+  if (access !== "ok") {
+    return { user, wishlist: null, status: "not_found" as SharedWishlistAccess };
   }
 
   const normalized = normalizeSharedWishlist(data, shareId, user?.id || null);
 
   if (!normalized) {
-    return { user, wishlist: null };
+    return { user, wishlist: null, status: "not_found" as SharedWishlistAccess };
   }
 
   await autoAcceptInvite({ invite: normalized.invite, user });
 
+  const withImages = await signSharedImages(normalized);
+  const wishlist = await attachCatalogAvailability(withImages);
+
   return {
     user,
-    wishlist: await signSharedImages(normalized),
+    wishlist,
+    status: "ok" as SharedWishlistAccess,
   };
-}
+});
 
 export function getSharedWishlistItem(
   wishlist: SharedWishlist,

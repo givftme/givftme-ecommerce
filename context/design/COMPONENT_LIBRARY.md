@@ -126,6 +126,9 @@ Giver-facing item card for `/w/[id]`. Handles available/claimed visual states, p
 ### `ClaimedBadge` / `IntentFlagBadge`
 Small status components for giver-facing item states. `IntentFlagBadge` uses the amber warning style and GSAP entrance.
 
+### `SharedWishlistNotice`
+Centered full-page notice used by `/w/[id]` for the private, archived-occasion, error, and not-found states — title + description + optional CTA link.
+
 ### `ReminderOptIn`
 Invitee Flow 2 reminder opt-in card. Used on claimed success and backed by the invite/public opt-in APIs.
 
