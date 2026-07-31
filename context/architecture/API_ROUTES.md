@@ -155,6 +155,21 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Request:** `{ wishlist_item_id: string }`.
 **Behavior:** verifies the item exists, is still available, and has `origin = "external"`; inserts `{ wishlist_item_id, buyer_id }`. The `on_purchase_created` DB trigger handles marking the item/master item purchased and creating the automated thank-you record. Missing/archived items return 404; an item already marked `purchased` (read-time check or a unique-constraint race at insert time) returns 409 with a user-friendly "someone else just claimed this" message.
 
+## `/api/thank-you/process` (cron route)
+**Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to run every 5 minutes via a scheduled job.
+**Purpose:** sends pending automated (`type = 'auto'`) `thank_you_messages` rows via Resend — one created by the pre-existing, unsourced `on_purchase_created` trigger per external purchase, or by the new `on_order_confirmed_thank_you` trigger per confirmed wishlist-originated catalog order. Builds the subject/body via `buildAutoThankYouEmail`, resolves the buyer's email via `auth.admin.getUserById` (service client), and on success sets `sent = true, sent_at = now()`. A send failure increments `retry_count` and sets `permanently_failed = true` once it reaches 5. A missing buyer email is treated as permanently failed immediately (defensive — shouldn't happen).
+**Concurrency safety:** identical pattern to `/api/reminders` — each row is atomically claimed (`claimed_at`, conditional `UPDATE`) before sending, and the Resend send passes the row's own id as an `Idempotency-Key`.
+**Response:** `{ processed: number, failed: number }`.
+
+## `/api/thank-you/[id]/personal`
+**Method:** POST. **Auth:** required, must be the receiver of the referenced gift. **Purpose:** sends a receiver-composed personal thank-you immediately (not queued — a failure returns 500 and nothing is persisted, so nothing retries it; the UI's own "already sent" button-hiding is the only guard against a double-send, matching the spec's explicit no-hard-constraint design).
+**Request:** `{ source: "purchase" | "order", message: string }` — `source` disambiguates which table `id` refers to (the spec's route only implied a single `id`, but a purchase id and an order id are both plain UUIDs with no reliable way to tell them apart otherwise).
+**Response:** `{ sent: true }`. Missing/non-owned gifts return 404; a Resend failure or missing buyer email returns 500 with `{ error: "Couldn't send your message. Please try again." }`.
+
+## `/api/gifts`
+**Method:** GET. **Auth:** required. **Purpose:** the "Gifts received" page's data source — renamed from the spec's `/api/dashboard/gifts` since no route in this repo is namespaced under `/api/dashboard` (matches the flat `/api/important-dates` naming convention instead).
+**Response:** `{ gifts: GiftReceived[] }` — merges external purchases and confirmed catalog orders (`confirmed`/`under_review`/`forwarded`/`shipped`/`delivered`) for the receiver's own wishlist items, each with `autoThankYouSent`/`personalThankYouSent` flags, sorted by purchase date descending.
+
 ## `/api/reviews` (to be built)
 **Method:** POST. **Auth:** required. **Purpose:** create a review. Must verify the user has a completed order containing the referenced `catalog_product_id` before allowing the insert (business rule #13) — this check should happen in the route handler, not rely solely on RLS, since the verified-purchase logic is more complex than a simple ownership check.
 

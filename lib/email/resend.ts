@@ -108,3 +108,13 @@ export async function sendReminderEmail({
 }: RawEmailInput) {
   return sendViaResend({ to, subject, text, html, idempotencyKey });
 }
+
+export async function sendThankYouEmail({
+  to,
+  subject,
+  text,
+  html,
+  idempotencyKey,
+}: RawEmailInput) {
+  return sendViaResend({ to, subject, text, html, idempotencyKey });
+}

@@ -1,7 +1,9 @@
 # Feature: Thank You Messages (Automated + Personal)
 
+> **Status note (2026-07-31):** This spec described a feature that was entirely unbuilt — unlike `09`/`10`/`11`, there was nothing shipped-differently to reconcile against. This file has been rewritten to document what actually shipped. See `context/ROADMAP.md`'s "In progress" section for the current deploy-readiness caveat (migration 016 not yet confirmed applied to Supabase).
+
 ## Overview
-Two-layer thank-you system. **Automated:** fires immediately when a purchase is confirmed (either flow), using the receiver's default message. **Personal:** the receiver can later compose and send a personal follow-up once they've received and opened the gift. Both are delivered via Resend email to the buyer. The receiver manages both from a "Gifts received" dashboard page.
+Two-layer thank-you system. **Automated:** fires when a purchase is confirmed (either flow), using the receiver's default message. **Personal:** the receiver can later compose and send a personal follow-up. Both are delivered via Resend email to the buyer. The receiver manages both from the "Gifts received" page at `/gifts`.
 
 ---
 
@@ -13,232 +15,111 @@ Two-layer thank-you system. **Automated:** fires immediately when a purchase is 
 ---
 
 ## User Stories
-- As a giver, I receive an automatic thank-you email as soon as my purchase is confirmed.
+- As a giver, I receive an automatic thank-you email once my purchase is confirmed.
 - As a receiver, I can see a list of all gifts people have bought for me.
 - As a receiver, I can send a personal thank-you message to a specific gift-buyer whenever I'm ready.
 - As a receiver, I can see which gifts I've already personally thanked someone for.
 
 ---
 
+## What actually ships each thank-you
+
+**External flow (affiliate purchases):** the pre-existing `on_purchase_created` trigger creates the `type='auto'` row. This trigger already runs in production and was deliberately **not** touched by migration 016 — it has no SQL source of truth anywhere in this repo, and reconstructing it from a guess risked silently replacing working behavior. If its live definition ever needs to change, that's a separate, careful piece of work with actual visibility into the current definition (e.g. via the Supabase dashboard), not a blind migration.
+
+**Catalog flow (Gifvtme checkout):** genuinely new. Nothing created a thank-you row for a confirmed catalog order before this pass — the new `on_order_confirmed_thank_you` trigger (migration 016) does this, scoped to orders with `wishlist_item_id` set (no receiver to thank on a direct shop purchase), guarded so it can't insert twice for the same order.
+
+Both triggers write `message = COALESCE(receiver's default_thank_you_msg, 'Thank you so much for the gift, I really appreciate you!')` — that fallback string is `DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER` in `lib/account/validation.ts`, already used as the profile-page placeholder.
+
+---
+
 ## Functional Requirements
-1. Automated thank-you fires via the `on_purchase_created` trigger (external flow) and the `on_order_confirmed_thank_you` trigger (catalog flow, fires when `orders.status` changes to `confirmed`).
+1. Automated thank-you fires via `on_purchase_created` (external flow, pre-existing) and `on_order_confirmed_thank_you` (catalog flow, new — migration 016).
 2. The automated message uses `public.users.default_thank_you_msg` for the receiver; falls back to the system default if null.
-3. Automated thank-you is sent via Resend when the `/api/thank-you/process` cron job runs (every 5 minutes).
-4. Personal thank-you: receiver composes a custom message from the dashboard; sent immediately via Resend on submit.
-5. A receiver can send at most one personal thank-you per purchase/order (one per gift-giver per item — not an enforced DB constraint, but a UI guard to prevent accidental double-sends).
-6. Automated thank-you rows are created with `type='auto'`, `sent=false`. Personal ones are created with `type='personal'` at compose time and sent immediately (not queued via cron).
-7. The "Gifts received" page shows all purchases and confirmed orders associated with the receiver's wishlist items and orders.
+3. Automated thank-you is sent via Resend when `/api/thank-you/process` runs (every 5 minutes, per `vercel.json`).
+4. Personal thank-you: receiver composes a custom message from `/gifts`; sent immediately via Resend on submit, not queued — a send failure returns 500 to the client and nothing is persisted (there's no cron retry path for personal messages).
+5. A receiver can send more than one personal thank-you per gift with no hard DB constraint stopping it — the UI hides the "send" button once one has been sent, and that's the only guard, exactly as this spec always specified (see Edge Cases below).
+6. Automated rows are created with `type='auto'`, `sent=false`. Personal rows are inserted only after a successful Resend send, with `type='personal'`, `sent=true`, `sent_at=now()`.
+7. `/gifts` shows all external purchases and confirmed catalog orders (`confirmed`/`under_review`/`forwarded`/`shipped`/`delivered`) associated with the receiver's wishlist items.
 
 ---
 
 ## Non-Functional Requirements
-- Automated thank-you email must be sent within 5 minutes of purchase confirmation.
-- Personal thank-you send must complete within 3 seconds (direct Resend call, not queued).
+- Automated thank-you email must be sent within 5 minutes of purchase confirmation (bounded by the cron cadence).
+- Personal thank-you send must complete within the request (direct Resend call, not queued).
 
 ---
 
-## UI Requirements
+## UI
 
-### Route: `/dashboard/gifts`
+### Route: `/gifts`
+
+Not `/dashboard/gifts` — no route in this repo is namespaced under `/dashboard/`; the existing convention (`/dates`, `/wishlists`, `/my-occasions`) is a flat path under the `(dashboard)` route group, and this follows it.
 
 **Page header:** "Gifts received" + item count badge.
 
-**Filter tabs:** "All" | "External gifts" | "Gifvtme orders" (or just "All" | "To thank" | "Thanked")
+**Filter tabs:** "All" | "To thank" | "Thanked".
 
-**Gift card, per purchase/order item:**
-- Item image (60×60px)
+**Gift card, per purchase/order:**
+- Item image (60×60px), or a gift icon placeholder if none
 - Item title
-- "Gifted by [Buyer Name]" (show name if buyer has a profile, else "Anonymous")
+- "Gifted by [Buyer Name]" (or "Anonymous" if the buyer has no profile name)
 - Date purchased
-- "Auto thank-you sent ✓" chip (muted, shown once auto thank-you has been sent)
+- "Auto thank-you sent ✓" chip (muted, once the auto thank-you sends)
 - "Send personal thank-you" button (ghost, small) — shown if no personal thank-you sent yet
-- "Personal thank-you sent ✓" chip — shown if already sent
+- "Personal thank-you sent ✓" chip — shown once sent
 
-**Personal thank-you compose sheet** (bottom sheet on mobile, dialog on desktop):
+**Personal thank-you compose sheet** — `Sheet` (the same component `ImportantDateForm` uses; it's a bottom sheet on mobile and a centered dialog on desktop via one responsive component, not two separate files):
 - Item image + title at top (context)
-- "To: [Buyer Name]" (read-only)
-- Textarea: "Your personal message" (required, max 1000 chars, character counter)
-- Pre-fill with `default_thank_you_msg` as a starting point (editable)
-- "Send thank-you" CTA (filled)
-- "Cancel" link
+- "To: [Buyer Name]"
+- Textarea, required, max 1000 chars, character counter
+- Pre-filled with the receiver's `default_thank_you_msg` (editable)
+- "Send thank-you" CTA, "Cancel" link
 
-**Empty state:** "No gifts yet — share your wishlist so people can start gifting!"
+**Empty state:** "No gifts yet — share your wishlist so people can start gifting!" (or "Try a different filter" when a filter tab has zero matches but gifts exist overall).
 
 ---
 
 ## Backend Logic
 
-### Automated thank-you processing (cron)
+### `POST /api/thank-you/process` (cron, every 5 minutes)
+Fetches pending `type='auto'`, `sent=false`, `permanently_failed=false` rows (claimed atomically first, same pattern as `/api/reminders`), resolves the buyer's email via `auth.admin.getUserById` (service client, cached per run), builds the email via `buildAutoThankYouEmail`, sends via Resend with the row's own id as an `Idempotency-Key`. Success sets `sent=true, sent_at=now()`. Failure increments `retry_count`, sets `permanently_failed=true` at 5. A missing buyer email is treated as permanently failed immediately.
 
-**`POST /api/thank-you/process`** (runs every 5 minutes):
-```typescript
-// 1. Fetch unsent auto thank-you messages
-const pending = await supabase
-  .from('thank_you_messages')
-  .select(`
-    *,
-    purchases(*, wishlist_items(title, image_url)),
-    orders(*, order_items(title: product_title, image_url: product_image_url)),
-    receiver:receiver_id(full_name, avatar_url),
-    buyer:buyer_id(full_name, email)
-  `)
-  .eq('type', 'auto')
-  .eq('sent', false)
-  .eq('permanently_failed', false)
-  .limit(50)
+### `on_order_confirmed_thank_you` trigger (catalog flow — new)
+Fires `AFTER UPDATE ON orders` when `status` changes to `'confirmed'` and `wishlist_item_id IS NOT NULL`. Resolves the receiver via `wishlist_items → wishlists.user_id`, buyer via `orders.buyer_id` (not `user_id` — that's the actual column name in this schema). Guarded with `NOT EXISTS (... WHERE order_id = NEW.id)` so it can't double-insert. See `gifvtme_migration_016_thank_you_messages.sql`.
 
-for (const msg of pending.data) {
-  try {
-    const itemTitle = msg.purchases?.wishlist_items?.title
-      || msg.orders?.order_items?.[0]?.title
-      || 'your gift'
-    
-    await resend.emails.send({
-      to: msg.buyer.email,
-      from: process.env.RESEND_FROM_EMAIL,
-      subject: `🎁 ${msg.receiver.full_name} says thank you!`,
-      html: buildAutoThankYouEmail({ message: msg.message, receiverName: msg.receiver.full_name, itemTitle, receiverAvatar: msg.receiver.avatar_url }),
-    })
-    
-    await supabase.from('thank_you_messages')
-      .update({ sent: true, sent_at: new Date() })
-      .eq('id', msg.id)
-  } catch (err) {
-    const newRetryCount = (msg.retry_count || 0) + 1
-    await supabase.from('thank_you_messages').update({
-      retry_count: newRetryCount,
-      permanently_failed: newRetryCount >= 5,
-    }).eq('id', msg.id)
-  }
-}
-```
+### `POST /api/thank-you/[id]/personal`
+**Auth:** required, must be the receiver — verified by joining the referenced purchase/order back to its wishlist item's `wishlists.user_id`, not just trusting a client-supplied receiver id.
+**Request:** `{ source: "purchase" | "order", message: string }`. `source` disambiguates which table `id` belongs to — both are plain UUIDs with no reliable way to tell them apart otherwise, so the client sends it explicitly (the gift card already knows which source it rendered from).
+**Behavior:** resolves the buyer's email via the service client, sends via Resend, and only inserts the `thank_you_messages` row after a successful send.
+**Response:** `{ sent: true }`.
 
-### `on_order_confirmed_thank_you` trigger (catalog flow)
-Fires when `orders.status` changes to `'confirmed'`:
-```sql
-CREATE OR REPLACE FUNCTION handle_order_confirmed_thank_you()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.status = 'confirmed' AND OLD.status != 'confirmed' THEN
-    INSERT INTO thank_you_messages (
-      order_id, receiver_id, buyer_id, type, message, sent
-    )
-    SELECT
-      NEW.id,
-      wl.user_id,        -- receiver is the wishlist owner (if order tied to a wishlist)
-      NEW.user_id,       -- buyer
-      'auto',
-      COALESCE(u.default_thank_you_msg, 'Thank you so much for the gift, I really appreciate you!'),
-      false
-    FROM orders o
-    LEFT JOIN wishlist_items wi ON wi.id = o.wishlist_item_id
-    LEFT JOIN wishlists wl ON wl.id = wi.wishlist_id
-    JOIN public.users u ON u.id = wl.user_id
-    WHERE o.id = NEW.id
-      AND o.wishlist_item_id IS NOT NULL; -- only create thank-you for wishlist-originated orders
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_order_confirmed_thank_you
-  AFTER UPDATE ON orders
-  FOR EACH ROW EXECUTE FUNCTION handle_order_confirmed_thank_you();
-```
-
-### Send personal thank-you
-```typescript
-// POST /api/thank-you/[purchaseOrOrderId]/personal
-
-// 1. Auth check — must be the receiver (wishlist owner)
-// 2. Validate message
-// 3. Fetch buyer email
-// 4. Send immediately via Resend:
-await resend.emails.send({
-  to: buyer.email,
-  from: process.env.RESEND_FROM_EMAIL,
-  subject: `💌 A personal message from ${receiver.full_name}`,
-  html: buildPersonalThankYouEmail({ message, receiverName: receiver.full_name, itemTitle }),
-})
-// 5. INSERT INTO thank_you_messages (type='personal', sent=true, sent_at=now(), message, ...)
-```
-
-### "Gifts received" page data
-```typescript
-// Fetch all purchases on the receiver's wishlist items:
-const externalGifts = await supabase
-  .from('purchases')
-  .select('*, wishlist_items!inner(*, wishlists!inner(user_id)), buyer:buyer_id(full_name, avatar_url)')
-  .eq('wishlist_items.wishlists.user_id', userId)
-
-// Fetch all confirmed catalog orders on the receiver's wishlist items:
-const catalogGifts = await supabase
-  .from('orders')
-  .select('*, order_items(*), buyer:user_id(full_name, avatar_url)')
-  .eq('wishlist_item_id', '<ids from receiver's wishlist items>')
-  .in('status', ['confirmed', 'under_review', 'forwarded', 'shipped', 'delivered'])
-
-// Merge and sort by created_at desc
-```
+### `GET /api/gifts`
+Renamed from `/api/dashboard/gifts` — matches the flat `/api/important-dates` naming convention, no route in this repo uses a `/api/dashboard/*` prefix.
+Fetches the receiver's own wishlist item ids first, then filters `purchases`/`orders` with `.in()` rather than a nested PostgREST nested-nested filter — kept to patterns already proven working elsewhere in this codebase rather than introducing untested query syntax with no way to verify it against a live database from this environment.
+**Response:** `{ gifts: GiftReceived[] }`.
 
 ---
 
 ## Database Changes
 
-**`thank_you_messages` table** — verify all columns exist (migration 004):
-```sql
-CREATE TABLE IF NOT EXISTS thank_you_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  purchase_id UUID REFERENCES purchases(id) ON DELETE CASCADE,
-  order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
-  wishlist_item_id UUID REFERENCES wishlist_items(id) ON DELETE SET NULL,
-  receiver_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  buyer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('auto', 'personal')),
-  message TEXT NOT NULL,
-  sent BOOLEAN NOT NULL DEFAULT false,
-  sent_at TIMESTAMPTZ,
-  retry_count INTEGER NOT NULL DEFAULT 0,
-  permanently_failed BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  -- Exactly one of purchase_id or order_id must be set:
-  CONSTRAINT purchase_or_order_required CHECK (
-    (purchase_id IS NOT NULL AND order_id IS NULL) OR
-    (order_id IS NOT NULL AND purchase_id IS NULL)
-  )
-);
-```
+**`thank_you_messages` table** — formally created by `gifvtme_migration_016_thank_you_messages.sql` (`CREATE TABLE IF NOT EXISTS` + defensive `ADD COLUMN IF NOT EXISTS`, same pattern migration 015 used for `important_dates`, since this table already existed live with zero SQL source of truth). Adds `retry_count`, `permanently_failed`, `sent_at`, and `claimed_at` (atomic per-row cron claim, mirroring `reminders.claimed_at`) alongside the originally-documented columns.
 
-**`vercel.json` cron:**
+**`vercel.json`** — added to this repo for the first time (it didn't exist even for the already-shipped `/api/reminders` cron):
 ```json
-{ "path": "/api/thank-you/process", "schedule": "*/5 * * * *" }
+{
+  "crons": [
+    { "path": "/api/reminders", "schedule": "0 * * * *" },
+    { "path": "/api/thank-you/process", "schedule": "*/5 * * * *" }
+  ]
+}
 ```
-
----
-
-## API Endpoints
-
-### `POST /api/thank-you/process` (cron)
-Process pending auto thank-you messages.
-**Auth:** `Authorization: Bearer ${CRON_SECRET}`.
-**Response:** `{ processed: number, failed: number }`.
-
-### `POST /api/thank-you/[id]/personal`
-Send a personal thank-you for a specific purchase or order.
-**Auth:** required (must be the receiver).
-**Body:** `{ message: string }`
-**Response:** `{ sent: true }`.
-
-### `GET /api/dashboard/gifts`
-Fetch all gifts received (purchases + catalog orders on receiver's items).
-**Auth:** required.
-**Response:** `{ gifts: GiftReceived[] }`.
+The reminders cadence (hourly) is an assumed default, not a confirmed production value — reminders' schedule previously lived entirely outside this repo. Cheap to change later.
 
 ---
 
 ## Permissions and Authorization
-- `thank_you_messages`: receiver can read and create personal messages for their own gifts. Buyer can read messages sent to them. Neither can read the other's records beyond their own.
-- `/api/thank-you/[id]/personal`: verify `receiver_id = auth.uid()` before sending.
+- `thank_you_messages` RLS: `receiver_id = auth.uid() OR buyer_id = auth.uid()` can `SELECT`. Only the receiver can `INSERT`, and only a `type='personal'` row (`WITH CHECK (auth.uid() = receiver_id AND type = 'personal')`). No `UPDATE`/`DELETE` grant to `authenticated` — only the cron (service role, bypasses RLS) mutates `sent`/`retry_count`/`permanently_failed`.
+- `/api/thank-you/[id]/personal`: ownership verified in the route handler by joining back to the wishlist owner, not solely relying on RLS (same pattern as `/api/important-dates`).
 - Cron route: `CRON_SECRET` header only.
 
 ---
@@ -246,11 +127,10 @@ Fetch all gifts received (purchases + catalog orders on receiver's items).
 ## Validation
 
 ```typescript
-const personalThankYouSchema = z.object({
-  message: z.string()
-    .min(1, "Message cannot be empty")
-    .max(1000, "Message must be under 1000 characters"),
-})
+export const personalThankYouSchema = z.object({
+  source: z.enum(["purchase", "order"]),
+  message: z.string().trim().min(1, "Message cannot be empty").max(1000, "Message must be under 1000 characters"),
+});
 ```
 
 ---
@@ -260,82 +140,65 @@ const personalThankYouSchema = z.object({
 | Scenario | Behavior |
 |---|---|
 | Auto thank-you Resend failure | Increment `retry_count`; retry on next cron run (every 5 min) |
-| 5 Resend failures | `permanently_failed=true`; stop retrying; surface in monitoring |
-| Personal thank-you Resend failure | Return 500 to client: "Couldn't send your message. Please try again." |
-| Buyer has no email (shouldn't happen but defensive) | Skip sending, mark `permanently_failed=true`, log |
-| No wishlist_item_id on order (direct purchase, not from wishlist) | No thank-you created — correct behavior, no receiver to thank |
-
----
-
-## Loading and Empty States
-
-- **Gifts page loading:** skeleton cards.
-- **Empty state:** illustrated gift box, "No gifts yet" copy, "Share your wishlist" CTA.
-- **Personal thank-you compose:** textarea pre-filled with `default_thank_you_msg` (if set); spinner on submit.
-- **Already sent personal thank-you:** "Personal thank-you sent ✓" chip replaces the button.
+| 5 Resend failures | `permanently_failed=true`; stop retrying |
+| Personal thank-you Resend failure | Return 500: "Couldn't send your message. Please try again." Nothing is persisted — the user can just resubmit. |
+| Buyer has no email (shouldn't happen but defensive) | Auto: mark `permanently_failed=true` immediately. Personal: same 500 message as a Resend failure. |
+| No `wishlist_item_id` on order (direct shop purchase) | No thank-you created — correct, no receiver to thank |
 
 ---
 
 ## Edge Cases
 
-1. **Buyer has no Gifvtme account** (purchased an external item without confirming on Gifvtme). In this flow, a `purchases` row still requires an authenticated `buyer_id` (Business Rule #2). So a buyer without an account can't trigger the purchase confirm step — they just don't click "Mark as gifted" and the item stays available. No orphan thank-you scenarios.
-
-2. **Receiver hasn't set `default_thank_you_msg`.** Falls back to the system default string. The receiver should be nudged (via the profile page banner) to set a custom one. But the system default is a good enough fallback.
-
-3. **Order with multiple `order_items`** (buyer purchased 3 catalog items for the receiver in one cart). One order → one `on_order_confirmed_thank_you` trigger call → one thank-you message covering the whole order. The message mentions "your gift" generically (or the first item title). This is acceptable — a personal thank-you can be more specific.
-
-4. **Receiver sends a personal thank-you multiple times.** The UI should guard against this (replace the button with a "sent" indicator after first send). If somehow the API is called twice, it creates a second `thank_you_messages` row and sends a second email — no hard constraint prevents this. UI guard is the primary defense.
-
-5. **Buyer deletes their account after sending a gift but before receiving the thank-you.** The `buyer_id` FK uses `ON DELETE RESTRICT` on `purchases` — account deletion is blocked if the user has purchase records. This needs to be addressed in the account deletion flow (see `02-PROFILE-MANAGEMENT.md` edge case #5).
-
-6. **`order_id` path for catalog gifts.** The `on_order_confirmed_thank_you` trigger only fires for orders with `wishlist_item_id` set. A buyer purchasing directly from the shop (not from someone's wishlist) generates no thank-you message — correct, since there's no receiver to thank.
+1. **Buyer has no Gifvtme account.** Unchanged from the original spec's reasoning — a `purchases` row requires an authenticated `buyer_id` (Business Rule #2), so this can't happen for the external flow.
+2. **Receiver hasn't set `default_thank_you_msg`.** Falls back to `DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER`.
+3. **Order with multiple `order_items`.** One order → one auto thank-you row. The "Gifts received" card and the auto email both show the *first* order item's title, not an itemized list — acceptable per the original spec's own reasoning (a personal thank-you can be more specific).
+4. **Receiver sends a personal thank-you multiple times.** No hard DB constraint prevents this — matches the original spec's explicit design. The UI hides the button after a successful send; if the API is called again anyway, it just sends and records another one.
+5. **Buyer deletes their account after gifting but before being thanked.** Still an open item in `02-PROFILE-MANAGEMENT.md`'s own edge cases — unchanged by this pass.
+6. **Direct shop order (`wishlist_item_id IS NULL`).** No thank-you — correct, no receiver.
 
 ---
 
 ## Analytics / Events
-- `thank_you.auto.queued`
-- `thank_you.auto.sent` (delay_minutes from purchase to send)
-- `thank_you.auto.failed` (retry_count)
-- `thank_you.personal.sent`
-- `thank_you.personal.compose_opened`
+- `thank_you.personal.sent` (fired client-side on a confirmed send)
+- `thank_you.personal.compose_opened` (fired when the sheet opens, not from inside a `useEffect` — React's rule against synchronous `setState` in effects pushed this to the actual open-triggering click handler in `GiftsClient`)
+
+Not implemented: `thank_you.auto.queued`/`sent`/`failed` — these would need to fire from the trigger/cron, and no analytics-from-SQL or server-cron-side `trackEvent` precedent exists elsewhere in this codebase (the reminders cron doesn't emit analytics events either). Flagged, not built, matching that precedent rather than introducing a new one unilaterally.
 
 ---
 
 ## Testing Requirements
 
-### Unit tests
-- `buildAutoThankYouEmail`: correct subject/body structure.
-- `buildPersonalThankYouEmail`: correct structure.
-- `personalThankYouSchema`: valid/invalid message lengths.
+### Unit tests (shipped)
+- `lib/thank-you/buildThankYouEmail.test.ts`: `buildAutoThankYouEmail`/`buildPersonalThankYouEmail` subject/body structure, HTML escaping.
+- `lib/thank-you/validation.test.ts`: `personalThankYouSchema` valid/invalid message lengths and source values.
 
-### Integration tests
-- `on_purchase_created` trigger: auto thank-you row created for external purchase.
-- `on_order_confirmed_thank_you` trigger: fires only when status changes to `confirmed`, only for wishlist-originated orders.
-- Cron: pending auto thank-you → Resend called, `sent=true`.
-- Cron: Resend failure → `retry_count++`, not marked sent.
-- Personal thank-you POST: Resend called immediately, `thank_you_messages` row created with `sent=true`.
+### Integration tests (not built — no DB test harness exists in this repo for any feature)
+- `on_purchase_created` / `on_order_confirmed_thank_you` trigger behavior.
+- Cron send/retry behavior.
+- Personal thank-you POST end-to-end.
 
-### Manual QA
+### Manual QA (unchanged from original spec, still pending — no DB access from this environment)
 - Complete an external purchase confirmation → wait up to 5 minutes → verify buyer receives auto thank-you email.
-- Complete a Flutterwave catalog purchase → verify order confirmed → auto thank-you email sent to buyer.
-- From the gifts page, click "Send personal thank-you" → compose → send → verify email received by buyer.
-- Verify the "sent ✓" chip appears after sending and the button is replaced.
+- Complete a Flutterwave catalog purchase → verify the new trigger fires → auto thank-you email sent.
+- From `/gifts`, send a personal thank-you → verify received by buyer, chip replaces button.
 
 ---
 
 ## Acceptance Criteria
-- [ ] Every confirmed external purchase creates an auto `thank_you_messages` row via the DB trigger.
-- [ ] Every confirmed catalog order (with `wishlist_item_id`) creates an auto `thank_you_messages` row via the DB trigger.
-- [ ] The cron sends auto thank-yous within 5 minutes of purchase confirmation.
-- [ ] Resend failures increment `retry_count` and are retried; 5 failures = `permanently_failed`.
-- [ ] The "Gifts received" page shows all external purchases and confirmed catalog orders for the receiver's items.
-- [ ] A receiver can compose and immediately send a personal thank-you from the dashboard.
-- [ ] The personal thank-you button is replaced with a "sent ✓" indicator after sending.
+- [x] Every confirmed external purchase creates an auto `thank_you_messages` row (pre-existing trigger, unverified from this repo but assumed working — the whole affiliate flow has depended on it for multiple sessions already).
+- [x] Every confirmed catalog order (with `wishlist_item_id`) creates an auto `thank_you_messages` row via the new trigger.
+- [x] The cron sends auto thank-yous within 5 minutes of purchase confirmation, when running.
+- [x] Resend failures increment `retry_count` and are retried; 5 failures = `permanently_failed`.
+- [x] `/gifts` shows all external purchases and confirmed catalog orders for the receiver's items.
+- [x] A receiver can compose and immediately send a personal thank-you.
+- [x] The personal thank-you button is replaced with a "sent ✓" indicator after sending.
+- [ ] Migration 016 confirmed applied to Supabase (blocking — see `ROADMAP.md`).
 
 ---
 
 ## Future Improvements
-- In-app thank-you messages (not just email) — notification in the buyer's Gifvtme account.
-- Thank-you with a photo ("Here's me using your gift!").
-- Scheduled personal thank-yous ("Send this on Christmas day").
+- In-app thank-you messages (not just email).
+- Thank-you with a photo.
+- Scheduled personal thank-yous.
 - Thank-you message templates beyond the single default.
+- Reconstructing `on_purchase_created` with a verified (not guessed) definition, if it ever needs to change.

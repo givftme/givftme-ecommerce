@@ -21,6 +21,7 @@ export interface DueReminderRow {
   important_date_id: string | null;
   invite_id: string | null;
   occasion_id: string | null;
+  advance_expected_date: string | null;
   important_dates: ImportantDateJoin | ImportantDateJoin[] | null;
   occasions: OccasionJoin | OccasionJoin[] | null;
   wishlist_invites: InviteJoin | InviteJoin[] | null;
@@ -69,7 +70,7 @@ function escapeHtml(value: string) {
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;",
-      })[char] as string
+      })[char] as string,
   );
 }
 
@@ -83,7 +84,7 @@ function resolveDays(daysBefore: number | null, scheduledDate: string) {
 
 function unsubscribeUrl(token: string, type: "owner" | "invitee") {
   return `${getAppUrl()}/api/reminders/unsubscribe?token=${encodeURIComponent(
-    token
+    token,
   )}&type=${type}`;
 }
 
@@ -100,7 +101,12 @@ function wrapEmail({
   ctaUrl?: string;
   unsubscribe: string;
 }) {
-  const text = [greeting, body, ctaUrl ? `${ctaLabel}: ${ctaUrl}` : null, `Unsubscribe: ${unsubscribe}`]
+  const text = [
+    greeting,
+    body,
+    ctaUrl ? `${ctaLabel}: ${ctaUrl}` : null,
+    `Unsubscribe: ${unsubscribe}`,
+  ]
     .filter(Boolean)
     .join("\n\n");
 
@@ -118,7 +124,9 @@ function wrapEmail({
           : ""
       }
       <p style="margin-top: 24px; font-size: 12px; color: #666666;">
-        <a href="${unsubscribe}" style="color: #666666;">Unsubscribe from this reminder</a>
+        <form method="post" action="${unsubscribe}" style="display: inline;">
+          <button type="submit" style="background: none; border: 0; padding: 0; color: #666666; text-decoration: underline; cursor: pointer; font: inherit;">Unsubscribe from this reminder</button>
+        </form>
       </p>
     </div>
   `;
@@ -135,14 +143,17 @@ export function buildReminderEmail({
 }): { to: string; subject: string; html: string; text: string } | null {
   const daysBefore = reminder.days_before ?? null;
 
-  if (reminder.reminder_type === "occasion_owner" && reminder.important_date_id) {
+  if (
+    reminder.reminder_type === "occasion_owner" &&
+    reminder.important_date_id
+  ) {
     const importantDate = first(reminder.important_dates);
 
     if (!importantDate) {
       return null;
     }
 
-     const days = resolveDays(daysBefore, importantDate.date);
+    const days = resolveDays(daysBefore, importantDate.date);
     const wishlistUrl = importantDate.linked_wishlist_id
       ? buildWishlistShareUrl(importantDate.linked_wishlist_id)
       : null;
@@ -151,7 +162,7 @@ export function buildReminderEmail({
     )} is in ${days} ${days === 1 ? "day" : "days"}`;
     const { html, text } = wrapEmail({
       greeting: `Reminder that ${importantDate.person_name}'s ${occasionLabel(
-        importantDate.occasion_type
+        importantDate.occasion_type,
       )} is on ${formatOccasionDate(importantDate.date)}.`,
       body: wishlistUrl
         ? `View their wishlist for gift ideas, or browse Givftme for something special.`
@@ -177,7 +188,7 @@ export function buildReminderEmail({
     }`;
     const { html, text } = wrapEmail({
       greeting: `Your ${occasionLabel(occasion.occasion_type)} — ${occasion.title} — is on ${formatOccasionDate(
-        occasion.occasion_date
+        occasion.occasion_date,
       )}.`,
       body: "Make sure your wishlist is up to date so the people gifting you know what to get.",
       ctaLabel: "View your wishlist",
@@ -201,7 +212,7 @@ export function buildReminderEmail({
     const subject = `🎂 ${occasion.title} is in ${days} ${daysBefore === 1 ? "day" : "days"}`;
     const { html, text } = wrapEmail({
       greeting: `Just a reminder — ${occasion.title} (${occasionLabel(
-        occasion.occasion_type
+        occasion.occasion_type,
       )}) is on ${formatOccasionDate(occasion.occasion_date)}.`,
       body: "View their wishlist and buy a gift before it's gone.",
       ctaLabel: "View wishlist",

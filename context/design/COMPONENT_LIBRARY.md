@@ -172,6 +172,17 @@ Compact summary card: occasion emoji, person name, formatted date, a colored day
 ### `ImportantDateForm`
 Sheet-based add/edit form (react-hook-form + Zod via `lib/important-dates/validation.ts`), reusing `OccasionTypeSelector` for the occasion-type grid. Fields: person name, occasion type, date, "Recurs annually" switch (auto-defaults on for birthday/anniversary until the user overrides it), and an optional wishlist-link input that the server resolves to `linked_wishlist_id` via `gifvtme_get_shared_wishlist`. Includes its own delete confirmation when editing, matching `EditItemSheet`'s convention of exposing delete both from the sheet and from the card's menu.
 
+## `gifts/`
+
+### `GiftsClient`
+Full page controller for `/gifts` — owns the header + item count badge, the All/To-thank/Thanked filter tabs (plain inline segmented buttons, no shared `Tabs` primitive exists yet — same "build it inline until it's reused a third time" call as `ImportantDateCard`'s inline menu), the list/empty state, and the `PersonalThankYouSheet`. Fires `thank_you.personal.compose_opened` at the actual click that opens the sheet, not from an effect inside the sheet (React's rule against synchronous `setState` in effects).
+
+### `GiftCard`
+Compact summary card: 60×60 item image (or a gift-icon placeholder), title, "Gifted by [name]"/"Anonymous" + purchase date, an "Auto thank-you sent ✓" muted chip once that fires, and either a ghost "Send personal thank-you" button or a "Personal thank-you sent ✓" chip.
+
+### `PersonalThankYouSheet`
+Sheet-based compose form (react-hook-form + Zod), same responsive one-component pattern as `ImportantDateForm`. Item image/title context header, read-only "To: [buyer]" line, a 1000-char textarea with counter pre-filled from the receiver's `default_thank_you_msg`, and a send CTA that POSTs to `/api/thank-you/[id]/personal` with `{ source, message }`.
+
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
 `cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `isHydrated`, `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.

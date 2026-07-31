@@ -55,12 +55,14 @@ function extractShareId(url: string): string | null {
 
 export async function resolveLinkedWishlistId(
   supabase: SupabaseClient,
-  wishlistUrl: string
+  wishlistUrl: string,
 ): Promise<string> {
   const shareId = extractShareId(wishlistUrl);
 
   if (!shareId) {
-    throw new ImportantDateInputError("That doesn't look like a Gifvtme wishlist link.");
+    throw new ImportantDateInputError(
+      "That doesn't look like a Gifvtme wishlist link.",
+    );
   }
 
   const { data, error } = await supabase.rpc("gifvtme_get_shared_wishlist", {
@@ -71,10 +73,15 @@ export async function resolveLinkedWishlistId(
     throw new ImportantDateInputError("Couldn't verify that wishlist link.");
   }
 
-  const payload = data as { access?: string; wishlist?: { id?: string } } | null;
+  const payload = data as {
+    access?: string;
+    wishlist?: { id?: string };
+  } | null;
 
   if (payload?.access !== "ok" || !payload.wishlist?.id) {
-    throw new ImportantDateInputError("Couldn't find that wishlist. Check the link and try again.");
+    throw new ImportantDateInputError(
+      "Couldn't find that wishlist. Check the link and try again.",
+    );
   }
 
   return payload.wishlist.id;
@@ -82,7 +89,7 @@ export async function resolveLinkedWishlistId(
 
 export async function getImportantDates(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
 ): Promise<ImportantDate[]> {
   const { data, error } = await supabase
     .from("important_dates")
@@ -100,7 +107,7 @@ export async function getImportantDates(
 export async function assertImportantDateOwner(
   supabase: SupabaseClient,
   id: string,
-  userId: string
+  userId: string,
 ) {
   const { data, error } = await supabase
     .from("important_dates")
@@ -133,7 +140,10 @@ export async function createImportantDate({
   let linkedWishlistId: string | null = null;
 
   if (input.linked_wishlist_url) {
-    linkedWishlistId = await resolveLinkedWishlistId(supabase, input.linked_wishlist_url);
+    linkedWishlistId = await resolveLinkedWishlistId(
+      supabase,
+      input.linked_wishlist_url,
+    );
   }
 
   const { data, error } = await supabase
@@ -170,7 +180,10 @@ export async function createImportantDate({
         date: importantDate.date,
       });
     } catch (scheduleError) {
-      console.error("Important date reminder scheduling failed.", scheduleError);
+      console.error(
+        "Important date reminder scheduling failed.",
+        scheduleError,
+      );
     }
   }
 
@@ -193,9 +206,11 @@ export async function updateImportantDate({
   const updates: Record<string, unknown> = {};
 
   if (input.person_name !== undefined) updates.person_name = input.person_name;
-  if (input.occasion_type !== undefined) updates.occasion_type = input.occasion_type;
+  if (input.occasion_type !== undefined)
+    updates.occasion_type = input.occasion_type;
   if (input.date !== undefined) updates.date = input.date;
-  if (input.is_recurring !== undefined) updates.is_recurring = input.is_recurring;
+  if (input.is_recurring !== undefined)
+    updates.is_recurring = input.is_recurring;
 
   if (input.linked_wishlist_url !== undefined) {
     updates.linked_wishlist_id = input.linked_wishlist_url
@@ -269,35 +284,51 @@ export async function advanceRecurringImportantDate({
   userId,
   importantDateId,
   date,
+  expectedDate,
 }: {
   supabase: SupabaseClient;
   userId: string;
   importantDateId: string;
   date: string;
-}) {
+  expectedDate?: string;
+}): Promise<"advanced" | "already-advanced" | "failed"> {
   const current = parseDateOnly(date);
 
   if (!current) {
-    return;
+    return "failed";
   }
 
   const next = new Date(current);
   next.setFullYear(next.getFullYear() + 1);
 
-  if (current.getMonth() === 1 && current.getDate() === 29 && next.getMonth() !== 1) {
+  if (
+    current.getMonth() === 1 &&
+    current.getDate() === 29 &&
+    next.getMonth() !== 1
+  ) {
     next.setMonth(1, 28);
   }
 
   const nextDate = toDateOnly(next);
 
-  const { error } = await supabase
+  let updateQuery = supabase
     .from("important_dates")
     .update({ date: nextDate })
     .eq("id", importantDateId)
     .eq("user_id", userId);
 
+  if (expectedDate) {
+    updateQuery = updateQuery.eq("date", expectedDate);
+  }
+
+  const { data, error } = await updateQuery.select("id");
+
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!data?.length) {
+    return expectedDate ? "already-advanced" : "failed";
   }
 
   try {
@@ -308,6 +339,11 @@ export async function advanceRecurringImportantDate({
       date: nextDate,
     });
   } catch (scheduleError) {
-    console.error("Recurring important date reminder scheduling failed.", scheduleError);
+    console.error(
+      "Recurring important date reminder scheduling failed.",
+      scheduleError,
+    );
   }
+
+  return "advanced";
 }

@@ -49,6 +49,7 @@ app/
     wishlists/, wishlists/[id]/    evergreen only — auto-created, one per user; title is edited inline, no separate new/edit routes
     my-occasions/, my-occasions/new/, my-occasions/[id]/
     dates/                        important dates (Flow 1 reminders)
+    gifts/                        gifts received + thank-you messages
     orders/[id]/                  receiver's own order history
     settings/
 
@@ -77,6 +78,7 @@ components/
   flash-sale/    FlashSaleBanner, FlashSaleTimer
   occasion/      user-created occasion wishlist UI (creation flow, detail page, reactivation) plus occasion-museum display cards
   reminders/     Flow 1 important-dates UI (list, card, add/edit form) for `/dashboard/dates`
+  gifts/         "Gifts received" UI (list, card, personal thank-you compose sheet) for `/gifts`
   shared/        cross-domain components that don't fit elsewhere, e.g. CopyLinkButton
 ```
 
@@ -94,6 +96,7 @@ lib/
   email/         Resend-triggering logic — wishlist invite delivery, reminder emails
   reminders/     scheduling helpers per reminder source (occasion, invitee, important date) + buildReminderEmail
   important-dates/  Flow 1 domain logic (types, validation, server) for `/dashboard/dates`
+  thank-you/     automated + personal thank-you domain logic (types, validation, server, buildThankYouEmail) for `/gifts`
   orders/        order status transition helpers (to be built)
   reviews/       verified-purchase gating logic (to be built)
   utils.ts       cn(), formatPrice(), formatCountdown(), daysUntil(), pluralize(), wishlistUrl()

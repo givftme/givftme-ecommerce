@@ -90,7 +90,7 @@ export async function PATCH(request: Request, context: OccasionRouteContext) {
   }
 
   if (dateChanged && updates.occasion_date) {
-    await Promise.all([
+    const results = await Promise.allSettled([
       rescheduleOccasionReminders({
         supabase,
         userId: user.id,
@@ -103,6 +103,15 @@ export async function PATCH(request: Request, context: OccasionRouteContext) {
         occasionDate: updates.occasion_date,
       }),
     ]);
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error(
+          "Couldn't reschedule reminders after occasion date change.",
+          result.reason,
+        );
+      }
+    }
   }
 
   return NextResponse.json({ occasion: data });
@@ -139,8 +148,16 @@ export async function DELETE(_request: Request, context: OccasionRouteContext) {
     return jsonError("Couldn't archive occasion. Try again.", 500);
   }
 
-  await deleteUnsentOccasionReminders({ supabase, userId: user.id, occasionId: id });
-  await createReactivationPromptIfNeeded({ supabase, userId: user.id, occasionId: id });
+  await deleteUnsentOccasionReminders({
+    supabase,
+    userId: user.id,
+    occasionId: id,
+  });
+  await createReactivationPromptIfNeeded({
+    supabase,
+    userId: user.id,
+    occasionId: id,
+  });
 
   return new NextResponse(null, { status: 204 });
 }
