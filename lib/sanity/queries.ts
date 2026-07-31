@@ -224,6 +224,12 @@ export const PRODUCT_PAGE_QUERY = defineQuery(/* groq */ `
   }
 `);
 
+export const PRODUCT_BY_ID_QUERY = defineQuery(/* groq */ `
+  *[_type == "product" && status == "active" && _id == $id][0] {
+    ${PRODUCT_FULL_FRAGMENT}
+  }
+`);
+
 export const RELATED_PRODUCTS_QUERY = defineQuery(/* groq */ `
   *[
     _type == "product" &&

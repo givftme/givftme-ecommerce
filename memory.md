@@ -1,40 +1,47 @@
-# Memory — Wishlist Sharing Spec Reconciliation
+# Memory — Item Detail (Giver View) & Intent Flag (09) Gap-Closing
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ## What was built
 
-- `context/feature-specs/07-WISHLIST-SHARING.md` described visibility/sharing/invites as if largely unbuilt, but it was ~90% already shipped under migration 006 ("sharing and giver flow") — `ShareSettingsSheet.tsx`, the invites API routes, and `gifvtme_get_shared_wishlist()`. Per [[feedback-spec-vs-architecture-precedence]], surveyed shipped code first (via an Explore subagent) instead of implementing the spec literally, found the shipped design deliberately diverges from the spec in several ways (no `share_token` column — wishlist `id` doubles as the public share key; hex invite tokens not UUID; email-**or-phone** invites not email-only; WhatsApp share not Web Share API). Presented the conflict and the real remaining gaps to the developer; developer chose "close real gaps only, document shipped reality" over a literal spec rewrite — same call as the prior catalog-item-wishlist session.
-- Closed the one real gap: **signup-time `invitee_user_id` backfill**. Added `gifvtme_migration_012_invite_backfill_on_signup.sql` — a standalone `AFTER INSERT ON auth.users` trigger (`gifvtme_backfill_invitee_on_signup_trigger` → `gifvtme_backfill_invitee_on_signup()`) that matches pending `wishlist_invites.invitee_email` against the new user's email. Deliberately implemented as a *second, independent* trigger rather than editing `handle_new_user` — that function's live SQL body isn't in this repo (migration 001 was applied directly to Supabase and never committed), so editing it blind risked silently dropping unknown existing logic.
-- Rewrote `07-WISHLIST-SHARING.md` section-by-section to document shipped reality (token format, invite-by-phone, id-as-share-key design, `autoAcceptInvite`-on-view behavior, the `gifvtme_wishlist_invites_public_self_insert` RLS policy backing public-wishlist reminder opt-in, etc.), matching the correction style used for `06-CATALOG-ITEM-WISHLIST.md` last session.
-- `context/architecture/API_ROUTES.md` needed no changes — it was already accurate for all the sharing/invite endpoints (verified by grep before assuming a gap).
-- Updated `context/ROADMAP.md`: added migration 012 to the "Done but must still be applied to Supabase" list, alongside 003/006/007/008/011.
-- No commit made yet — developer has not asked to commit this pass.
+- On branch `item-detail-giver` (fresh off `main`, no prior commits on the branch), discovered `09-ITEM-DETAIL-GIVER.md` described a page that was already shipped under migration 006 — `app/w/[id]/item/[itemId]/page.tsx`, `/confirm/[itemId]`, `/success/[itemId]`, `GiverItemActions.tsx`, `PurchaseConfirmationClient.tsx`, `GiftClaimedSuccess.tsx`, the `flag-intent` API route (~840 lines total). Developer said "implement exactly as specified"; per [[feedback-spec-vs-architecture-precedence]] flagged the conflict before writing anything — 5th confirmation of this recurring pattern across sessions. Developer chose "audit first, fix real gaps only."
+- An Explore-subagent audit against the spec found real bugs, real gaps, and cosmetic-only divergences (CTA copy, back-link style, badge wording, analytics event naming, the external-purchase confirm bridge).
+- **Real bugs fixed:** the intent-flag RPC (`gifvtme_flag_wishlist_item_intent`) was a permanent first-write-wins lock — once any user flagged an item, no one else could ever flag it again, even past the 24h expiry the rest of the app (`lib/wishlist/shared.ts`) already enforced at read time. Rewritten in `gifvtme_migration_014_intent_flag_fixes.sql` to be expiry-aware (a flag >24h old, or held by the caller, no longer blocks a reflag), returning a soft `jsonb` result instead of always raising: `{ flagged: true }` on success, `{ warning: 'already_flagged', flagged_at }` (200, not an error) when someone else's active flag stands. Flagging a purchased item now correctly returns 409 (was 404, conflated with generic not-found). The UI (`GiverItemActions.tsx`) previously couldn't distinguish "you flagged this" from "someone else did" (didn't even receive the current user's id), so the Remove/clear-flag control was dead code and "buy anyway" didn't exist — both now wired correctly, with the CTA section actually hidden/revealed based on flag ownership per spec.
+- **Real bug fixed — catalog purchase flow was non-functional:** "Add to cart" on a catalog wishlist item linked to `/checkout?item=...`, a query param `/checkout` never read; the item was never added to cart and never associated with the resulting order, so completing checkout never marked the wishlist item purchased. Fixed end-to-end: the item-detail page now fetches the live Sanity product (`PRODUCT_BY_ID_QUERY`, added to `lib/sanity/queries.ts`), `GiverItemActions` renders a real variant selector (reusing the catalog PDP's `VariantSelector`) and adds a correctly-priced line item to the shared cart, then records the wishlist-item association via a new small localStorage marker (`lib/checkout/pendingWishlistItem.ts`) that `CheckoutForm.tsx` reads on hydration and threads through to `/api/checkout`'s `wishlist_item_id` field — which the server route already validated and stored, just was never fed by the client.
+- **Gaps closed:** item description/notes now render on the page (previously fetched but never shown); the intent-flag section is now hidden for the wishlist owner viewing their own item (`wishlist.viewer_is_owner`).
+- **Gaps acknowledged but not closed (documented, not silently dropped):** analytics event naming still follows this repo's existing `shared_wishlist.*`/`purchase.*` convention rather than the spec's proposed `item_detail.*` names (matches the established precedent from `07`/`08`); no integration test coverage added for the confirm/purchase/checkout-association flow (would need Supabase/Flutterwave test doubles beyond this session's scope).
+- Added `app/api/wishlists/items/[itemId]/flag-intent/route.test.ts` (7 tests: 401/404/409 mappings, the `{flagged:true}` success shape, the `already_flagged` 200-warning shape, DELETE's always-`{cleared:true}` response) — the route had zero test coverage before.
+- After this pass, the developer (or a linter) added `FOR UPDATE` to the RPC's `SELECT ... INTO target_item` in `gifvtme_migration_014_intent_flag_fixes.sql` — row-locks the wishlist_items row for the duration of the function so the read-then-conditionally-write sequence (check existing flag → decide overwrite vs warn → UPDATE) can't race between two concurrent flag attempts on the same item. Correct, minimal, kept as-is.
+- Rewrote `09-ITEM-DETAIL-GIVER.md` (status-note style matching `07`/`08`) to document shipped reality — including three spec inaccuracies corrected: intent-flag columns came from migration 006 not 003; there's no standalone `buildCombinationKey` export (variant matching is inline in `GiverItemActions.tsx`); the DELETE "not_your_flag" 403 the spec's API section proposed contradicts the spec's own Error Handling table (which wants a silent no-op) — kept the silent no-op.
+- Updated `context/ROADMAP.md` (migration 014 added to the must-apply-to-Supabase list, new "done" bullet) and `context/architecture/API_ROUTES.md` (flag-intent entry rewritten for the new response shapes).
+- `tsc --noEmit`, `eslint` (scoped to touched files), and `npm test`/vitest (34/34, up from 27) all clean.
 
 ## Decisions made
 
-- Confirmed (third time now, across catalog-item-wishlist, then this session) that shipped/architecture-documented code wins over a literal feature-spec rewrite by default in this repo — [[feedback-spec-vs-architecture-precedence]] is a load-bearing, recurring pattern, not a one-off judgment call.
-- When a DB trigger needs extending but its live definition isn't checked into the repo (migration 001's `handle_new_user`), prefer adding a new, independent trigger over blind-rewriting the unknown function — avoids risking silent loss of existing logic that can't be diffed against.
-- Public share links intentionally use the wishlist's own `id` as the share key rather than a separate `share_token` column — simpler, already works, no reason flagged to change it.
+- Confirmed a 5th time that shipped/architecture-documented code wins over a literal spec rewrite by default in this repo, even against an explicit "implement exactly as specified" instruction — [[feedback-spec-vs-architecture-precedence]] continues to hold; still flag and ask rather than deciding unilaterally.
+- Given the scope split between small, contained intent-flag bugs and the much larger catalog-checkout wiring gap, asked the developer explicitly whether to scope down — they chose "everything," so both were done in one pass rather than splitting into a follow-up session.
+- The `wishlist_item_id` ⇄ cart association uses a dedicated localStorage marker rather than extending the shared `CartItem` type — the cart supports multiple/mixed catalog line items per business rule 6, but only one of them (at most) corresponds to a wishlist gift, so a side-channel marker is simpler and lower-risk than threading a wishlist-item field through the general cart model.
 
 ## Problems solved
 
-- None novel — this session's shape (spec describes something already shipped differently) is now a recognized pattern, not a fresh problem each time.
+- None architecturally novel — the "spec describes something already shipped differently" pattern is fully established now (5 sessions running). The one new technical problem (linking a client-side cart add to a specific wishlist item for checkout, when checkout already had unused server-side support for it) was solved via the localStorage marker described above.
 
 ## Current state
 
-- On `main`, one new untracked file (`gifvtme_migration_012_invite_backfill_on_signup.sql`) plus modified `context/feature-specs/07-WISHLIST-SHARING.md` and `context/ROADMAP.md`. Not committed.
-- `tsc --noEmit`, `eslint`, and `npm test` (27/27) all clean.
-- `gifvtme_migration_012_invite_backfill_on_signup.sql` has **not** been applied to the Supabase project (no DB access from this environment) — same unconfirmed-application state as migrations 003, 006, 007, 008, 011.
-- Open question raised to the developer but not yet answered: whether to eventually reconcile this new trigger into `handle_new_user` properly once its live Supabase definition can be pulled, versus keeping it as a permanent second trigger.
+- Branch `item-detail-giver` (off `main`), changes not yet committed.
+- Changed: `app/api/wishlists/items/[itemId]/flag-intent/route.ts`, `app/w/[id]/item/[itemId]/page.tsx`, `components/checkout/CheckoutForm.tsx`, `components/wishlist/GiverItemActions.tsx`, `context/ROADMAP.md`, `context/architecture/API_ROUTES.md`, `context/feature-specs/09-ITEM-DETAIL-GIVER.md`, `lib/sanity/queries.ts`.
+- New: `app/api/wishlists/items/[itemId]/flag-intent/route.test.ts`, `gifvtme_migration_014_intent_flag_fixes.sql`, `lib/checkout/pendingWishlistItem.ts`.
+- `gifvtme_migration_014_intent_flag_fixes.sql` has **not** been applied to the Supabase project (no DB access from this environment) — same unconfirmed-application state as migrations 003/004/005/006/008/011/012/013, now unresolved across 6+ sessions.
+- Not committed yet — developer hasn't asked to commit this pass.
 
 ## Next session starts with
 
 Run `/remember restore`. Ask the developer:
-1. Whether to commit the migration 012 file + doc updates now.
-2. Whether migrations 006/011/012 have been applied to the Supabase project yet (recurring open item across sessions — consider resolving definitively rather than re-asking each time).
+1. Whether to commit this pass now.
+2. Whether migration 014 (and the still-outstanding 003/004/005/006/008/011/012/013) have been applied to Supabase yet.
+3. Whether to finally set up a definitive way to track migration-apply state — it's been open since session 1 and is now 9 migrations deep.
 
 ## Open questions
 
-- Whether the signup-backfill trigger should stay a permanent standalone trigger, or get folded into `handle_new_user` once its live definition is retrievable from Supabase directly (`pg_get_functiondef`).
-- The broader "is migration N applied to Supabase yet" question keeps recurring across sessions (003, 006, 007, 008, 011, now 012) with no resolution mechanism — worth the developer setting up a way to track this (e.g. a `schema_migrations` marker table, or just applying the backlog) rather than it staying an open question indefinitely.
+- The migration-apply tracking problem is still unresolved after 6+ sessions (003, 004, 005, 006, 008, 011, 012, 013, now 014) — worth the developer resolving definitively rather than it staying a recurring open item.
+- Whether purchase CTAs (not just the intent-flag section) should also be hidden for the wishlist owner viewing their own item — noted as a spec edge case but left as shipped (out of scope this pass, not a bug).
