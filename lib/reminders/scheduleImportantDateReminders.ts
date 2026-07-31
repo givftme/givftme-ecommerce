@@ -6,21 +6,21 @@ import {
   subDays,
 } from "@/lib/reminders/constants";
 
-export async function deleteUnsentInviteeReminders({
+export async function deleteUnsentImportantDateReminders({
   supabase,
   userId,
-  inviteId,
+  importantDateId,
 }: {
   supabase: SupabaseClient;
   userId: string;
-  inviteId: string;
+  importantDateId: string;
 }) {
   const { error } = await supabase
     .from("reminders")
     .delete()
     .eq("user_id", userId)
-    .eq("invite_id", inviteId)
-    .eq("reminder_type", "invitee")
+    .eq("important_date_id", importantDateId)
+    .eq("reminder_type", "occasion_owner")
     .eq("sent", false);
 
   if (error) {
@@ -28,20 +28,18 @@ export async function deleteUnsentInviteeReminders({
   }
 }
 
-export async function scheduleInviteeReminders({
+export async function scheduleImportantDateReminders({
   supabase,
   userId,
-  inviteId,
-  occasionDate,
+  importantDateId,
+  date: dateOnly,
 }: {
   supabase: SupabaseClient;
   userId: string;
-  inviteId: string;
-  occasionDate: string;
+  importantDateId: string;
+  date: string;
 }) {
-  await deleteUnsentInviteeReminders({ supabase, userId, inviteId });
-
-  const date = parseDateOnly(occasionDate);
+  const date = parseDateOnly(dateOnly);
 
   if (!date) {
     return;
@@ -51,8 +49,8 @@ export async function scheduleInviteeReminders({
     .flatMap((days) =>
       channels.map((channel) => ({
         user_id: userId,
-        invite_id: inviteId,
-        reminder_type: "invitee",
+        important_date_id: importantDateId,
+        reminder_type: "occasion_owner",
         channel,
         scheduled_at: subDays(date, days).toISOString(),
         days_before: days,
@@ -69,5 +67,25 @@ export async function scheduleInviteeReminders({
 
   if (error) {
     throw new Error(error.message);
+  }
+}
+
+export async function rescheduleImportantDateReminders({
+  supabase,
+  userId,
+  importantDateId,
+  date,
+}: {
+  supabase: SupabaseClient;
+  userId: string;
+  importantDateId: string;
+  date: string;
+}) {
+  await deleteUnsentImportantDateReminders({ supabase, userId, importantDateId });
+
+  try {
+    await scheduleImportantDateReminders({ supabase, userId, importantDateId, date });
+  } catch (error) {
+    console.error("Important date reminder rescheduling failed.", error);
   }
 }

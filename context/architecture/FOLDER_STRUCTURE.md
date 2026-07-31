@@ -76,7 +76,7 @@ components/
   review/        ReviewCard, ReviewsList, StarRating, RatingBreakdown
   flash-sale/    FlashSaleBanner, FlashSaleTimer
   occasion/      user-created occasion wishlist UI (creation flow, detail page, reactivation) plus occasion-museum display cards
-  reminders/     reminder opt-in UI components
+  reminders/     Flow 1 important-dates UI (list, card, add/edit form) for `/dashboard/dates`
   shared/        cross-domain components that don't fit elsewhere, e.g. CopyLinkButton
 ```
 
@@ -91,7 +91,9 @@ lib/
   affiliate/     transform.ts — affiliate URL building per retailer
   scraper/       microlink.ts — URL metadata extraction
   flutterwave/   payment initiation + webhook verification (to be built)
-  email/         Resend-triggering logic such as wishlist invite delivery
+  email/         Resend-triggering logic — wishlist invite delivery, reminder emails
+  reminders/     scheduling helpers per reminder source (occasion, invitee, important date) + buildReminderEmail
+  important-dates/  Flow 1 domain logic (types, validation, server) for `/dashboard/dates`
   orders/        order status transition helpers (to be built)
   reviews/       verified-purchase gating logic (to be built)
   utils.ts       cn(), formatPrice(), formatCountdown(), daysUntil(), pluralize(), wishlistUrl()

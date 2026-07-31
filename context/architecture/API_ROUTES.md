@@ -84,7 +84,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/occasions/[id]`
 **Methods:** GET, PATCH, DELETE. **Auth:** required, must own occasion. **Purpose:** loads, edits, or archives an occasion.
-**PATCH request:** partial `{ title?, occasion_type?, occasion_date? }`. Title edits update the linked occasion wishlist title in the same database transaction as the occasion row.
+**PATCH request:** partial `{ title?, occasion_type?, occasion_date? }`. Title edits update the linked occasion wishlist title in the same database transaction as the occasion row. A changed `occasion_date` reschedules both the owner's reminders (`rescheduleOccasionReminders`) and, separately, every opted-in invite's Flow 2 reminders (`rescheduleInviteeRemindersForOccasion` — keyed off each invitee's own user id, since invitee reminder rows belong to the giver, not the receiver).
 **DELETE behavior:** soft-archives the occasion, deletes that occasion's unsent owner reminders, and (best-effort) inserts an `occasion_prompts` row if the occasion has purchased evergreen (non-exclusive) items — see `/api/occasions/[id]/reactivate` and `DATABASE_SCHEMA.md`.
 
 ## `/api/occasions/[id]/items`
@@ -101,11 +101,29 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Purpose:** archives occasions whose `occasion_date` is more than 7 days past, using the service-role client. For each newly archived occasion, best-effort inserts an `occasion_prompts` row if it has purchased evergreen items. Also auto-resolves any `occasion_prompts` row older than 30 days that's still unresolved (items are left as purchased — this only stops the dashboard nudge).
 **Response:** `{ archived: number }`.
 
+## `/api/important-dates`
+**Methods:** GET, POST. **Auth:** required. **Purpose:** Flow 1 — lists or creates the current user's saved "important dates" (someone else's birthday/anniversary/etc, not tied to a wishlist the user created).
+**GET response:** `{ dates }`, ordered by `date` ascending.
+**POST request:** `{ person_name, occasion_type, date, is_recurring, linked_wishlist_url? }` — `date` uses the same future/≤5-years validation as occasion dates. `linked_wishlist_url` (optional) is a pasted `/w/[id]` share link; the server resolves it to `linked_wishlist_id` via `gifvtme_get_shared_wishlist` and returns 400 if it can't be resolved. On success, schedules 14-day/3-day owner reminders when the date is in the future.
+**Response:** `{ date }` with 201.
+
+## `/api/important-dates/[id]`
+**Methods:** PATCH, DELETE. **Auth:** required, must own the date. **Purpose:** edit or delete a saved important date.
+**PATCH request:** partial, same shape as POST (`linked_wishlist_url` re-resolves; passing `""` clears the link). A changed `date` deletes unsent reminders and reschedules.
+**DELETE behavior:** hard-deletes the row (no soft-archive — this is a personal note list, not purchase-linked) in a single statement; `reminders.important_date_id`'s `ON DELETE CASCADE` (migration 015) removes every reminder that pointed at it, sent or unsent, as part of the same delete. **Response:** `{ deleted: true }`.
+
 ## `/api/reminders`
 **Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth — intended to be called by a scheduled job (Vercel Cron or external scheduler), not the frontend.
-**Purpose:** expires wishlist item intent flags older than 24 hours, then queries `reminders` where `sent = false` and `scheduled_at <= now()`.
-**Response:** `{ processed: number, deferred: number }`.
-**Status as of this writing:** reminder email/push delivery is intentionally deferred to the Reminders feature. Due reminder rows remain `sent = false` as the handoff queue until a real dispatcher succeeds and marks them sent. Do not assume reminder emails are firing until this is completed; check `ROADMAP.md`.
+**Purpose:** expires wishlist item intent flags older than 24 hours, then processes due `email`-channel reminders (`sent = false`, `permanently_failed = false`, `scheduled_at <= now()`, oldest-first, capped at 50 per run) — builds the subject/body per `reminder_type` and source (`important_date_id` / `occasion_id` / `invite_id`) via `buildReminderEmail`, sends through Resend, and on success sets `sent = true, sent_at = now()`. A send failure increments `retry_count` and sets `permanently_failed = true` once it reaches 5 (no further retries after that). If a reminder's parent row (important date/occasion/invite) was deleted while queued, the reminder is deleted outright rather than retried. After a `days_before = 3` owner reminder tied to a recurring `important_date_id` sends successfully, the important date advances to next year (Feb 29 → Feb 28 in non-leap years) and reschedules.
+**Concurrency safety:** each due reminder is atomically claimed (`claimed_at`, a conditional `UPDATE ... WHERE claimed_at IS NULL OR claimed_at < staleThreshold`) before it's processed, so two overlapping invocations of this route can't both send the same reminder — a claim older than 10 minutes is treated as abandoned and re-claimed. The Resend send itself passes the reminder's own id as an `Idempotency-Key`, so if a send actually reached Resend but the response was lost (timeout, network error) and the reminder gets retried, Resend dedupes it instead of sending a second email — this is what makes it safe to leave a reminder `sent = false` (and therefore retryable) whenever the post-send bookkeeping update fails, rather than risking either a lost send or a duplicate one.
+**`push`-channel reminders are not processed** — push delivery isn't built, so those rows are left queued and only counted, not attempted.
+**Response:** `{ processed: number, failed: number, deferred: number }` — `processed` is reminders successfully sent this run, `failed` is reminders that failed this run (including ones that just became `permanently_failed`), `deferred` is the count of still-queued `push`-channel due reminders.
+
+## `/api/reminders/unsubscribe`
+**Method:** GET. **Auth:** none (token-based — must work from an email client with no session). **Purpose:** the unsubscribe link included in every reminder email.
+**Query params:** `token` (the reminder's `important_date_id`/`occasion_id` for `type=owner`, or `invite_id` for `type=invitee`), `type` (`owner` | `invitee`).
+**Behavior:** `type=owner` deletes all unsent `occasion_owner` reminders matching that `important_date_id` or `occasion_id`. `type=invitee` sets `wishlist_invites.reminder_opted_in = false` for that invite and deletes its unsent `invitee` reminders.
+**Response:** a small HTML confirmation page (200), or 400/500 with an HTML error page on a missing/invalid token or a database failure.
 
 ## `/api/cart/prices`
 **Method:** GET. **Auth:** none. **Purpose:** refreshes current Sanity prices for catalog cart items and returns four recommended products for the cart page.

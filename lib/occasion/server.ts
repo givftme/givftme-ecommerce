@@ -15,6 +15,10 @@ import {
   scheduleOccasionReminders,
 } from "@/lib/reminders/scheduleOccasionReminders";
 import {
+  deleteUnsentInviteeReminders,
+  scheduleInviteeReminders,
+} from "@/lib/reminders/scheduleInviteeReminders";
+import {
   getNextSortOrder,
   getOwnedWishlistDetail,
   signWishlistImages,
@@ -483,6 +487,75 @@ export async function rescheduleOccasionReminders({
   } catch (error) {
     console.error("Occasion reminder rescheduling failed.", error);
   }
+}
+
+interface OptedInInviteRow {
+  id: string;
+  invitee_user_id: string | null;
+}
+
+// Flow 2 invitee reminders are keyed off the invitee's own user id, not the
+// occasion owner's, so each opted-in invite needs its own reschedule call.
+export async function rescheduleInviteeRemindersForOccasion({
+  supabase,
+  occasionId,
+  occasionDate,
+}: {
+  supabase: SupabaseClient;
+  occasionId: string;
+  occasionDate: string;
+}) {
+  const { data: wishlist, error: wishlistError } = await supabase
+    .from("wishlists")
+    .select("id")
+    .eq("occasion_id", occasionId)
+    .maybeSingle();
+
+  if (wishlistError || !wishlist) {
+    return;
+  }
+
+  const { data: invites, error: invitesError } = await supabase
+    .from("wishlist_invites")
+    .select("id, invitee_user_id")
+    .eq("wishlist_id", (wishlist as { id: string }).id)
+    .eq("reminder_opted_in", true)
+    .returns<OptedInInviteRow[]>();
+
+  if (invitesError) {
+    console.error("Could not load invitee reminders to reschedule.", invitesError);
+    return;
+  }
+
+  const dateIsFuture = isFutureDateOnly(occasionDate);
+
+  await Promise.allSettled(
+    (invites || [])
+      .filter((invite): invite is OptedInInviteRow & { invitee_user_id: string } =>
+        Boolean(invite.invitee_user_id)
+      )
+      .map(async (invite) => {
+        try {
+          if (!dateIsFuture) {
+            await deleteUnsentInviteeReminders({
+              supabase,
+              userId: invite.invitee_user_id,
+              inviteId: invite.id,
+            });
+            return;
+          }
+
+          await scheduleInviteeReminders({
+            supabase,
+            userId: invite.invitee_user_id,
+            inviteId: invite.id,
+            occasionDate,
+          });
+        } catch (error) {
+          console.error("Invitee reminder rescheduling failed.", error);
+        }
+      })
+  );
 }
 
 interface PurchasedPulledItemRow {

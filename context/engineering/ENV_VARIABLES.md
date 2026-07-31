@@ -28,7 +28,7 @@ Mirrors `.env.local.example` at the project root. Update both files together whe
 | `RESEND_API_KEY` | **No — secret** | From resend.com dashboard |
 | `RESEND_FROM_EMAIL` | No (server-only, not secret but not exposed) | Sender address for all transactional email |
 
-**If missing:** wishlist invite creation still succeeds but logs that the invite email was not sent. Reminder emails, order status emails, and thank-you message emails cannot send.
+**If missing:** wishlist invite creation still succeeds but logs that the invite email was not sent. Reminder emails (`/api/reminders`) fail the same way — each affected reminder's `retry_count` increments and it retries on the next cron run rather than sending, eventually hitting `permanently_failed` after 5 attempts. Order status emails and thank-you message emails still cannot send (not yet built).
 
 **Resend dashboard dependency:** `RESEND_FROM_EMAIL` must belong to a verified sender/domain in Resend before invite delivery works in production.
 
