@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -35,6 +35,10 @@ export function PurchaseConfirmationClient({
   const [authOpen, setAuthOpen] = useState(false);
   const [raceMessage, setRaceMessage] = useState("");
   const domain = getSourceDomain(item.product_url) || "the store";
+
+  useEffect(() => {
+    trackEvent("purchase.external.confirm_screen_viewed", { item_id: item.id });
+  }, [item.id]);
 
   const confirm = async () => {
     if (!isAuthenticated) {
