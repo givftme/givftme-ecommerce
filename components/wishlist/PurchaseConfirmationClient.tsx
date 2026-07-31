@@ -73,7 +73,12 @@ export function PurchaseConfirmationClient({
       }
 
       if (!response.ok) {
-        throw new Error(payload.error || "Couldn't confirm. Try again.");
+        toast({
+          title: payload.error || "Couldn't confirm. Try again.",
+          variant: "danger",
+        });
+        setConfirming(false);
+        return;
       }
 
       trackEvent("purchase.external.confirmed", { item_id: item.id });

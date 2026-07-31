@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     return jsonError("This item doesn't exist or was removed.", 404);
   }
 
-  if (row.status === "purchased") {
+  if (row.status !== "available") {
     return jsonError("Someone just claimed this - they got there first!", 409);
   }
 

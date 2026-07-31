@@ -49,7 +49,7 @@ The complete external-item transaction flow. A giver is redirected to the retail
 
 ### Item detail page — inline confirmation prompt
 Shipped as a static panel below "Buy this gift" after it's clicked (no animation, no dismiss control):
-```
+```text
 "Once you've bought it on {domain}, come back and confirm below."
 [I bought it — link to /w/[id]/confirm/[itemId]]
 ```

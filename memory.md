@@ -28,10 +28,10 @@ Last updated: 2026-07-31
 
 ## Current state
 
-- Branch `item-detail-giver` (off `main`). Committed in two commits: `464f910` ("Implement item detail giver view and intent flagging functionality; enhance API responses and add tests" — the full session's work) and `9910e8e` ("Implement coderabbit suggestions" — the FOR UPDATE + try/catch fixes above). Working tree clean.
+- Branch `item-detail-giver` (off `main`). Committed in two commits: `464f910` ("Implement item detail giver view and intent flagging functionality; enhance API responses and add tests" — the full session's work) and `9910e8e` ("Implement coderabbit suggestions" — the FOR UPDATE + try/catch fixes above). Working tree clean at the time.
 - Touched this session: `app/api/wishlists/items/[itemId]/flag-intent/route.ts` (+ new `route.test.ts`), `app/w/[id]/item/[itemId]/page.tsx`, `components/checkout/CheckoutForm.tsx`, `components/wishlist/GiverItemActions.tsx`, `context/ROADMAP.md`, `context/architecture/API_ROUTES.md`, `context/feature-specs/09-ITEM-DETAIL-GIVER.md`, `lib/sanity/queries.ts`, new `gifvtme_migration_014_intent_flag_fixes.sql`, new `lib/checkout/pendingWishlistItem.ts`.
-- `gifvtme_migration_014_intent_flag_fixes.sql` has **not** been applied to the Supabase project (no DB access from this environment) — same unconfirmed-application state as migrations 003/004/005/006/008/011/012/013, now unresolved across 6+ sessions.
-- Not yet pushed or opened as a PR, as far as this environment can tell — only local commits confirmed.
+- Migrations 003, 004, 005, 006, 008, 011, 012, 013, and 014 (`gifvtme_migration_014_intent_flag_fixes.sql`) confirmed applied to the Supabase project by the developer on 2026-07-31 (verbal confirmation in the following session — no DB access from this environment to independently verify) — resolves the unconfirmed-application state that had been unresolved across 6+ sessions. See `context/ROADMAP.md`'s "Done" section for the synchronized record.
+- The `item-detail-giver` branch was merged into `main` via PR #19 the same session (2026-07-31); current work has since moved to a new branch, `affiliate-purchase`.
 
 ## Next session starts with
 
