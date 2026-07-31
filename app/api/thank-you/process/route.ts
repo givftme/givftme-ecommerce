@@ -7,6 +7,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const MAX_RETRIES = 5;
 const BATCH_LIMIT = 50;
+const MAX_CONCURRENCY = 5;
+const MAX_DURATION_SECONDS = 300;
+
+export const maxDuration = MAX_DURATION_SECONDS;
+
 // Same staleness window as /api/reminders — long enough that this cron is
 // never expected to still be running, so an older claim is assumed abandoned
 // (crashed or timed out) rather than genuinely in progress.
@@ -26,8 +31,14 @@ interface DueThankYouRow {
   receiver_id: string;
   buyer_id: string;
   retry_count: number;
-  purchases: { wishlist_items: { title: string } | { title: string }[] | null } | { wishlist_items: { title: string } | { title: string }[] | null }[] | null;
-  orders: { order_items: { product_title: string }[] | null } | { order_items: { product_title: string }[] | null }[] | null;
+  purchases:
+    | { wishlist_items: { title: string } | { title: string }[] | null }
+    | { wishlist_items: { title: string } | { title: string }[] | null }[]
+    | null;
+  orders:
+    | { order_items: { product_title: string }[] | null }
+    | { order_items: { product_title: string }[] | null }[]
+    | null;
 }
 
 function first<T>(value: T | T[] | null): T | null {
@@ -57,21 +68,30 @@ function staleThresholdIso() {
 async function getUserEmail(
   supabase: SupabaseClient,
   cache: Map<string, string | null>,
-  userId: string
-) {
+  userId: string,
+): Promise<{ email: string | null; error: boolean }> {
   if (cache.has(userId)) {
-    return cache.get(userId) as string | null;
+    return { email: cache.get(userId) as string | null, error: false };
   }
 
   const { data, error } = await supabase.auth.admin.getUserById(userId);
-  const email = !error ? data?.user?.email || null : null;
+
+  if (error) {
+    console.error("Couldn't look up buyer email for thank-you message.", error);
+    return { email: null, error: true };
+  }
+
+  const email = data?.user?.email || null;
   cache.set(userId, email);
-  return email;
+  return { email, error: false };
 }
 
 // Same atomic-claim pattern as /api/reminders — guards against two
 // overlapping cron invocations both sending the same auto thank-you.
-async function claimThankYou(supabase: SupabaseClient, id: string): Promise<boolean> {
+async function claimThankYou(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<boolean> {
   const { data, error } = await supabase
     .from("thank_you_messages")
     .update({ claimed_at: new Date().toISOString() })
@@ -110,7 +130,7 @@ async function processDueThankYou(
   supabase: SupabaseClient,
   row: DueThankYouRow,
   nameCache: Map<string, string | null>,
-  emailCache: Map<string, string | null>
+  emailCache: Map<string, string | null>,
 ): Promise<"processed" | "failed"> {
   if (!nameCache.has(row.receiver_id)) {
     const { data, error } = await supabase
@@ -123,9 +143,18 @@ async function processDueThankYou(
   }
 
   const receiverName = nameCache.get(row.receiver_id) || "Someone";
-  const buyerEmail = await getUserEmail(supabase, emailCache, row.buyer_id);
+  const { email: buyerEmail, error: buyerEmailError } = await getUserEmail(
+    supabase,
+    emailCache,
+    row.buyer_id,
+  );
 
   if (!buyerEmail) {
+    if (buyerEmailError) {
+      await incrementFailure(supabase, row);
+      return "failed";
+    }
+
     // Buyer has no email — shouldn't happen, but nothing more can be done.
     await supabase
       .from("thank_you_messages")
@@ -142,7 +171,11 @@ async function processDueThankYou(
 
   // Reused across retries so a request that reached Resend but whose
   // response was lost doesn't cause a real duplicate email on retry.
-  const result = await sendThankYouEmail({ to: buyerEmail, ...email, idempotencyKey: row.id });
+  const result = await sendThankYouEmail({
+    to: buyerEmail,
+    ...email,
+    idempotencyKey: row.id,
+  });
 
   if (!result.sent) {
     await incrementFailure(supabase, row);
@@ -159,15 +192,18 @@ async function processDueThankYou(
     // because of the idempotency key (Resend dedupes the retried request).
     console.error(
       "Thank-you email sent but marking it sent failed; will retry (deduped by idempotency key).",
-      sentUpdateError
+      sentUpdateError,
     );
-    await supabase.from("thank_you_messages").update({ claimed_at: null }).eq("id", row.id);
+    await supabase
+      .from("thank_you_messages")
+      .update({ claimed_at: null })
+      .eq("id", row.id);
   }
 
   return "processed";
 }
 
-export async function POST(request: Request) {
+async function handleThankYouProcessing(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!cronSecret) {
@@ -196,32 +232,69 @@ export async function POST(request: Request) {
     return jsonError("Couldn't process thank-you messages.", 500);
   }
 
+  const rows = (pending || []) as unknown as DueThankYouRow[];
   const nameCache = new Map<string, string | null>();
   const emailCache = new Map<string, string | null>();
-  let processed = 0;
-  let failed = 0;
+  let nextIndex = 0;
 
-  for (const row of (pending || []) as unknown as DueThankYouRow[]) {
-    const claimed = await claimThankYou(supabase, row.id);
+  const workers = Array.from(
+    { length: Math.min(MAX_CONCURRENCY, rows.length) },
+    async () => {
+      let processed = 0;
+      let failed = 0;
 
-    if (!claimed) {
-      continue;
-    }
+      while (true) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
 
-    try {
-      const outcome = await processDueThankYou(supabase, row, nameCache, emailCache);
+        if (currentIndex >= rows.length) {
+          return { processed, failed };
+        }
 
-      if (outcome === "processed") {
-        processed += 1;
-      } else {
-        failed += 1;
+        const row = rows[currentIndex];
+
+        const claimed = await claimThankYou(supabase, row.id);
+
+        if (!claimed) {
+          continue;
+        }
+
+        try {
+          const outcome = await processDueThankYou(
+            supabase,
+            row,
+            nameCache,
+            emailCache,
+          );
+
+          if (outcome === "processed") {
+            processed += 1;
+          } else {
+            failed += 1;
+          }
+        } catch (error) {
+          console.error("Thank-you processing failed.", error);
+          await incrementFailure(supabase, row);
+          failed += 1;
+        }
       }
-    } catch (error) {
-      console.error("Thank-you processing failed.", error);
-      await incrementFailure(supabase, row);
-      failed += 1;
-    }
-  }
+    },
+  );
+
+  const results = await Promise.all(workers);
+  const processed = results.reduce(
+    (total, result) => total + result.processed,
+    0,
+  );
+  const failed = results.reduce((total, result) => total + result.failed, 0);
 
   return NextResponse.json({ processed, failed });
+}
+
+export async function GET(request: Request) {
+  return handleThankYouProcessing(request);
+}
+
+export async function POST(request: Request) {
+  return handleThankYouProcessing(request);
 }

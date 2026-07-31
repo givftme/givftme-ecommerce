@@ -9,7 +9,10 @@ interface PersonalThankYouRouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: Request, context: PersonalThankYouRouteContext) {
+export async function POST(
+  request: Request,
+  context: PersonalThankYouRouteContext,
+) {
   const { id } = await context.params;
   const supabase = await createClient();
   const user = await getAuthenticatedApiUser(supabase);
@@ -22,7 +25,10 @@ export async function POST(request: Request, context: PersonalThankYouRouteConte
   const parsed = personalThankYouSchema.safeParse(body);
 
   if (!parsed.success) {
-    return jsonError(parsed.error.issues[0]?.message || "Check your message and try again.", 400);
+    return jsonError(
+      parsed.error.issues[0]?.message || "Check your message and try again.",
+      400,
+    );
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -40,7 +46,8 @@ export async function POST(request: Request, context: PersonalThankYouRouteConte
       supabase,
       serviceClient: createServiceClient(),
       userId: user.id,
-      receiverName: (profile as { full_name?: string } | null)?.full_name || "Someone",
+      receiverName:
+        (profile as { full_name?: string } | null)?.full_name || "Someone",
       id,
       source: parsed.data.source,
       message: parsed.data.message,
@@ -53,9 +60,6 @@ export async function POST(request: Request, context: PersonalThankYouRouteConte
     return NextResponse.json({ sent: true });
   } catch (error) {
     console.error("Couldn't send personal thank-you.", error);
-    return jsonError(
-      error instanceof Error ? error.message : "Couldn't send your message. Please try again.",
-      500
-    );
+    return jsonError("Couldn't send your message. Please try again.", 500);
   }
 }

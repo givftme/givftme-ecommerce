@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api/response";
 import { advanceRecurringImportantDate } from "@/lib/important-dates/server";
-import { buildReminderEmail, type DueReminderRow } from "@/lib/reminders/buildReminderEmail";
+import {
+  buildReminderEmail,
+  type DueReminderRow,
+} from "@/lib/reminders/buildReminderEmail";
 import { sendReminderEmail } from "@/lib/email/resend";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -15,14 +18,14 @@ const CLAIM_STALE_MS = 10 * 60 * 1000;
 
 const DUE_REMINDER_SELECT = `
   id, reminder_type, channel, scheduled_at, days_before, retry_count, user_id,
-  important_date_id, invite_id, occasion_id,
+  important_date_id, invite_id, occasion_id, advance_expected_date,
   important_dates ( person_name, occasion_type, date, linked_wishlist_id, is_recurring ),
   occasions ( title, occasion_type, occasion_date ),
   wishlist_invites ( wishlist_id, token, wishlists ( title, occasions ( title, occasion_type, occasion_date ) ) )
 `;
 
 const PENDING_ADVANCE_SELECT = `
-  id, user_id, important_date_id,
+  id, user_id, important_date_id, advance_expected_date,
   important_dates ( date, is_recurring )
 `;
 
@@ -30,6 +33,7 @@ interface AdvanceCandidate {
   id: string;
   user_id: string;
   important_date_id: string | null;
+  advance_expected_date: string | null;
   important_dates:
     | { date: string; is_recurring: boolean }
     | { date: string; is_recurring: boolean }[]
@@ -51,7 +55,7 @@ function staleThresholdIso() {
 async function getRecipientEmail(
   supabase: SupabaseClient,
   cache: Map<string, string | null>,
-  userId: string
+  userId: string,
 ) {
   if (cache.has(userId)) {
     return cache.get(userId) as string | null;
@@ -72,7 +76,10 @@ async function getRecipientEmail(
 // ever sees a row actually get claimed (0 rows returned means "someone else
 // has it" or its state already changed) without needing SELECT ... FOR
 // UPDATE SKIP LOCKED via a separate RPC.
-async function claimReminder(supabase: SupabaseClient, reminderId: string): Promise<boolean> {
+async function claimReminder(
+  supabase: SupabaseClient,
+  reminderId: string,
+): Promise<boolean> {
   const { data, error } = await supabase
     .from("reminders")
     .update({ claimed_at: new Date().toISOString() })
@@ -119,7 +126,10 @@ function needsRecurringAdvance(reminder: DueReminderRow): boolean {
 // true and only log — the caller already persisted that flag alongside
 // `sent=true` before this runs, and retryPendingAdvancements() picks rows
 // like this back up on a later cron run without re-sending the email.
-async function tryAdvance(supabase: SupabaseClient, candidate: AdvanceCandidate) {
+async function tryAdvance(
+  supabase: SupabaseClient,
+  candidate: AdvanceCandidate,
+) {
   const importantDate = first(candidate.important_dates);
 
   if (!candidate.important_date_id || !importantDate) {
@@ -127,28 +137,31 @@ async function tryAdvance(supabase: SupabaseClient, candidate: AdvanceCandidate)
   }
 
   try {
-    await advanceRecurringImportantDate({
+    const result = await advanceRecurringImportantDate({
       supabase,
       userId: candidate.user_id,
       importantDateId: candidate.important_date_id,
       date: importantDate.date,
+      expectedDate: candidate.advance_expected_date || undefined,
     });
 
-    const { error } = await supabase
-      .from("reminders")
-      .update({ advance_pending: false })
-      .eq("id", candidate.id);
+    if (result === "advanced" || result === "already-advanced") {
+      const { error } = await supabase
+        .from("reminders")
+        .update({ advance_pending: false, advance_expected_date: null })
+        .eq("id", candidate.id);
 
-    if (error) {
-      console.error(
-        "Advance succeeded but clearing advance_pending failed; will retry next run.",
-        error
-      );
+      if (error) {
+        console.error(
+          "Advance succeeded but clearing advance_pending failed; will retry next run.",
+          error,
+        );
+      }
     }
   } catch (error) {
     console.error(
       "Recurring important date advancement failed; will retry next run.",
-      error
+      error,
     );
   }
 }
@@ -158,7 +171,9 @@ async function retryPendingAdvancements(supabase: SupabaseClient) {
     .from("reminders")
     .select(PENDING_ADVANCE_SELECT)
     .eq("advance_pending", true)
-    .not("important_date_id", "is", null);
+    .not("important_date_id", "is", null)
+    .order("scheduled_at", { ascending: true })
+    .limit(BATCH_LIMIT);
 
   if (error || !data) {
     return;
@@ -172,9 +187,13 @@ async function retryPendingAdvancements(supabase: SupabaseClient) {
 async function processDueReminder(
   supabase: SupabaseClient,
   reminder: DueReminderRow,
-  emailCache: Map<string, string | null>
+  emailCache: Map<string, string | null>,
 ): Promise<"processed" | "failed" | "skipped"> {
-  const recipientEmail = await getRecipientEmail(supabase, emailCache, reminder.user_id);
+  const recipientEmail = await getRecipientEmail(
+    supabase,
+    emailCache,
+    reminder.user_id,
+  );
 
   if (!recipientEmail) {
     await incrementFailure(supabase, reminder);
@@ -187,7 +206,10 @@ async function processDueReminder(
     // The parent important date/occasion/invite is gone (e.g. deleted while
     // queued) — nothing to send, and retrying will never succeed. Clean up
     // the orphaned row rather than treating this as a delivery failure.
-    const { error } = await supabase.from("reminders").delete().eq("id", reminder.id);
+    const { error } = await supabase
+      .from("reminders")
+      .delete()
+      .eq("id", reminder.id);
 
     if (error) {
       console.error("Couldn't delete orphaned reminder.", error);
@@ -199,7 +221,10 @@ async function processDueReminder(
   // Reused across retries (retry_count increments, but the reminder's id
   // never changes) so a request that reached Resend but whose response was
   // lost doesn't cause a real duplicate email on the next attempt.
-  const result = await sendReminderEmail({ ...email, idempotencyKey: reminder.id });
+  const result = await sendReminderEmail({
+    ...email,
+    idempotencyKey: reminder.id,
+  });
 
   if (!result.sent) {
     await incrementFailure(supabase, reminder);
@@ -207,13 +232,21 @@ async function processDueReminder(
   }
 
   const advancePending = needsRecurringAdvance(reminder);
+  const importantDate = first(reminder.important_dates);
+  const expectedAdvanceDate =
+    advancePending && importantDate ? importantDate.date : null;
 
   // `advance_pending` is set in the same update as `sent=true` so the
   // pending-advancement state survives even if the process crashes or the
   // advance call below fails — it's never lost, only ever retried.
   const { error: sentUpdateError } = await supabase
     .from("reminders")
-    .update({ sent: true, sent_at: new Date().toISOString(), advance_pending: advancePending })
+    .update({
+      sent: true,
+      sent_at: new Date().toISOString(),
+      advance_pending: advancePending,
+      advance_expected_date: expectedAdvanceDate,
+    })
     .eq("id", reminder.id);
 
   if (sentUpdateError) {
@@ -226,7 +259,7 @@ async function processDueReminder(
     // stale-claim window.
     console.error(
       "Reminder email sent but marking it sent failed; will retry (deduped by idempotency key).",
-      sentUpdateError
+      sentUpdateError,
     );
     await releaseClaim(supabase, reminder.id);
     return "processed";
@@ -239,7 +272,10 @@ async function processDueReminder(
   return "processed";
 }
 
-async function incrementFailure(supabase: SupabaseClient, reminder: DueReminderRow) {
+async function incrementFailure(
+  supabase: SupabaseClient,
+  reminder: DueReminderRow,
+) {
   const newRetryCount = (reminder.retry_count || 0) + 1;
 
   const { error } = await supabase
@@ -272,15 +308,16 @@ export async function POST(request: Request) {
   const intentCutoff = new Date();
   intentCutoff.setHours(intentCutoff.getHours() - 24);
 
-  const { error: intentError } = await supabase
-    .from("wishlist_items")
-    .update({ intent_flagged_by: null, intent_flagged_at: null })
-    .eq("status", "available")
-    .lt("intent_flagged_at", intentCutoff.toISOString())
-    .not("intent_flagged_at", "is", null);
+  const { count: deferredCount, error: deferredError } = await supabase
+    .from("reminders")
+    .select("id", { count: "exact", head: true })
+    .eq("sent", false)
+    .eq("permanently_failed", false)
+    .eq("channel", "push")
+    .lte("scheduled_at", now);
 
-  if (intentError) {
-    return jsonError("Couldn't expire intent flags.", 500);
+  if (deferredError) {
+    console.error("Couldn't count deferred push reminders.", deferredError);
   }
 
   await retryPendingAdvancements(supabase);
@@ -299,14 +336,6 @@ export async function POST(request: Request) {
   if (reminderError) {
     return jsonError("Couldn't process reminders.", 500);
   }
-
-  const { count: deferredCount } = await supabase
-    .from("reminders")
-    .select("id", { count: "exact", head: true })
-    .eq("sent", false)
-    .eq("permanently_failed", false)
-    .eq("channel", "push")
-    .lte("scheduled_at", now);
 
   const emailCache = new Map<string, string | null>();
   let processed = 0;

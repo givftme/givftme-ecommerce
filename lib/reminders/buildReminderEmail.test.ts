@@ -26,6 +26,7 @@ function baseReminder(overrides: Partial<DueReminderRow>): DueReminderRow {
     important_date_id: null,
     invite_id: null,
     occasion_id: null,
+    advance_expected_date: null,
     important_dates: null,
     occasions: null,
     wishlist_invites: null,
@@ -46,7 +47,10 @@ describe("buildReminderEmail — Flow 1 (important date owner)", () => {
       },
     });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "user@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "user@example.com",
+    });
 
     expect(email).not.toBeNull();
     expect(email?.to).toBe("user@example.com");
@@ -66,16 +70,25 @@ describe("buildReminderEmail — Flow 1 (important date owner)", () => {
       },
     });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "user@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "user@example.com",
+    });
 
     expect(email).not.toBeNull();
     expect(email?.html).not.toContain("/w/");
   });
 
   it("returns null when the important date has been deleted (orphaned reminder)", () => {
-    const reminder = baseReminder({ important_date_id: "date-1", important_dates: null });
+    const reminder = baseReminder({
+      important_date_id: "date-1",
+      important_dates: null,
+    });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "user@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "user@example.com",
+    });
 
     expect(email).toBeNull();
   });
@@ -92,16 +105,25 @@ describe("buildReminderEmail — occasion owner (user's own occasion)", () => {
       },
     });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "user@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "user@example.com",
+    });
 
     expect(email).not.toBeNull();
     expect(email?.html).toContain("My Birthday Bash");
   });
 
   it("returns null when the occasion has been deleted", () => {
-    const reminder = baseReminder({ occasion_id: "occasion-1", occasions: null });
+    const reminder = baseReminder({
+      occasion_id: "occasion-1",
+      occasions: null,
+    });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "user@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "user@example.com",
+    });
 
     expect(email).toBeNull();
   });
@@ -126,7 +148,10 @@ describe("buildReminderEmail — Flow 2 (invitee)", () => {
       },
     });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "giver@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "giver@example.com",
+    });
 
     expect(email).not.toBeNull();
     expect(email?.subject).toContain("Sarah's Birthday");
@@ -144,7 +169,10 @@ describe("buildReminderEmail — Flow 2 (invitee)", () => {
       },
     });
 
-    const email = buildReminderEmail({ reminder, recipientEmail: "giver@example.com" });
+    const email = buildReminderEmail({
+      reminder,
+      recipientEmail: "giver@example.com",
+    });
 
     expect(email).toBeNull();
   });
