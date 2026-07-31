@@ -48,14 +48,22 @@ export default async function SharedWishlistItemPage({
   const externalUrl = buildExternalGiftUrl(item);
   const claimed = item.status === "purchased";
 
-  const catalogProduct =
+  let catalogProduct: ProductFullData | null = null;
+
+  if (
     item.origin === "catalog" &&
     item.catalog_product_id &&
     !item.catalog_unavailable
-      ? await sanityFetch<ProductFullData | null>(PRODUCT_BY_ID_QUERY, {
-          id: item.catalog_product_id,
-        })
-      : null;
+  ) {
+    try {
+      catalogProduct = await sanityFetch<ProductFullData | null>(
+        PRODUCT_BY_ID_QUERY,
+        { id: item.catalog_product_id }
+      );
+    } catch (error) {
+      console.error("Failed to fetch catalog product for wishlist item", error);
+    }
+  }
 
   trackEvent("shared_wishlist.item.viewed", {
     item_id: item.id,
@@ -73,7 +81,9 @@ export default async function SharedWishlistItemPage({
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <p className="text-center text-sm font-semibold text-muted">Wishlist</p>
+          <p className="text-center text-sm font-semibold text-muted">
+            Wishlist
+          </p>
           {item.origin === "catalog" ? (
             <Link
               href="/cart"
@@ -136,7 +146,8 @@ export default async function SharedWishlistItemPage({
 
           {claimed ? (
             <div className="rounded-2xl bg-surface p-4 text-sm leading-6 text-muted">
-              This gift has already been claimed, so the buy action is no longer available.
+              This gift has already been claimed, so the buy action is no longer
+              available.
             </div>
           ) : (
             <GiverItemActions

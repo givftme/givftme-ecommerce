@@ -32,7 +32,8 @@ BEGIN
          item.intent_flagged_by, item.intent_flagged_at
   INTO target_item
   FROM public.wishlist_items item
-  WHERE item.id = p_item_id;
+  WHERE item.id = p_item_id
+  FOR UPDATE;
 
   IF NOT FOUND OR NOT public.gifvtme_can_read_wishlist_by_id(target_item.wishlist_id) THEN
     RAISE EXCEPTION 'not_found';
