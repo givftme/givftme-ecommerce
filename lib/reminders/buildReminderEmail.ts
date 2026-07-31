@@ -77,9 +77,8 @@ function occasionLabel(occasionType: string) {
   return OCCASION_LABELS[occasionType as OccasionType] || "occasion";
 }
 
-function daysCopy(scheduledDate: string) {
-  const days = daysFromToday(scheduledDate);
-  return days === 1 ? "1 day" : `${Math.max(days, 0)} days`;
+function resolveDays(daysBefore: number | null, scheduledDate: string) {
+  return daysBefore ?? Math.max(daysFromToday(scheduledDate), 0);
 }
 
 function unsubscribeUrl(token: string, type: "owner" | "invitee") {
@@ -143,20 +142,20 @@ export function buildReminderEmail({
       return null;
     }
 
-    const days = daysBefore ?? daysCopy(importantDate.date);
+     const days = resolveDays(daysBefore, importantDate.date);
     const wishlistUrl = importantDate.linked_wishlist_id
       ? buildWishlistShareUrl(importantDate.linked_wishlist_id)
       : null;
     const subject = `🎁 ${importantDate.person_name}'s ${occasionLabel(
-      importantDate.occasion_type
-    )} is in ${days} ${daysBefore === 1 ? "day" : "days"}`;
+      importantDate.occasion_type,
+    )} is in ${days} ${days === 1 ? "day" : "days"}`;
     const { html, text } = wrapEmail({
       greeting: `Reminder that ${importantDate.person_name}'s ${occasionLabel(
         importantDate.occasion_type
       )} is on ${formatOccasionDate(importantDate.date)}.`,
       body: wishlistUrl
-        ? `View their wishlist for gift ideas, or browse Gifvtme for something special.`
-        : `Browse gift ideas on Gifvtme.`,
+        ? `View their wishlist for gift ideas, or browse Givftme for something special.`
+        : `Browse gift ideas on Givftme.`,
       ctaLabel: wishlistUrl ? "View their wishlist" : "Browse gift ideas",
       ctaUrl: wishlistUrl || getAppUrl(),
       unsubscribe: unsubscribeUrl(reminder.important_date_id, "owner"),
@@ -172,7 +171,7 @@ export function buildReminderEmail({
       return null;
     }
 
-    const days = daysBefore ?? daysCopy(occasion.occasion_date);
+    const days = resolveDays(daysBefore, occasion.occasion_date);
     const subject = `🎉 Your ${occasionLabel(occasion.occasion_type)} is in ${days} ${
       daysBefore === 1 ? "day" : "days"
     }`;
@@ -198,7 +197,7 @@ export function buildReminderEmail({
       return null;
     }
 
-    const days = daysBefore ?? daysCopy(occasion.occasion_date);
+    const days = resolveDays(daysBefore, occasion.occasion_date);
     const subject = `🎂 ${occasion.title} is in ${days} ${daysBefore === 1 ? "day" : "days"}`;
     const { html, text } = wrapEmail({
       greeting: `Just a reminder — ${occasion.title} (${occasionLabel(

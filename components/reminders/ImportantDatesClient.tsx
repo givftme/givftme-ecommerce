@@ -28,6 +28,7 @@ export function ImportantDatesClient({ initialDates }: { initialDates: Important
   const [formOpen, setFormOpen] = useState(false);
   const [editingDate, setEditingDate] = useState<ImportantDate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ImportantDate | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditingDate(null);
@@ -123,6 +124,8 @@ export function ImportantDatesClient({ initialDates }: { initialDates: Important
                 key={date.id}
                 date={date}
                 index={index}
+                isMenuOpen={openMenuId === date.id}
+                onMenuOpenChange={(open) => setOpenMenuId(open ? date.id : null)}
                 onEdit={openEdit}
                 onDelete={setDeleteTarget}
               />

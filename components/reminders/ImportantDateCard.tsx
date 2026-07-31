@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { MoreHorizontal } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
@@ -38,16 +38,19 @@ function DaysPill({ date }: { date: ImportantDate }) {
 export function ImportantDateCard({
   date,
   index,
+  isMenuOpen,
+  onMenuOpenChange,
   onEdit,
   onDelete,
 }: {
   date: ImportantDate;
   index: number;
+  isMenuOpen: boolean;
+  onMenuOpenChange: (open: boolean) => void;
   onEdit: (date: ImportantDate) => void;
   onDelete: (date: ImportantDate) => void;
 }) {
   const ref = useRef<HTMLElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useGSAP(
     () => {
@@ -93,7 +96,7 @@ export function ImportantDateCard({
           <button
             type="button"
             aria-label="Date options"
-            onClick={() => setMenuOpen((current) => !current)}
+            onClick={() => onMenuOpenChange(!isMenuOpen)}
             className="flex h-8 w-8 items-center justify-center rounded-full text-ink transition-colors hover:bg-brand-light hover:text-brand"
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -101,7 +104,7 @@ export function ImportantDateCard({
         </div>
       </div>
 
-      {menuOpen && (
+      {isMenuOpen && (
         <div
           className={cn(
             "absolute right-4 top-16 z-20 w-36 rounded-2xl border border-stone-100 bg-white p-2 shadow-lg"
@@ -110,7 +113,7 @@ export function ImportantDateCard({
           <button
             type="button"
             onClick={() => {
-              setMenuOpen(false);
+              onMenuOpenChange(false);
               onEdit(date);
             }}
             className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-ink hover:bg-brand-light hover:text-brand"
@@ -120,7 +123,7 @@ export function ImportantDateCard({
           <button
             type="button"
             onClick={() => {
-              setMenuOpen(false);
+              onMenuOpenChange(false);
               onDelete(date);
             }}
             className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"

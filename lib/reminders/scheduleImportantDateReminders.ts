@@ -1,14 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseDateOnly } from "@/lib/occasion/date";
-
-const windows = [14, 3] as const;
-const channels = ["email", "push"] as const;
-
-function subDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() - days);
-  return next;
-}
+import {
+  REMINDER_CHANNELS as channels,
+  REMINDER_WINDOWS as windows,
+  subDays,
+} from "@/lib/reminders/constants";
 
 export async function deleteUnsentImportantDateReminders({
   supabase,

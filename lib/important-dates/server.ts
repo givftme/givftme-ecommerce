@@ -1,8 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isFutureDateOnly, parseDateOnly, toDateOnly } from "@/lib/occasion/date";
+import { isPastDateOnly, parseDateOnly, toDateOnly } from "@/lib/occasion/date";
 import type { OccasionType } from "@/lib/occasion/types";
 import {
-  deleteUnsentImportantDateReminders,
   rescheduleImportantDateReminders,
   scheduleImportantDateReminders,
 } from "@/lib/reminders/scheduleImportantDateReminders";
@@ -37,6 +36,13 @@ function normalizeImportantDate(row: ImportantDateRow): ImportantDate {
 const SELECT_COLUMNS =
   "id, person_name, occasion_type, date, is_recurring, linked_wishlist_id, created_at";
 
+// Thrown only for input-driven failures that are safe to show verbatim to
+// the user (e.g. a wishlist link that doesn't resolve). Route handlers use
+// this to decide whether a caught error's message can be surfaced as-is or
+// must be replaced with a generic message — raw DB error messages (column
+// names, constraint details) must never reach the client.
+export class ImportantDateInputError extends Error {}
+
 function extractShareId(url: string): string | null {
   try {
     const parsed = new URL(url);
@@ -54,7 +60,7 @@ export async function resolveLinkedWishlistId(
   const shareId = extractShareId(wishlistUrl);
 
   if (!shareId) {
-    throw new Error("That doesn't look like a Gifvtme wishlist link.");
+    throw new ImportantDateInputError("That doesn't look like a Gifvtme wishlist link.");
   }
 
   const { data, error } = await supabase.rpc("gifvtme_get_shared_wishlist", {
@@ -62,13 +68,13 @@ export async function resolveLinkedWishlistId(
   });
 
   if (error) {
-    throw new Error("Couldn't verify that wishlist link.");
+    throw new ImportantDateInputError("Couldn't verify that wishlist link.");
   }
 
   const payload = data as { access?: string; wishlist?: { id?: string } } | null;
 
   if (payload?.access !== "ok" || !payload.wishlist?.id) {
-    throw new Error("Couldn't find that wishlist. Check the link and try again.");
+    throw new ImportantDateInputError("Couldn't find that wishlist. Check the link and try again.");
   }
 
   return payload.wishlist.id;
@@ -144,12 +150,18 @@ export async function createImportantDate({
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message || "Couldn't save this date.");
+    console.error("Important date insert failed.", error);
+    throw new Error("Couldn't save this date.");
   }
 
   const importantDate = normalizeImportantDate(data as ImportantDateRow);
 
-  if (isFutureDateOnly(importantDate.date)) {
+  // Same boundary importantDateSchema.date validation uses (rejects only
+  // strictly-past dates) — a date of today is valid input, so it should at
+  // least attempt scheduling too, not be silently skipped by a stricter
+  // "strictly future" check here. scheduleImportantDateReminders' own
+  // filter still drops any resulting scheduled_at that's already passed.
+  if (!isPastDateOnly(importantDate.date)) {
     try {
       await scheduleImportantDateReminders({
         supabase,
@@ -200,7 +212,8 @@ export async function updateImportantDate({
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message || "Couldn't update this date.");
+    console.error("Important date update failed.", error);
+    throw new Error("Couldn't update this date.");
   }
 
   const updated = normalizeImportantDate(data as ImportantDateRow);
@@ -218,6 +231,10 @@ export async function updateImportantDate({
   return updated;
 }
 
+// A single statement, not a separate "delete unsent reminders then delete
+// the date" sequence — migration 015 gives reminders.important_date_id an
+// explicit ON DELETE CASCADE, so this atomically removes every reminder
+// that pointed at this date (sent or unsent) along with the row itself.
 export async function deleteImportantDate({
   supabase,
   userId,
@@ -227,8 +244,6 @@ export async function deleteImportantDate({
   userId: string;
   id: string;
 }) {
-  await deleteUnsentImportantDateReminders({ supabase, userId, importantDateId: id });
-
   const { error } = await supabase
     .from("important_dates")
     .delete()
@@ -285,10 +300,14 @@ export async function advanceRecurringImportantDate({
     throw new Error(error.message);
   }
 
-  await scheduleImportantDateReminders({
-    supabase,
-    userId,
-    importantDateId,
-    date: nextDate,
-  });
+  try {
+    await scheduleImportantDateReminders({
+      supabase,
+      userId,
+      importantDateId,
+      date: nextDate,
+    });
+  } catch (scheduleError) {
+    console.error("Recurring important date reminder scheduling failed.", scheduleError);
+  }
 }

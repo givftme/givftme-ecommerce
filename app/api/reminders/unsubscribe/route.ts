@@ -52,12 +52,20 @@ export async function GET(request: Request) {
     return htmlPage("Couldn't process your unsubscribe request. Try again later.", 500);
   }
 
-  await supabase
+  const { error: deleteError } = await supabase
     .from("reminders")
     .delete()
     .eq("reminder_type", "invitee")
     .eq("sent", false)
     .eq("invite_id", token);
+
+  if (deleteError) {
+    // reminder_opted_in is already false at this point, so no *new* reminders
+    // will be scheduled, but any already-queued ones weren't removed — don't
+    // tell the user they're fully unsubscribed when one may still arrive.
+    console.error("Couldn't delete pending invitee reminders on unsubscribe.", deleteError);
+    return htmlPage("Couldn't process your unsubscribe request. Try again later.", 500);
+  }
 
   return htmlPage("You've been unsubscribed.", 200);
 }

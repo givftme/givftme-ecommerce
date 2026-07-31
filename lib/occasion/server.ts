@@ -529,31 +529,33 @@ export async function rescheduleInviteeRemindersForOccasion({
 
   const dateIsFuture = isFutureDateOnly(occasionDate);
 
-  for (const invite of invites || []) {
-    if (!invite.invitee_user_id) {
-      continue;
-    }
+  await Promise.allSettled(
+    (invites || [])
+      .filter((invite): invite is OptedInInviteRow & { invitee_user_id: string } =>
+        Boolean(invite.invitee_user_id)
+      )
+      .map(async (invite) => {
+        try {
+          if (!dateIsFuture) {
+            await deleteUnsentInviteeReminders({
+              supabase,
+              userId: invite.invitee_user_id,
+              inviteId: invite.id,
+            });
+            return;
+          }
 
-    try {
-      if (!dateIsFuture) {
-        await deleteUnsentInviteeReminders({
-          supabase,
-          userId: invite.invitee_user_id,
-          inviteId: invite.id,
-        });
-        continue;
-      }
-
-      await scheduleInviteeReminders({
-        supabase,
-        userId: invite.invitee_user_id,
-        inviteId: invite.id,
-        occasionDate,
-      });
-    } catch (error) {
-      console.error("Invitee reminder rescheduling failed.", error);
-    }
-  }
+          await scheduleInviteeReminders({
+            supabase,
+            userId: invite.invitee_user_id,
+            inviteId: invite.id,
+            occasionDate,
+          });
+        } catch (error) {
+          console.error("Invitee reminder rescheduling failed.", error);
+        }
+      })
+  );
 }
 
 interface PurchasedPulledItemRow {

@@ -90,17 +90,19 @@ export async function PATCH(request: Request, context: OccasionRouteContext) {
   }
 
   if (dateChanged && updates.occasion_date) {
-    await rescheduleOccasionReminders({
-      supabase,
-      userId: user.id,
-      occasionId: id,
-      occasionDate: updates.occasion_date,
-    });
-    await rescheduleInviteeRemindersForOccasion({
-      supabase,
-      occasionId: id,
-      occasionDate: updates.occasion_date,
-    });
+    await Promise.all([
+      rescheduleOccasionReminders({
+        supabase,
+        userId: user.id,
+        occasionId: id,
+        occasionDate: updates.occasion_date,
+      }),
+      rescheduleInviteeRemindersForOccasion({
+        supabase,
+        occasionId: id,
+        occasionDate: updates.occasion_date,
+      }),
+    ]);
   }
 
   return NextResponse.json({ occasion: data });

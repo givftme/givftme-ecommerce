@@ -9,6 +9,11 @@ interface RawEmailInput {
   subject: string;
   text: string;
   html: string;
+  // Reused across retries of the same logical send (e.g. the reminder's own
+  // row id) so a request that actually reached Resend but whose response we
+  // lost (timeout, network error) doesn't cause a real duplicate email when
+  // the caller retries — Resend dedupes by this key.
+  idempotencyKey?: string;
 }
 
 function getConfiguredFromEmail() {
@@ -39,7 +44,7 @@ function escapeHtml(value: string) {
 // sender domain in the Resend dashboard. Callers must keep working (invite
 // creation, reminder scheduling) without email so setup gaps never block
 // the underlying feature — the caller decides how to treat `sent: false`.
-async function sendViaResend({ to, subject, text, html }: RawEmailInput) {
+async function sendViaResend({ to, subject, text, html, idempotencyKey }: RawEmailInput) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = getConfiguredFromEmail();
 
@@ -54,6 +59,7 @@ async function sendViaResend({ to, subject, text, html }: RawEmailInput) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: JSON.stringify({ from, to, subject, text, html }),
       signal: AbortSignal.timeout(8000),
@@ -93,6 +99,12 @@ export async function sendWishlistInviteEmail({
   return sendViaResend({ to, subject, text, html });
 }
 
-export async function sendReminderEmail({ to, subject, text, html }: RawEmailInput) {
-  return sendViaResend({ to, subject, text, html });
+export async function sendReminderEmail({
+  to,
+  subject,
+  text,
+  html,
+  idempotencyKey,
+}: RawEmailInput) {
+  return sendViaResend({ to, subject, text, html, idempotencyKey });
 }

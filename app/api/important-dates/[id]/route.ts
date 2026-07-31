@@ -3,6 +3,7 @@ import { jsonError, readJson } from "@/lib/api/response";
 import {
   assertImportantDateOwner,
   deleteImportantDate,
+  ImportantDateInputError,
   updateImportantDate,
 } from "@/lib/important-dates/server";
 import { updateImportantDateSchema } from "@/lib/important-dates/validation";
@@ -55,10 +56,13 @@ export async function PATCH(request: Request, context: ImportantDateRouteContext
 
     return NextResponse.json({ date });
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : "Couldn't update this date.",
-      400
-    );
+    console.error("Couldn't update important date.", error);
+
+    if (error instanceof ImportantDateInputError) {
+      return jsonError(error.message, 400);
+    }
+
+    return jsonError("Couldn't update this date. Try again.", 500);
   }
 }
 

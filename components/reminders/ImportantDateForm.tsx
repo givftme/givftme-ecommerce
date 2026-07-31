@@ -73,12 +73,22 @@ function ImportantDateFormBody({
 
   const save = async (values: ImportantDateInput) => {
     try {
+      // The form always defaults linked_wishlist_url to "" (it never
+      // re-fetches the existing link to prefill it), so on an edit save
+      // where the user never touched that field, omit it entirely rather
+      // than sending "" — otherwise every unrelated edit would silently
+      // clear an already-resolved linked_wishlist_id.
+      const requestBody =
+        isEditing && !form.formState.dirtyFields.linked_wishlist_url
+          ? { ...values, linked_wishlist_url: undefined }
+          : values;
+
       const response = await fetch(
         isEditing ? `/api/important-dates/${date!.id}` : "/api/important-dates",
         {
           method: isEditing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(values),
+          body: JSON.stringify(requestBody),
         }
       );
       const payload = (await response.json()) as { date?: ImportantDate; error?: string };

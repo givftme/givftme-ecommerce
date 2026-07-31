@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
-import { createImportantDate, getImportantDates } from "@/lib/important-dates/server";
+import {
+  createImportantDate,
+  getImportantDates,
+  ImportantDateInputError,
+} from "@/lib/important-dates/server";
 import { importantDateSchema } from "@/lib/important-dates/validation";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
@@ -40,9 +44,12 @@ export async function POST(request: Request) {
     const date = await createImportantDate({ supabase, userId: user.id, input: parsed.data });
     return NextResponse.json({ date }, { status: 201 });
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : "Couldn't save this date.",
-      400
-    );
+    console.error("Couldn't create important date.", error);
+
+    if (error instanceof ImportantDateInputError) {
+      return jsonError(error.message, 400);
+    }
+
+    return jsonError("Couldn't save this date. Try again.", 500);
   }
 }
