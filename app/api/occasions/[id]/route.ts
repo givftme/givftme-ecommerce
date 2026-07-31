@@ -4,6 +4,7 @@ import {
   assertOccasionOwner,
   createReactivationPromptIfNeeded,
   getOwnedOccasionDetail,
+  rescheduleInviteeRemindersForOccasion,
   rescheduleOccasionReminders,
 } from "@/lib/occasion/server";
 import { updateOccasionSchema } from "@/lib/occasion/validation";
@@ -92,6 +93,11 @@ export async function PATCH(request: Request, context: OccasionRouteContext) {
     await rescheduleOccasionReminders({
       supabase,
       userId: user.id,
+      occasionId: id,
+      occasionDate: updates.occasion_date,
+    });
+    await rescheduleInviteeRemindersForOccasion({
+      supabase,
       occasionId: id,
       occasionDate: updates.occasion_date,
     });

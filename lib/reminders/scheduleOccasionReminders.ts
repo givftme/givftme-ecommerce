@@ -35,6 +35,7 @@ export async function scheduleOccasionReminders({
         reminder_type: "occasion_owner",
         channel,
         scheduled_at: subDays(date, days).toISOString(),
+        days_before: days,
         sent: false,
       }))
     )

@@ -161,6 +161,17 @@ The 3-step occasion creation flow at `/my-occasions/new`: occasion basics, pull-
 ### `MuseumOccasionCard` / `MuseumOccasionGrid`
 Public gift-museum occasion browsing cards — unrelated to the user-created occasions above; these render Sanity `occasion` documents on `/occasions`.
 
+## `reminders/`
+
+### `ImportantDatesClient`
+Full page controller for `/dashboard/dates` (Flow 1) — owns the header + "Add a date" CTA, the list/empty state, and the standalone delete-confirmation dialog. Renders `ImportantDateCard` per saved date and `ImportantDateForm` for add/edit.
+
+### `ImportantDateCard`
+Compact summary card: occasion emoji, person name, formatted date, a colored days-to-go pill (same visual language as `OccasionCard`'s), a "Wishlist linked" badge when `linked_wishlist_id` is set, and an inline three-dot Edit/Delete menu (same pattern as `OccasionDetailClient`'s header menu — no shared `DropdownMenu` primitive exists yet).
+
+### `ImportantDateForm`
+Sheet-based add/edit form (react-hook-form + Zod via `lib/important-dates/validation.ts`), reusing `OccasionTypeSelector` for the occasion-type grid. Fields: person name, occasion type, date, "Recurs annually" switch (auto-defaults on for birthday/anniversary until the user overrides it), and an optional wishlist-link input that the server resolves to `linked_wishlist_id` via `gifvtme_get_shared_wishlist`. Includes its own delete confirmation when editing, matching `EditItemSheet`'s convention of exposing delete both from the sheet and from the card's menu.
+
 ## `cart/`, `checkout/`, `order/`, `review/`, `flash-sale/`
 
 `cart/CartContext.tsx` and `cart/CartProvider.tsx` provide the v1 client-only catalog cart state and expose `isHydrated`, `items`, `addItem`, `removeItem`, `updateQuantity`, `updateItemDetails`, `clearCart`, `totalItems`, and `totalPrice`. The cart count is wired into `Navbar` through `PageWrapper`.
