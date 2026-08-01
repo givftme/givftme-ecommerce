@@ -19,6 +19,7 @@ export interface CatalogProductGridProps {
   emptyMessage?: string;
   showBadges?: boolean;
   className?: string;
+  onProductClick?: (product: ProductCardData, index: number) => void;
 }
 
 export function CatalogProductGrid({
@@ -26,6 +27,7 @@ export function CatalogProductGrid({
   emptyMessage,
   showBadges = true,
   className,
+  onProductClick,
 }: CatalogProductGridProps) {
   const [wishlistProduct, setWishlistProduct] = useState<ProductCardData | null>(
     null
@@ -132,6 +134,7 @@ export function CatalogProductGrid({
           emptyMessage={emptyMessage}
           onAddToCart={handleAddToCart}
           onAddToWishlist={handleAddToWishlist}
+          onProductClick={onProductClick}
           wishlistedIds={wishlistedIds}
           className={className}
         />

@@ -23,6 +23,7 @@ interface ProductExplorerProps {
   totalProducts: number;
   loadMoreEndpoint?: string;
   collectionSlug?: string;
+  searchQuery?: string;
 }
 
 function parsePrice(value: string) {
@@ -63,6 +64,7 @@ export function ProductExplorer({
   totalProducts,
   loadMoreEndpoint,
   collectionSlug,
+  searchQuery,
 }: ProductExplorerProps) {
   const [products, setProducts] = useState(initialProducts);
   const [filters, setFilters] = useState<ProductFilters>({
@@ -151,6 +153,18 @@ export function ProductExplorer({
     } finally {
       setIsLoadingMore(false);
     }
+  };
+
+  const handleProductClick = (product: ProductCardData, index: number) => {
+    if (!searchQuery) {
+      return;
+    }
+
+    trackEvent("museum.search.product_clicked", {
+      query: searchQuery,
+      product_id: product.catalogProductId,
+      position: index,
+    });
   };
 
   const addSimpleProductToCart = (product: ProductCardData) => {
@@ -250,10 +264,11 @@ export function ProductExplorer({
           <CatalogProductGrid
             products={filteredProducts}
             emptyMessage="No products match those filters."
+            onProductClick={handleProductClick}
           />
         ) : filteredProducts.length > 0 ? (
           <div className="space-y-4">
-            {filteredProducts.map((product) => (
+            {filteredProducts.map((product, index) => (
               <article
                 key={product.id}
                 className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm"
@@ -263,6 +278,7 @@ export function ProductExplorer({
                     <Link
                       href={`/product/${product.slug}`}
                       className="text-sm font-semibold text-ink transition-colors hover:text-brand"
+                      onClick={() => handleProductClick(product, index)}
                     >
                       {product.title}
                     </Link>

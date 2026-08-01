@@ -1,5 +1,7 @@
 # Feature: Gift Museum & Catalog
 
+> **Status note (2026-08-02):** This feature was already fully shipped in an earlier session before this spec was audited against it — unlike `12`, most of it matched spec intent, so this file was left as-is rather than rewritten. A gap-closing pass fixed real issues (a `salePrice > basePrice` pricing guard, search sanitization/minimum length, the wishlist picker's "Create new occasion" link and option cap, a variant-selection hint, and a flash-sale timer on product cards) and added the missing unit tests. See `context/ROADMAP.md`'s "Done" section for the full list of what changed and what naming/architecture divergences were deliberately left as shipped.
+
 ## Overview
 The editorial product discovery layer — occasion-themed browsing that makes gift shopping feel curated rather than transactional. Content is entirely managed in Sanity CMS. Three levels: Occasions → Collections → Products. Includes a product detail page with variant selection, a search experience, and an "Add to wishlist" integration. This is distinct from the cart/checkout flow — this feature covers discovery and wishlist addition; purchasing from the catalog is handled in `07-COMMERCE`.
 

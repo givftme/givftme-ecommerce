@@ -130,6 +130,9 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
     product.attributes.every((attribute) => selectedOptions[attribute.name]);
   const invalidCombination =
     Boolean(product.hasVariants) && hasAllVariantSelections && !selectedVariant;
+  const missingAttribute = product.hasVariants
+    ? product.attributes.find((attribute) => !selectedOptions[attribute.name])
+    : undefined;
   const selectedVariantSoldOut =
     Boolean(selectedVariant) && selectedVariant?.available === false;
   const saleActive = Boolean(product.isOnFlashSale && !saleEnded);
@@ -278,6 +281,12 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
               selectedOptions={selectedOptions}
               onChange={setSelectedOptions}
             />
+          ) : null}
+
+          {missingAttribute ? (
+            <p className="rounded-xl bg-surface px-4 py-3 text-sm font-medium text-muted">
+              Please select a {missingAttribute.label}
+            </p>
           ) : null}
 
           {invalidCombination ? (

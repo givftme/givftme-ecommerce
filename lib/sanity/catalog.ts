@@ -38,6 +38,16 @@ export function isFlashSaleActive(
   return start <= now && end > now;
 }
 
+const MIN_SEARCH_QUERY_LENGTH = 2;
+
+export function sanitizeSearchQuery(raw: string) {
+  return raw.replace(/["*\\]/g, "").trim();
+}
+
+export function isSearchableQuery(query: string) {
+  return query.length >= MIN_SEARCH_QUERY_LENGTH;
+}
+
 export function isProductNew(createdAt?: string | null, now = new Date()) {
   if (!createdAt) {
     return false;
@@ -56,8 +66,13 @@ export function getProductDisplayPrice(
   const basePrice = product.price ?? null;
 
   if ("salePrice" in product && isFlashSaleActive(product, now)) {
+    const salePrice =
+      product.salePrice != null && basePrice != null
+        ? Math.min(product.salePrice, basePrice)
+        : (product.salePrice ?? basePrice);
+
     return {
-      price: product.salePrice ?? basePrice,
+      price: salePrice,
       compareAtPrice: basePrice ?? product.compareAtPrice ?? null,
       isOnFlashSale: true,
       saleEndTime: product.saleEndTime ?? null,
