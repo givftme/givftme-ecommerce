@@ -138,6 +138,7 @@ Shown when "Add to wishlist" clicked on an authenticated user:
 }
 ```
 
+
 **Product detail:**
 ```groq
 *[_type == "product" && slug.current == $slug][0] {
