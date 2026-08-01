@@ -38,9 +38,10 @@ export function isFlashSaleWindowActive(
 
 export function getActivePrice(
   product: SanityCheckoutProduct,
-  combinationKey: string | null
+  combinationKey: string | null,
+  now = new Date()
 ): number {
-  const saleActive = isFlashSaleWindowActive(product);
+  const saleActive = isFlashSaleWindowActive(product, now);
 
   if (product.hasVariants && combinationKey) {
     const variant = product.variants?.find(
@@ -51,12 +52,14 @@ export function getActivePrice(
       throw new Error(`Variant not found: ${combinationKey}`);
     }
 
-    return saleActive ? (product.salePrice ?? variant.price ?? 0) : variant.price ?? 0;
+    const variantPrice = variant.price ?? 0;
+    return saleActive
+      ? Math.min(product.salePrice ?? variantPrice, variantPrice)
+      : variantPrice;
   }
 
-  return saleActive
-    ? product.salePrice ?? product.basePrice ?? 0
-    : product.basePrice ?? 0;
+  const basePrice = product.basePrice ?? 0;
+  return saleActive ? Math.min(product.salePrice ?? basePrice, basePrice) : basePrice;
 }
 
 export function getCheckoutVariant(

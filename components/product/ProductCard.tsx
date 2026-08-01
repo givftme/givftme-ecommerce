@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { PriceDisplay } from "@/components/ui/PriceDisplay";
+import { FlashSaleTimer } from "@/components/flash-sale/FlashSaleTimer";
 import type { ProductCardData } from "@/lib/sanity/types";
 
 export type { ProductCardData };
@@ -16,6 +17,7 @@ export interface ProductCardProps {
   onToggleWishlist?: (id: string) => void;
   onAddToWishlist?: (product: ProductCardData) => void;
   onAddToCart?: (product: ProductCardData) => void;
+  onClick?: (product: ProductCardData) => void;
   isWishlisted?: boolean;
   showBadges?: boolean;
   className?: string;
@@ -26,6 +28,7 @@ export function ProductCard({
   onToggleWishlist,
   onAddToWishlist,
   onAddToCart,
+  onClick,
   isWishlisted,
   showBadges = true,
   className,
@@ -48,7 +51,11 @@ export function ProductCard({
   return (
     <div className={cn("group", className)}>
       <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface">
-        <Link href={productHref} className="absolute inset-0">
+        <Link
+          href={productHref}
+          className="absolute inset-0"
+          onClick={() => onClick?.(product)}
+        >
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
@@ -68,6 +75,12 @@ export function ProductCard({
         {showBadges && product.isOnFlashSale && (
           <Badge variant="sale" className="absolute left-3 top-3">
             Flash sale
+            {product.saleEndTime ? (
+              <>
+                {" · "}
+                <FlashSaleTimer endTime={product.saleEndTime} />
+              </>
+            ) : null}
           </Badge>
         )}
         {showBadges && discountPercent !== null && (

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Gift, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Gift, Loader2, Plus } from "lucide-react";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { Button } from "@/components/ui/Button";
 import {
@@ -16,6 +17,8 @@ import { useToast } from "@/components/ui/Toast";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 import type { ProductCardData } from "@/lib/sanity/types";
+
+const MAX_VISIBLE_WISHLISTS = 6;
 
 interface WishlistSummary {
   id: string;
@@ -222,8 +225,8 @@ export function WishlistPickerSheet({
               Loading your wishlists...
             </div>
           ) : (
-            <div className="mt-6 space-y-3">
-              {wishlists.map((wishlist) => (
+            <div className="mt-6 max-h-80 space-y-3 overflow-y-auto pr-1">
+              {wishlists.slice(0, MAX_VISIBLE_WISHLISTS).map((wishlist) => (
                 <button
                   key={wishlist.id}
                   type="button"
@@ -255,6 +258,17 @@ export function WishlistPickerSheet({
               ))}
             </div>
           )}
+
+          {!isPreparing ? (
+            <Link
+              href="/my-occasions/new"
+              onClick={() => onOpenChange(false)}
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-stone-200 p-3 text-sm font-semibold text-brand transition-colors hover:border-brand/40"
+            >
+              <Plus className="h-4 w-4" />
+              Create new occasion
+            </Link>
+          ) : null}
 
           <div className="mt-5">
             <Button

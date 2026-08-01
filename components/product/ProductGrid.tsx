@@ -6,6 +6,7 @@ export interface ProductGridProps {
   onToggleWishlist?: (id: string) => void;
   onAddToWishlist?: (product: ProductCardData) => void;
   onAddToCart?: (product: ProductCardData) => void;
+  onProductClick?: (product: ProductCardData, index: number) => void;
   wishlistedIds?: Set<string>;
   showBadges?: boolean;
   emptyMessage?: string;
@@ -17,6 +18,7 @@ export function ProductGrid({
   onToggleWishlist,
   onAddToWishlist,
   onAddToCart,
+  onProductClick,
   wishlistedIds,
   showBadges,
   emptyMessage = "No products to show yet.",
@@ -33,13 +35,14 @@ export function ProductGrid({
         className
       )}
     >
-      {products.map((product) => (
+      {products.map((product, index) => (
         <ProductCard
           key={product.id}
           product={product}
           onToggleWishlist={onToggleWishlist}
           onAddToWishlist={onAddToWishlist}
           onAddToCart={onAddToCart}
+          onClick={onProductClick ? () => onProductClick(product, index) : undefined}
           isWishlisted={wishlistedIds?.has(product.id)}
           showBadges={showBadges}
           className="catalog-product-card"
