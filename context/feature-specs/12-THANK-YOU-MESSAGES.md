@@ -1,6 +1,6 @@
 # Feature: Thank You Messages (Automated + Personal)
 
-> **Status note (2026-07-31):** This spec described a feature that was entirely unbuilt — unlike `09`/`10`/`11`, there was nothing shipped-differently to reconcile against. This file has been rewritten to document what actually shipped. See `context/ROADMAP.md`'s "In progress" section for the current deploy-readiness caveat (migration 016 not yet confirmed applied to Supabase).
+> **Status note (2026-08-01):** This spec described a feature that was entirely unbuilt — unlike `09`/`10`/`11`, there was nothing shipped-differently to reconcile against. This file has been rewritten to document what actually shipped. Migration 016 is confirmed applied to Supabase; see `context/ROADMAP.md`'s "Done" section.
 
 ## Overview
 Two-layer thank-you system. **Automated:** fires when a purchase is confirmed (either flow), using the receiver's default message. **Personal:** the receiver can later compose and send a personal follow-up. Both are delivered via Resend email to the buyer. The receiver manages both from the "Gifts received" page at `/gifts`.
@@ -192,7 +192,7 @@ Not implemented: `thank_you.auto.queued`/`sent`/`failed` — these would need to
 - [x] `/gifts` shows all external purchases and confirmed catalog orders for the receiver's items.
 - [x] A receiver can compose and immediately send a personal thank-you.
 - [x] The personal thank-you button is replaced with a "sent ✓" indicator after sending.
-- [ ] Migration 016 confirmed applied to Supabase (blocking — see `ROADMAP.md`).
+- [x] Migration 016 confirmed applied to Supabase (2026-08-01).
 
 ---
 
