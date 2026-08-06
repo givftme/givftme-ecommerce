@@ -132,9 +132,11 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 
 ## `/api/checkout`
 **Method:** POST. **Auth:** required. **Purpose:** creates a pending catalog order, snapshots server-fetched Sanity prices into `order_items`, and initiates a Flutterwave hosted payment.
+**Headers:** `Idempotency-Key` (required) — a client-generated opaque string, unique per logical checkout attempt.
 **Request:** `{ cart_items, shipping, preferred_payment?, wishlist_item_id? }`. `cart_items[]` includes `{ catalog_product_id, combination_key, quantity, display_price }`, but `display_price` is ignored server-side except for request validation.
-**Response:** `{ order_id, payment_link }`.
+**Response:** `{ order_id, payment_link }` — `payment_link` is `null` when the matched order (see below) is already past `pending_payment`/`payment_failed` (e.g. `confirmed`) and has nothing left to pay.
 **Critical:** fetches prices from Sanity using `CART_PRICES_QUERY` and never trusts client-submitted prices. Creates `orders.status = 'pending_payment'` and `order_items.unit_price` before contacting Flutterwave. If Flutterwave initiation fails, returns 502 while leaving the order retryable.
+**Idempotency:** before creating anything, looks up an existing order by `idempotency_key` + `buyer_id` (`orders.idempotency_key`, migration 017). If one exists, no new order/order_items are created — the route re-initiates Flutterwave payment against that existing order (via the same `reinitiateOrderPayment` helper `/api/checkout/retry` uses, `lib/checkout/reinitiatePayment.ts`) and returns its `order_id`. A `23505` unique-violation on insert (concurrent request racing with the same key) is handled the same way rather than surfacing a 500. The client (`CheckoutForm.tsx`) regenerates the key whenever the cart contents actually change, and reuses it across resubmits of the same cart/shipping — so a network retry or double-submit reuses the original order instead of creating a duplicate, but a genuinely different cart gets a fresh key. There's no requirement that a re-submitted body match the original cart snapshot: the replay path always pays for the *original* order as created, not whatever the retried request currently contains.
 
 ## `/api/checkout/retry`
 **Method:** POST. **Auth:** required, must own order. **Purpose:** re-initiates Flutterwave payment for an existing `pending_payment` or `payment_failed` order without creating a new order.

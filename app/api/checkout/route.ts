@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
+import {
+  reinitiateOrderPayment,
+  type ReinitiatableOrder,
+} from "@/lib/checkout/reinitiatePayment";
 import { checkoutSchema, type CheckoutInput } from "@/lib/checkout/validation";
 import { getActivePrice, getCheckoutVariant } from "@/lib/flutterwave/getActivePrice";
 import type { SanityCheckoutProduct } from "@/lib/flutterwave/getActivePrice";
@@ -8,6 +12,26 @@ import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
+
+async function respondForExistingOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  order: ReinitiatableOrder,
+  preferredPayment: CheckoutInput["preferred_payment"]
+) {
+  if (!["pending_payment", "payment_failed"].includes(order.status)) {
+    // Already resolved (e.g. confirmed) — nothing to (re)pay, just hand back
+    // the order id so the client can route to the processing/order page.
+    return NextResponse.json({ order_id: order.id, payment_link: null });
+  }
+
+  const result = await reinitiateOrderPayment(supabase, order, preferredPayment);
+
+  if (!result.ok) {
+    return jsonError(result.error, result.status);
+  }
+
+  return NextResponse.json({ order_id: order.id, payment_link: result.paymentLink });
+}
 
 interface CartPriceProduct extends SanityCheckoutProduct {
   images?: Array<{ url?: string | null; alt?: string | null }> | null;
@@ -175,11 +199,38 @@ export async function POST(request: Request) {
     return jsonError("You need to sign in first.", 401);
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key")?.trim();
+
+  if (!idempotencyKey) {
+    return jsonError("Missing Idempotency-Key header.", 400);
+  }
+
   const body = await readJson(request);
   const parsed = checkoutSchema.safeParse(body);
 
   if (!parsed.success) {
     return jsonError("Check your checkout details and try again.", 400);
+  }
+
+  const { data: existingOrder, error: existingOrderError } = await supabase
+    .from("orders")
+    .select(
+      "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone"
+    )
+    .eq("idempotency_key", idempotencyKey)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  if (existingOrderError) {
+    return jsonError("Couldn't verify your checkout request.", 500);
+  }
+
+  if (existingOrder) {
+    return respondForExistingOrder(
+      supabase,
+      existingOrder as ReinitiatableOrder,
+      parsed.data.preferred_payment
+    );
   }
 
   const wishlistValidation = await validateWishlistItem(
@@ -245,9 +296,32 @@ export async function POST(request: Request) {
       shipping_city: parsed.data.shipping.city,
       shipping_state: parsed.data.shipping.state,
       wishlist_item_id: parsed.data.wishlist_item_id ?? null,
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
+
+  if (orderError?.code === "23505") {
+    // Lost a race with a concurrent request carrying the same key.
+    const { data: raceOrder, error: raceOrderError } = await supabase
+      .from("orders")
+      .select(
+        "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone"
+      )
+      .eq("idempotency_key", idempotencyKey)
+      .eq("buyer_id", user.id)
+      .maybeSingle();
+
+    if (raceOrderError || !raceOrder) {
+      return jsonError("Couldn't create your order. Try again.", 500);
+    }
+
+    return respondForExistingOrder(
+      supabase,
+      raceOrder as ReinitiatableOrder,
+      parsed.data.preferred_payment
+    );
+  }
 
   if (orderError || !order?.id) {
     return jsonError("Couldn't create your order. Try again.", 500);

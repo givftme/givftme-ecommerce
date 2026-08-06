@@ -8,7 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { AddressSelector, type SavedAddress } from "@/components/checkout/AddressSelector";
 import { OrderSummaryPanel } from "@/components/checkout/OrderSummaryPanel";
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
-import { useCart } from "@/components/cart/CartContext";
+import { useCart, type CartItem } from "@/components/cart/CartContext";
 import { useCartPriceRefresh } from "@/components/cart/useCartPriceRefresh";
 import { Button } from "@/components/ui/Button";
 import { clearPendingWishlistItem, getPendingWishlistItem } from "@/lib/checkout/pendingWishlistItem";
@@ -44,6 +44,22 @@ interface CheckoutResponse {
   payment_link?: string;
   error?: string;
   unavailable_items?: Array<{ title?: string; reason?: string }>;
+}
+
+function generateIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// Same cart + shipping resubmitted (e.g. a network retry) reuses one key so
+// /api/checkout can dedupe it; a genuinely different cart gets a fresh one.
+function getCartSignature(items: CartItem[], wishlistItemId: string | null) {
+  return `${wishlistItemId ?? ""}|${items
+    .map((item) => `${item.catalog_product_id}:${item.combination_key ?? ""}:${item.quantity}`)
+    .join(",")}`;
 }
 
 function getDefaultValues({
@@ -84,6 +100,10 @@ export function CheckoutForm({
   const [globalError, setGlobalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const hasUnavailableItems = unavailableItems.length > 0;
+  const [idempotencyState, setIdempotencyState] = useState<{
+    signature: string;
+    key: string;
+  } | null>(null);
   const wishlistItemId = useMemo(() => {
     if (!isHydrated) {
       return null;
@@ -199,10 +219,23 @@ export function CheckoutForm({
       has_saved_address: savedAddresses.length > 0,
     });
 
+    const cartSignature = getCartSignature(items, wishlistItemId);
+    let idempotencyKey: string;
+
+    if (idempotencyState && idempotencyState.signature === cartSignature) {
+      idempotencyKey = idempotencyState.key;
+    } else {
+      idempotencyKey = generateIdempotencyKey();
+      setIdempotencyState({ signature: cartSignature, key: idempotencyKey });
+    }
+
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify(payload.data),
       });
       const data = (await response.json()) as CheckoutResponse;
