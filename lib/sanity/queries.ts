@@ -213,7 +213,12 @@ export const PRODUCT_SEARCH_QUERY = defineQuery(/* groq */ `
       $query in tags[]
     )
   ]
-  | order(featured desc, _createdAt desc) [0...48] {
+  | score(
+      boost(title match $term, 3),
+      boost(shortDescription match $term, 2),
+      category match $term
+    )
+  | order(_score desc, featured desc, _createdAt desc) [0...48] {
     ${PRODUCT_CARD_FRAGMENT}
   }
 `);

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { ProductExplorer } from "@/components/collection/ProductExplorer";
@@ -28,11 +27,6 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const rawQuery = (getQueryValue(params.q) || "").trim();
-
-  if (!rawQuery) {
-    redirect("/shop");
-  }
-
   const query = sanitizeSearchQuery(rawQuery);
   const searchable = isSearchableQuery(query);
 
@@ -53,14 +47,16 @@ export default async function SearchPage({
 
   return (
     <PageWrapper searchQuery={rawQuery}>
-      <TrackView
-        event={products.length > 0 ? "museum.search.submitted" : "museum.search.no_results"}
-        properties={{ query, result_count: products.length }}
-      />
+      {searchable ? (
+        <TrackView
+          event={products.length > 0 ? "museum.search.submitted" : "museum.search.no_results"}
+          properties={{ query, result_count: products.length }}
+        />
+      ) : null}
       <section className="mx-auto max-w-7xl px-4 py-10 lg:px-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-ink lg:text-4xl">
-            Results for &quot;{rawQuery}&quot;
+            {rawQuery ? <>Results for &quot;{rawQuery}&quot;</> : "Search our gifts"}
           </h1>
           {searchable ? (
             <p className="mt-3 text-sm text-muted">

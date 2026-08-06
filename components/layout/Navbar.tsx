@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -51,8 +51,10 @@ export function Navbar({
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const desktopCartRef = useRef<HTMLAnchorElement>(null);
   const mobileCartRef = useRef<HTMLAnchorElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const accountHref = isAuthenticated ? "/account" : "/login";
   const accountPrimaryLabel = userName
     ? `Welcome, ${userName}`
@@ -78,6 +80,23 @@ export function Navbar({
     },
     { dependencies: [cartPulseKey] }
   );
+
+  useEffect(() => {
+    if (!isMobileSearchOpen) {
+      return;
+    }
+
+    mobileSearchInputRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMobileSearchOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileSearchOpen]);
 
   return (
     <header className="sticky top-0 z-50 bg-white">
@@ -166,6 +185,14 @@ export function Navbar({
         </div>
 
         <div className="ml-auto flex items-center gap-4 md:hidden">
+          <button
+            type="button"
+            aria-label="Search"
+            onClick={() => setIsMobileSearchOpen(true)}
+            className="text-ink"
+          >
+            <Search className="h-6 w-6" strokeWidth={1.5} />
+          </button>
           <Link
             ref={mobileCartRef}
             href="/cart"
@@ -246,6 +273,41 @@ export function Navbar({
           </li>
         </ul>
       </div>
+
+      {isMobileSearchOpen ? (
+        <div className="fixed inset-0 z-60 bg-white md:hidden">
+          <div className="flex items-center gap-3 border-b border-stone-100 px-4 py-4">
+            <form
+              action="/search"
+              method="get"
+              role="search"
+              className="flex-1"
+              onSubmit={() => setIsMobileSearchOpen(false)}
+            >
+              <label htmlFor="mobile-search" className="sr-only">
+                Search products
+              </label>
+              <input
+                ref={mobileSearchInputRef}
+                id="mobile-search"
+                name="q"
+                type="search"
+                defaultValue={searchQuery}
+                placeholder="Electronic blender"
+                className="h-11 w-full rounded-full border border-stone-200 bg-white px-5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+              />
+            </form>
+            <button
+              type="button"
+              aria-label="Close search"
+              onClick={() => setIsMobileSearchOpen(false)}
+              className="text-ink"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -1,5 +1,7 @@
 # Feature: Search
 
+> **Status note (2026-08-06):** This feature was already mostly shipped (built during the `13-GIFT-MUSEUM-CATALOG.md` gap-closing pass) before this spec was audited against it directly. A follow-up gap-closing pass fixed 4 real issues: a missing mobile search entry point, an empty-query redirect that skipped the "enter at least 2 characters" prompt, analytics conflating too-short queries with genuine zero-result searches, and missing relevance ranking in `PRODUCT_SEARCH_QUERY`. See `context/ROADMAP.md`'s "Done" section for the full list of what changed and what was deliberately left as shipped (character-stripping set, no breadcrumb).
+
 ## Overview
 Product search across the Gifvtme catalog using Sanity's GROQ `match` operator. A search input in the navbar routes to a `/search?q=` results page. The search GROQ query already exists in `lib/sanity/queries.ts` (`PRODUCT_SEARCH_QUERY`) but has no wired-up page or API route yet. This feature closes that gap.
 
