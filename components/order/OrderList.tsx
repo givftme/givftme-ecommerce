@@ -44,10 +44,13 @@ export function OrderList({ orders }: { orders: OrderCardData[] }) {
           <button
             key={option.id}
             type="button"
+            aria-pressed={tab === option.id}
             onClick={() => setTab(option.id)}
             className={cn(
               "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-              tab === option.id ? "bg-brand text-white" : "text-muted hover:text-ink",
+              tab === option.id
+                ? "bg-brand text-white"
+                : "text-muted hover:text-ink",
             )}
           >
             {option.label}

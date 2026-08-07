@@ -60,7 +60,6 @@ This file should be updated frequently — at minimum every time a feature moves
 - Retool setup against production Supabase
 - Sanity Studio deployment
 - Push notification delivery for reminders (`reminders.channel` supports `push` and the cron would count due rows, but no scheduling function creates them — `REMINDER_CHANNELS` in `lib/reminders/constants.ts` is `email`-only until push infrastructure, e.g. web push subscriptions or FCM/APNs, actually exists; scheduling a channel with no delivery path would just accumulate undeliverable rows forever)
-- Actual Resend email sending for order status (thank-you messages and reminders now both send — see "In progress"/"Done" above)
 
 ## Explicitly deferred to v2 — do not build without an explicit decision
 

@@ -15,7 +15,17 @@ function escapeHtml(value: string) {
 }
 
 function ctaButton(label: string, url: string) {
-  return `<p><a href="${url}" style="display: inline-block; border-radius: 999px; background: #C50404; color: #ffffff; padding: 12px 20px; text-decoration: none; font-weight: 600;">${escapeHtml(label)}</a></p>`;
+  return `<p><a href="${escapeHtml(url)}" style="display: inline-block; border-radius: 999px; background: #C50404; color: #ffffff; padding: 12px 20px; text-decoration: none; font-weight: 600;">${escapeHtml(label)}</a></p>`;
+}
+
+function isHttpsUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 function shortOrderId(orderId: string) {
@@ -54,6 +64,10 @@ function buildContent(input: OrderStatusEmailInput): OrderStatusEmailContent {
         cta: { label: "View your order", url: input.orderUrl },
       };
     case "shipped": {
+      const trackingUrl = isHttpsUrl(input.trackingUrl)
+        ? input.trackingUrl
+        : null;
+
       const tracking = input.trackingNumber
         ? ` Tracking number: ${input.trackingNumber}.`
         : "";
@@ -61,10 +75,10 @@ function buildContent(input: OrderStatusEmailInput): OrderStatusEmailContent {
         subject: `📦 Order #${shortId} is on its way`,
         message: `Your order is on its way!${tracking}`,
         cta: {
-          label: input.trackingUrl
+          label: trackingUrl
             ? `Track on ${input.carrierName || "carrier"}`
             : "View your order",
-          url: input.trackingUrl || input.orderUrl,
+          url: trackingUrl || input.orderUrl,
         },
       };
     }
@@ -90,7 +104,9 @@ function buildContent(input: OrderStatusEmailInput): OrderStatusEmailContent {
         cta: { label: "View your order", url: input.orderUrl },
       };
     default:
-      throw new Error(`No customer email template for status "${input.status}"`);
+      throw new Error(
+        `No customer email template for status "${input.status}"`,
+      );
   }
 }
 

@@ -8,7 +8,16 @@ import { createServiceClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const MAX_RETRIES = 5;
-const BATCH_LIMIT = 50;
+// Unlike /api/thank-you/process (which declares `maxDuration = 300` and
+// fans out across MAX_CONCURRENCY workers), this route has no maxDuration
+// override and processes rows one at a time — so it inherits the platform's
+// default execution limit (10s on Vercel's Hobby plan, no Fluid Compute).
+// Each row does a claim + optional auth.admin.getUserById + a Resend call
+// (up to its own 8s abort timeout) + a notified-update, all sequentially,
+// so a batch of 50 could easily blow past that window. A small batch that
+// only fits the common (fast) case is fine — a row that doesn't finish in
+// time is simply retried on the next run once its claim goes stale.
+const BATCH_LIMIT = 10;
 // Same staleness window as /api/reminders and /api/thank-you/process — a
 // claim older than this is assumed abandoned rather than still in progress.
 const CLAIM_STALE_MS = 10 * 60 * 1000;

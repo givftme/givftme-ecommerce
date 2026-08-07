@@ -62,12 +62,17 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
     // pending_payment/payment_failed orders aren't fetched by
     // getOrderDetail (they're excluded from the tracked statuses) — check
     // separately so checkout can still redirect here mid-flow.
-    const { data: pendingOrder } = await supabase
+    const { data: pendingOrder, error: pendingOrderError } = await supabase
       .from("orders")
       .select("id, status")
       .eq("id", id)
       .eq("buyer_id", user.id)
       .maybeSingle();
+    
+    if (pendingOrderError) {
+      console.error("Could not load pending order for account order page.", pendingOrderError);
+      throw new Error("Couldn't load this order. Please try again.");
+    }
 
     if (pendingOrder?.status === "pending_payment") {
       redirect(`/checkout/processing?order=${pendingOrder.id}`);
@@ -187,7 +192,9 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted">Shipping</dt>
-                <dd className="font-semibold text-green-700">FREE</dd>
+                <dd className="font-semibold text-green-700">
+                  {formatPrice(0)}
+                </dd>
               </div>
               <div className="flex items-end justify-between border-t border-stone-100 pt-3">
                 <dt className="text-base font-semibold text-ink">Total</dt>
@@ -216,7 +223,10 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
                 <p className="text-sm text-muted">No status history yet.</p>
               ) : (
                 order.order_status_history.map((entry) => (
-                  <div key={entry.id} className="border-l-2 border-brand-light pl-4">
+                  <div
+                    key={entry.id}
+                    className="border-l-2 border-brand-light pl-4"
+                  >
                     <p className="text-sm font-semibold text-ink">
                       {STATUS_LABELS[entry.status] || entry.status}
                     </p>

@@ -54,7 +54,7 @@ app/
     settings/
 
   account/                      requires auth — buyer-facing account area
-    orders/[id]/, addresses/, profile/
+    orders/, orders/[id]/, addresses/, profile/
 
   api/                          route handlers — see API_ROUTES.md
 ```
@@ -72,7 +72,7 @@ components/
   product/       ProductCard, ProductGrid, (ProductDetail, VariantSelector — to be added)
   cart/          CartItem, CartSummary, EmptyCart
   checkout/      CheckoutForm, AddressForm, PaymentSelector, OrderSummaryPanel
-  order/         OrderCard, OrderList, OrderTracking, OrderStatusBadge
+  order/         OrderCard, OrderList, OrderTracking, OrderStatusBadge, TrackingLink
   wishlist/      WishlistItem, WishlistGrid, ShareSettingsSheet, SharedWishlistHeader, SharedWishlistItem, ClaimedBadge, IntentFlagBadge, ReminderOptIn, AuthGateSheet
   review/        ReviewCard, ReviewsList, StarRating, RatingBreakdown
   flash-sale/    FlashSaleBanner, FlashSaleTimer
