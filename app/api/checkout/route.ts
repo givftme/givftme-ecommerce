@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
 import {
   reinitiateOrderPayment,
+  releasePaymentClaim,
   type ReinitiatableOrder,
 } from "@/lib/checkout/reinitiatePayment";
 import { checkoutSchema, type CheckoutInput } from "@/lib/checkout/validation";
@@ -282,27 +283,34 @@ export async function POST(request: Request) {
   ]
     .filter(Boolean)
     .join(", ");
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      buyer_id: user.id,
-      total_amount: prepared.totalAmount,
-      currency: "NGN",
-      status: "pending_payment",
-      shipping_name: shippingName,
-      shipping_email: parsed.data.shipping.email,
-      shipping_phone: parsed.data.shipping.phone,
-      shipping_address: shippingAddress,
-      shipping_city: parsed.data.shipping.city,
-      shipping_state: parsed.data.shipping.state,
-      wishlist_item_id: parsed.data.wishlist_item_id ?? null,
-      idempotency_key: idempotencyKey,
-    })
-    .select("id")
-    .single();
 
-  if (orderError?.code === "23505") {
-    // Lost a race with a concurrent request carrying the same key.
+  // orders + order_items are created together in one Postgres transaction
+  // (see gifvtme_create_checkout_order, migration 018) — no other request
+  // can observe an order that doesn't already have its items, so the
+  // existing-order lookups above and below are always safe to act on.
+  const { data: createdOrderId, error: createOrderError } = await supabase.rpc(
+    "gifvtme_create_checkout_order",
+    {
+      p_buyer_id: user.id,
+      p_idempotency_key: idempotencyKey,
+      p_total_amount: prepared.totalAmount,
+      p_currency: "NGN",
+      p_shipping_name: shippingName,
+      p_shipping_email: parsed.data.shipping.email,
+      p_shipping_phone: parsed.data.shipping.phone,
+      p_shipping_address: shippingAddress,
+      p_shipping_city: parsed.data.shipping.city,
+      p_shipping_state: parsed.data.shipping.state,
+      p_wishlist_item_id: parsed.data.wishlist_item_id ?? null,
+      p_order_items: prepared.orderItems,
+    }
+  );
+
+  if (createOrderError?.code === "23505") {
+    // Lost a race with a concurrent request carrying the same key — the
+    // winning transaction has already committed both the order and its
+    // items by the time this can happen, so it's safe to treat as a
+    // normal existing-order replay.
     const { data: raceOrder, error: raceOrderError } = await supabase
       .from("orders")
       .select(
@@ -323,45 +331,15 @@ export async function POST(request: Request) {
     );
   }
 
-  if (orderError || !order?.id) {
+  if (createOrderError || !createdOrderId) {
     return jsonError("Couldn't create your order. Try again.", 500);
   }
 
-  const orderItemRows = prepared.orderItems.map((item) => ({
-    order_id: order.id,
-    catalog_product_id: item.catalog_product_id,
-    product_title: item.product_title,
-    product_image_url: item.product_image_url,
-    supplier_id: item.supplier_id,
-    supplier_product_id: item.supplier_product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-  }));
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItemRows);
-
-  if (itemsError) {
-    const { error: cleanupError } = await supabase
-      .from("orders")
-      .delete()
-      .eq("id", order.id)
-      .eq("buyer_id", user.id)
-      .eq("status", "pending_payment");
-
-    if (cleanupError) {
-      console.error("Couldn't clean up incomplete checkout order.", {
-        orderId: order.id,
-        error: cleanupError,
-      });
-    }
-
-    return jsonError("Couldn't save your order items. Try again.", 500);
-  }
+  const orderId = createdOrderId as string;
 
   try {
     const payment = await initiateFlutterwavePayment({
-      orderId: order.id,
+      orderId,
       amount: prepared.totalAmount,
       customer: {
         email: parsed.data.shipping.email,
@@ -372,16 +350,21 @@ export async function POST(request: Request) {
     });
 
     if (!payment.ok || !payment.paymentLink) {
-      // Keep pending_payment so retry can reuse the traceable order row.
+      // Keep pending_payment so retry can reuse the traceable order row —
+      // but release the claim gifvtme_create_checkout_order took on
+      // creation, so an immediate retry isn't blocked as "already in
+      // progress" for no reason.
+      await releasePaymentClaim(supabase, orderId, user.id);
       return jsonError("Payment couldn't start - try again.", 502);
     }
 
     return NextResponse.json({
-      order_id: order.id,
+      order_id: orderId,
       payment_link: payment.paymentLink,
     });
   } catch (error) {
     console.error("Flutterwave initiation failed.", error);
+    await releasePaymentClaim(supabase, orderId, user.id);
     return jsonError("Payment couldn't start - try again.", 502);
   }
 }

@@ -27,6 +27,7 @@ import {
   NIGERIAN_STATES,
   type CheckoutFormInput,
   type CheckoutFormValues,
+  type CheckoutShippingValues,
   type PaymentPreference,
 } from "@/lib/checkout/validation";
 import { trackEvent } from "@/lib/analytics";
@@ -55,11 +56,42 @@ function generateIdempotencyKey() {
 }
 
 // Same cart + shipping resubmitted (e.g. a network retry) reuses one key so
-// /api/checkout can dedupe it; a genuinely different cart gets a fresh one.
-function getCartSignature(items: CartItem[], wishlistItemId: string | null) {
-  return `${wishlistItemId ?? ""}|${items
+// /api/checkout can dedupe it; a genuinely different cart OR a shipping edit
+// (address/phone/name/etc. correction before resubmitting) gets a fresh one
+// — otherwise a stale key would make the server replay the *original*
+// order's shipping details instead of the corrected ones. `shipping` here is
+// the Zod-parsed, already-normalized value (trimmed, lowercased email, etc.)
+// so equivalent input never produces spurious signature churn.
+//
+// preferred_payment is deliberately NOT part of this signature. Unlike
+// shipping, it isn't stored on the order at all — /api/checkout always
+// forwards whichever preferred_payment came with the *current* request into
+// Flutterwave initiation, even on an idempotent replay, so it can never go
+// stale. Including it here would do the opposite of what we want: toggling
+// payment method between submissions would mint a new key, miss the
+// idempotency lookup, and create a duplicate order for the same cart.
+function getCheckoutSignature(
+  items: CartItem[],
+  wishlistItemId: string | null,
+  shipping: CheckoutShippingValues
+) {
+  const cartPart = items
     .map((item) => `${item.catalog_product_id}:${item.combination_key ?? ""}:${item.quantity}`)
-    .join(",")}`;
+    .join(",");
+  const shippingPart = [
+    shipping.first_name,
+    shipping.last_name,
+    shipping.email,
+    shipping.phone,
+    shipping.street_address,
+    shipping.apartment ?? "",
+    shipping.city,
+    shipping.state,
+    shipping.postal_code ?? "",
+    shipping.delivery_instructions ?? "",
+  ].join(":");
+
+  return `${wishlistItemId ?? ""}|${cartPart}|${shippingPart}`;
 }
 
 function getDefaultValues({
@@ -219,14 +251,18 @@ export function CheckoutForm({
       has_saved_address: savedAddresses.length > 0,
     });
 
-    const cartSignature = getCartSignature(items, wishlistItemId);
+    const checkoutSignature = getCheckoutSignature(
+      items,
+      wishlistItemId,
+      payload.data.shipping
+    );
     let idempotencyKey: string;
 
-    if (idempotencyState && idempotencyState.signature === cartSignature) {
+    if (idempotencyState && idempotencyState.signature === checkoutSignature) {
       idempotencyKey = idempotencyState.key;
     } else {
       idempotencyKey = generateIdempotencyKey();
-      setIdempotencyState({ signature: cartSignature, key: idempotencyKey });
+      setIdempotencyState({ signature: checkoutSignature, key: idempotencyKey });
     }
 
     try {

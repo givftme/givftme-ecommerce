@@ -35,7 +35,7 @@ Both triggers write `message = COALESCE(receiver's default_thank_you_msg, 'Thank
 ## Functional Requirements
 1. Automated thank-you fires via `on_purchase_created` (external flow, pre-existing) and `on_order_confirmed_thank_you` (catalog flow, new — migration 016).
 2. The automated message uses `public.users.default_thank_you_msg` for the receiver; falls back to the system default if null.
-3. Automated thank-you is sent via Resend when `/api/thank-you/process` runs (every 5 minutes, per `vercel.json`).
+3. Automated thank-you is sent via Resend when `/api/thank-you/process` runs — once daily, per `vercel.json` (originally every 5 minutes; changed 2026-08-06 because Vercel's Hobby plan only permits daily cron schedules — see Database Changes below).
 4. Personal thank-you: receiver composes a custom message from `/gifts`; sent immediately via Resend on submit, not queued — a send failure returns 500 to the client and nothing is persisted (there's no cron retry path for personal messages).
 5. A receiver can send more than one personal thank-you per gift with no hard DB constraint stopping it — the UI hides the "send" button once one has been sent, and that's the only guard, exactly as this spec always specified (see Edge Cases below).
 6. Automated rows are created with `type='auto'`, `sent=false`. Personal rows are inserted only after a successful Resend send, with `type='personal'`, `sent=true`, `sent_at=now()`.
@@ -44,7 +44,7 @@ Both triggers write `message = COALESCE(receiver's default_thank_you_msg, 'Thank
 ---
 
 ## Non-Functional Requirements
-- Automated thank-you email must be sent within 5 minutes of purchase confirmation (bounded by the cron cadence).
+- Automated thank-you email is sent within one cron cycle of purchase confirmation — originally bounded to 5 minutes, now up to ~24h on the current daily cadence (Hobby plan constraint, see Database Changes).
 - Personal thank-you send must complete within the request (direct Resend call, not queued).
 
 ---
@@ -81,7 +81,7 @@ Not `/dashboard/gifts` — no route in this repo is namespaced under `/dashboard
 
 ## Backend Logic
 
-### `POST /api/thank-you/process` (cron, every 5 minutes)
+### `POST /api/thank-you/process` (cron, once daily)
 Fetches pending `type='auto'`, `sent=false`, `permanently_failed=false` rows (claimed atomically first, same pattern as `/api/reminders`), resolves the buyer's email via `auth.admin.getUserById` (service client, cached per run), builds the email via `buildAutoThankYouEmail`, sends via Resend with the row's own id as an `Idempotency-Key`. Success sets `sent=true, sent_at=now()`. Failure increments `retry_count`, sets `permanently_failed=true` at 5. A missing buyer email is treated as permanently failed immediately.
 
 ### `on_order_confirmed_thank_you` trigger (catalog flow — new)
@@ -104,16 +104,16 @@ Fetches the receiver's own wishlist item ids first, then filters `purchases`/`or
 
 **`thank_you_messages` table** — formally created by `gifvtme_migration_016_thank_you_messages.sql` (`CREATE TABLE IF NOT EXISTS` + defensive `ADD COLUMN IF NOT EXISTS`, same pattern migration 015 used for `important_dates`, since this table already existed live with zero SQL source of truth). Adds `retry_count`, `permanently_failed`, `sent_at`, and `claimed_at` (atomic per-row cron claim, mirroring `reminders.claimed_at`) alongside the originally-documented columns.
 
-**`vercel.json`** — added to this repo for the first time (it didn't exist even for the already-shipped `/api/reminders` cron):
+**`vercel.json`** — added to this repo for the first time (it didn't exist even for the already-shipped `/api/reminders` cron), originally with an hourly `/api/reminders` schedule and a 5-minute `/api/thank-you/process` schedule. Changed 2026-08-06 to both run once daily — the project is on Vercel's Hobby plan, which only permits daily cron schedules; the original sub-daily schedules were failing:
 ```json
 {
   "crons": [
-    { "path": "/api/reminders", "schedule": "0 * * * *" },
-    { "path": "/api/thank-you/process", "schedule": "*/5 * * * *" }
+    { "path": "/api/reminders", "schedule": "0 6 * * *" },
+    { "path": "/api/thank-you/process", "schedule": "15 6 * * *" }
   ]
 }
 ```
-The reminders cadence (hourly) is an assumed default, not a confirmed production value — reminders' schedule previously lived entirely outside this repo. Cheap to change later.
+Both times are UTC (~7am WAT). If the project moves to a Pro plan, both can move back to a tighter cadence — the original hourly reminders schedule was itself only an assumed default, not a confirmed production value.
 
 ---
 

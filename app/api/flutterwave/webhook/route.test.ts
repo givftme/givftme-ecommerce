@@ -124,6 +124,23 @@ describe("POST /api/flutterwave/webhook", () => {
     expect(builder.update).not.toHaveBeenCalled();
   });
 
+  it("does not confirm the order when the webhook currency doesn't match", async () => {
+    const { builder } = mockOrderClient(baseOrder);
+
+    const response = await POST(
+      webhookRequest(
+        {
+          ...successfulChargePayload,
+          data: { ...successfulChargePayload.data, currency: "USD" },
+        },
+        SECRET_HASH
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(builder.update).not.toHaveBeenCalled();
+  });
+
   it("is idempotent for an order that's already been confirmed", async () => {
     const { builder } = mockOrderClient({ ...baseOrder, status: "confirmed" });
 
