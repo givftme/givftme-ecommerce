@@ -8,7 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { AddressSelector, type SavedAddress } from "@/components/checkout/AddressSelector";
 import { OrderSummaryPanel } from "@/components/checkout/OrderSummaryPanel";
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
-import { useCart } from "@/components/cart/CartContext";
+import { useCart, type CartItem } from "@/components/cart/CartContext";
 import { useCartPriceRefresh } from "@/components/cart/useCartPriceRefresh";
 import { Button } from "@/components/ui/Button";
 import { clearPendingWishlistItem, getPendingWishlistItem } from "@/lib/checkout/pendingWishlistItem";
@@ -27,6 +27,7 @@ import {
   NIGERIAN_STATES,
   type CheckoutFormInput,
   type CheckoutFormValues,
+  type CheckoutShippingValues,
   type PaymentPreference,
 } from "@/lib/checkout/validation";
 import { trackEvent } from "@/lib/analytics";
@@ -44,6 +45,53 @@ interface CheckoutResponse {
   payment_link?: string;
   error?: string;
   unavailable_items?: Array<{ title?: string; reason?: string }>;
+}
+
+function generateIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+// Same cart + shipping resubmitted (e.g. a network retry) reuses one key so
+// /api/checkout can dedupe it; a genuinely different cart OR a shipping edit
+// (address/phone/name/etc. correction before resubmitting) gets a fresh one
+// — otherwise a stale key would make the server replay the *original*
+// order's shipping details instead of the corrected ones. `shipping` here is
+// the Zod-parsed, already-normalized value (trimmed, lowercased email, etc.)
+// so equivalent input never produces spurious signature churn.
+//
+// preferred_payment is deliberately NOT part of this signature. Unlike
+// shipping, it isn't stored on the order at all — /api/checkout always
+// forwards whichever preferred_payment came with the *current* request into
+// Flutterwave initiation, even on an idempotent replay, so it can never go
+// stale. Including it here would do the opposite of what we want: toggling
+// payment method between submissions would mint a new key, miss the
+// idempotency lookup, and create a duplicate order for the same cart.
+function getCheckoutSignature(
+  items: CartItem[],
+  wishlistItemId: string | null,
+  shipping: CheckoutShippingValues
+) {
+  const cartPart = items
+    .map((item) => `${item.catalog_product_id}:${item.combination_key ?? ""}:${item.quantity}`)
+    .join(",");
+  const shippingPart = [
+    shipping.first_name,
+    shipping.last_name,
+    shipping.email,
+    shipping.phone,
+    shipping.street_address,
+    shipping.apartment ?? "",
+    shipping.city,
+    shipping.state,
+    shipping.postal_code ?? "",
+    shipping.delivery_instructions ?? "",
+  ].join(":");
+
+  return `${wishlistItemId ?? ""}|${cartPart}|${shippingPart}`;
 }
 
 function getDefaultValues({
@@ -84,6 +132,10 @@ export function CheckoutForm({
   const [globalError, setGlobalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const hasUnavailableItems = unavailableItems.length > 0;
+  const [idempotencyState, setIdempotencyState] = useState<{
+    signature: string;
+    key: string;
+  } | null>(null);
   const wishlistItemId = useMemo(() => {
     if (!isHydrated) {
       return null;
@@ -199,10 +251,27 @@ export function CheckoutForm({
       has_saved_address: savedAddresses.length > 0,
     });
 
+    const checkoutSignature = getCheckoutSignature(
+      items,
+      wishlistItemId,
+      payload.data.shipping
+    );
+    let idempotencyKey: string;
+
+    if (idempotencyState && idempotencyState.signature === checkoutSignature) {
+      idempotencyKey = idempotencyState.key;
+    } else {
+      idempotencyKey = generateIdempotencyKey();
+      setIdempotencyState({ signature: checkoutSignature, key: idempotencyKey });
+    }
+
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify(payload.data),
       });
       const data = (await response.json()) as CheckoutResponse;

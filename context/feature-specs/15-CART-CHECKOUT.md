@@ -1,5 +1,7 @@
 # Feature: Cart & Checkout
 
+**Status: shipped.** This file documents the actual implementation, not an aspirational spec — see "Divergences from the original spec" at the bottom for what changed and why. Checkout idempotency (originally a gap) was closed 2026-08-06, then a follow-up review found the order-creation path itself wasn't atomic and closed that too (migration 018). Three other divergences (order-status polling design, saved addresses, the success route) were deliberately left as shipped after review — see that section.
+
 ## Overview
 Catalog-only (Flow B) e-commerce. Covers adding items to a client-side cart, reviewing and editing the cart, entering shipping details, processing payment via Flutterwave, and the post-payment states (processing, success, failure/retry). Never mixes with the affiliate (Flow A) transaction path. Price shown at checkout is always re-fetched from Sanity server-side — the client is never trusted for pricing.
 
@@ -10,7 +12,7 @@ Catalog-only (Flow B) e-commerce. Covers adding items to a client-side cart, rev
 - Never trust client-provided prices — always re-fetch and snapshot from Sanity at order creation.
 - Create an auditable `orders` row before any payment redirect (covers abandoned payments).
 - Handle payment failure gracefully with a retry path.
-- Support pre-saved shipping addresses to reduce re-entry.
+- Dedupe a retried/duplicated checkout submission so it can't create two orders for the same attempt.
 
 ---
 
@@ -18,29 +20,44 @@ Catalog-only (Flow B) e-commerce. Covers adding items to a client-side cart, rev
 - As a shopper, I can add multiple catalog items to my cart and see a running total.
 - As a shopper, I can adjust quantities or remove items from my cart.
 - As a shopper, if a flash sale ends while something is in my cart, I see the updated price.
-- As a shopper, I can select a saved shipping address or enter a new one at checkout.
-- As a shopper, I proceed to Flutterwave to pay and return to a confirmation page.
+- As a shopper, I proceed to Flutterwave to pay and land on my order once it's confirmed.
 - As a shopper, if payment fails, I see a clear error and can retry.
 
 ---
 
 ## Functional Requirements
-1. Cart is client-side state (React context + localStorage persistence for logged-in users).
-2. Cart stores: `catalog_product_id`, `variant_combination_key` (if applicable), `quantity`, display snapshot of `title`/`image_url`/`price_at_add` — but price shown is always re-fetched live from Sanity, not the `price_at_add` snapshot.
+1. Cart is client-side state — `components/cart/CartContext.tsx` (React context), persisted to `localStorage` under a single global key `gifvtme.catalog-cart` (not per-user — see divergences).
+2. Cart line items store `catalog_product_id`, `combination_key` (nullable — the Sanity variant identifier), `quantity`, `selected_options`, and a display snapshot (`product_title`, `product_image_url`, `unit_price`, `supplier_product_id`). The cart/checkout-summary UI re-fetches current prices from Sanity via `GET /api/cart/prices` (`useCartPriceRefresh`) and patches the snapshot in place — the snapshot itself is never used as the source of truth at checkout.
 3. Checkout requires auth — unauthenticated users are redirected to login (cart preserved in localStorage).
-4. `POST /api/checkout`: re-fetches all prices server-side from Sanity, creates `orders` row at `status='pending_payment'`, creates `order_items` rows with current prices snapshotted, calls Flutterwave to initiate payment, returns a Flutterwave checkout URL.
-5. On Flutterwave payment success: webhook fires → `POST /api/flutterwave/webhook` verifies signature → sets `orders.status='confirmed'`.
-6. On return from Flutterwave (redirect back): `/checkout/processing` page polls `GET /api/orders/[id]/status` until it sees `confirmed` or `payment_failed`.
-7. On `confirmed`: redirect to `/checkout/success/[orderId]`.
-8. On `payment_failed`: show `/checkout/failed` with a retry CTA.
-9. Flash sale expiry during checkout: the server always uses the current Sanity price at `POST /api/checkout` time. If a sale expired between when the user added the item and when they submit checkout, they pay the regular price — shown as an update on the checkout summary before final submission if the price changed.
+4. `POST /api/checkout`: requires an `Idempotency-Key` header; re-fetches all prices server-side from Sanity, creates `orders` row at `status='pending_payment'`, creates `order_items` rows with current prices snapshotted, calls Flutterwave to initiate payment, returns a Flutterwave checkout URL. See "Idempotency" below.
+5. On Flutterwave payment success: webhook fires → `POST /api/flutterwave/webhook` verifies the `verif-hash` signature header → sets `orders.status='confirmed'`.
+6. On return from Flutterwave (redirect back): `/checkout/processing` polls `orders.status` directly from Supabase (client-side, RLS-scoped) until it sees `confirmed` or `payment_failed` — see "Order status polling" below.
+7. On `confirmed`: redirect to `/account/orders/[id]` (there is no separate `/checkout/success` route — see divergences).
+8. On `payment_failed`: show `/checkout/failed` with a retry CTA that calls `POST /api/checkout/retry`.
+9. Flash sale expiry during checkout: the server always uses the current Sanity price at `POST /api/checkout` time. If a sale expired between when the user added the item and when they submit checkout, they pay the regular price — `useCartPriceRefresh` shows a banner on both `/cart` and `/checkout` when any line's live price differs from its snapshot.
+
+### Idempotency
+`orders.idempotency_key` (migration 017, nullable text, unique per buyer via a partial unique index on `(buyer_id, idempotency_key)` — not globally unique) is set from the client-generated `Idempotency-Key` header. `CheckoutForm.tsx`'s `getCheckoutSignature` derives the key from every field that defines the order: the linked wishlist item id, each cart line (`catalog_product_id:combination_key:quantity`), and every Zod-normalized shipping field (name, email, phone, address, city, state, postal code, delivery instructions). A fresh key is generated only when that signature changes — a resubmit with the *exact same* cart and shipping (double-click, network retry) reuses the key, but changing either the cart **or** correcting a shipping field (e.g. a typo'd phone number) before resubmitting gets a new one. This matters because the server-side replay path (below) doesn't re-read the resubmitted shipping — it pays for the order exactly as originally created, so a stale key would silently ship the *old* shipping details even after the user fixed them. `preferred_payment` is deliberately excluded from the signature: it isn't stored on the order, and `POST /api/checkout` always forwards the *current* request's `preferred_payment` into Flutterwave initiation on every call (fresh order or replay alike), so it can never go stale the way shipping can — including it would instead cause a spurious duplicate order any time someone toggled payment method between submissions.
+
+Server-side, `POST /api/checkout` looks up an existing order by `idempotency_key` + `buyer_id` before doing anything else:
+- If found and still `pending_payment`/`payment_failed`: no new order or order_items are created — it re-initiates Flutterwave payment for that existing order (`lib/checkout/reinitiatePayment.ts`, shared with `/api/checkout/retry`) and returns its `order_id`.
+- If found and already resolved (e.g. `confirmed`): returns `{ order_id, payment_link: null }` — the client falls through to `/checkout/processing`, which will pick up the already-confirmed status.
+- A `23505` unique-violation on insert (two concurrent requests racing with the same key) is handled the same way as a normal replay rather than surfacing a 500.
+
+This does **not** attempt to reconcile a replayed request whose cart differs from the original — the replay path always pays for the order as originally created, on the assumption that the key is only reused for retries of the *same* submission, never a materially different one (enforced client-side via the signature check above).
+
+### Atomicity
+The `orders` row and its `order_items` are created together via one RPC call, `gifvtme_create_checkout_order` (migration 018) — a single Postgres transaction, not two separate inserts. This closes a real race: with two separate inserts, a concurrent request carrying the same idempotency key could look up the just-inserted `orders` row (which is fully visible to other transactions the instant it commits) and initiate payment against it *before its `order_items` existed*. Wrapping both inserts in one function call means no other request can ever observe an order without its items — every idempotency lookup in `POST /api/checkout` is safe to act on the moment it finds a row.
+
+### Payment claim
+Being able to safely find an existing order (above) doesn't by itself stop two concurrent requests from *both* initiating payment for it. `orders.payment_claimed_at` (also migration 018, set to `now()` at creation) is a `claimed_at`-style compare-and-set lock — the same pattern `/api/reminders` and `/api/thank-you/process` use for their cron rows, just with a 2-minute stale window instead of 10 (this guards an interactive click, not a background job). `lib/checkout/reinitiatePayment.ts`'s `reinitiateOrderPayment` — used by both `/api/checkout`'s replay path and `/api/checkout/retry` — atomically claims the order (a conditional `UPDATE ... WHERE status IN ('pending_payment','payment_failed') AND (payment_claimed_at IS NULL OR stale)`, checking a row was actually affected) before calling Flutterwave, and only proceeds if it wins the claim; a losing claim returns 409 without touching Flutterwave. The claim is released whenever a Flutterwave call fails (both here and in the fresh-order creation path in `route.ts`), so a genuine follow-up retry isn't blocked. Without this, a double-click on "Try again" or two racing idempotent replays could each start an independent, separately-payable Flutterwave session for the same order — the DB would still only ever mark it `confirmed` once, but a buyer who completed both payment sessions would actually be charged twice.
 
 ---
 
 ## Non-Functional Requirements
 - The checkout flow must work on mobile Safari (most Nigerian users).
 - Flutterwave redirect must use HTTPS in production — never HTTP.
-- `POST /api/checkout` must be idempotent with a client-generated `idempotency_key` to prevent double-orders on network retries.
+- `POST /api/checkout` is idempotent via the `Idempotency-Key` header described above.
 
 ---
 
@@ -52,279 +69,193 @@ Catalog-only (Flow B) e-commerce. Covers adding items to a client-side cart, rev
 
 **Item list:**
 Each line item:
-- Product image (60×60), title, variant description (e.g. "Size: M, Color: Red")
-- Current price (live from Sanity, not cached) — if different from when added, show "Price updated" badge
-- Quantity stepper (`QuantityStepper` component, min 1, max 10)
-- Remove button (×)
+- Product image, title, selected variant options
+- Current price (live from Sanity via `/api/cart/prices`, not cached)
+- Quantity stepper (`QuantityStepper` component, min 1, max 99)
+- Remove button
 
 **Price summary panel:**
-- Subtotal
-- Shipping: "Calculated at checkout" (v1 — flat rate or free shipping determined at checkout)
-- Total
+- Subtotal / Total (shipping is not itemized separately in v1 — Flutterwave collects the order total, delivery cost is not currently broken out on this panel)
 
 **CTAs:**
 - "Proceed to checkout" (filled, full width)
 - "Continue shopping" (ghost)
 
-**Empty cart:** Illustrated empty bag, "Your cart is empty", "Browse the gift museum" CTA.
+**Empty cart:** empty-state illustration, "Your cart is empty", browse CTA.
 
-**Price-changed banner:** If any item's current Sanity price differs from `price_at_add`: amber banner — "Some prices have updated since you added them to your cart."
+**Price-changed banner:** `useCartPriceRefresh`'s `priceNotice`, shown when any line's live Sanity price differs from its cached snapshot (worded differently depending on whether a flash sale just ended vs. a general price change).
 
 ### `/checkout` — Checkout page
 
 **Two-column layout on desktop** (form left, order summary right). Single column on mobile.
 
-**Step 1: Shipping details**
-- Full name (text input)
-- Phone number (text input, required — for delivery coordination)
-- Address line 1 (text input)
-- Address line 2 (optional)
-- City (text input)
-- State (select — Nigerian states list, 36 states + FCT)
-- Saved addresses: if user has saved addresses, show a "Use a saved address" selector above the form; selecting one pre-fills the form.
-- "Save this address" checkbox (checked by default).
+**Shipping details form** (`CheckoutForm.tsx` / `lib/checkout/validation.ts`'s `checkoutShippingSchema`):
+- First name, last name (separate fields, not a single `full_name`)
+- Email address
+- Phone number (Nigerian format, required)
+- Street address, apartment/suite (optional)
+- City, State (select — `NIGERIAN_STATES`, 36 states + `"FCT - Abuja"`)
+- Postal code (optional), delivery instructions (optional)
+- Saved addresses: `AddressSelector` component exists and is wired into the form, but is always given an empty array (`app/checkout/page.tsx`) — there's no `addresses` table or account UI to populate it from yet. See "Saved addresses" under divergences.
 
-**Step 2: Order summary** (right column / below form on mobile)
-- Line items: image, title, variant, quantity, price
-- Subtotal, shipping, total
-- Flash sale prices shown if active at this moment
+**Order summary** (right column / below form on mobile): line items, total, live prices, a price-changed notice, and an unavailable-items warning that blocks submission until resolved.
 
 **Payment section:**
-- "Pay ₦[total] with Flutterwave" (filled, full width)
-- Flutterwave logo + "Secure payment" copy
-- On click: shows spinner, calls `POST /api/checkout`, redirects to Flutterwave URL.
+- Payment method selector (`PaymentMethodSelector` — card / bank transfer / USSD, passed to Flutterwave as `preferred_payment`)
+- "Place order ₦[total]" button — disabled while submitting, while cart prices are refreshing, while any item is unavailable, or while the cart is empty/zero-total
+- On click: validates the form and cart, sends `POST /api/checkout` with a stable `Idempotency-Key`, then either redirects to the returned Flutterwave `payment_link` or (if the order was already resolved via idempotent replay) pushes to `/checkout/processing`.
 
 ### `/checkout/processing` — Polling page
+Shown while waiting for Flutterwave webhook to confirm/fail the order (`components/order/ProcessingScreen.tsx`).
+- Animated spinner, "Confirming your payment…"
+- Polls Supabase directly every **2 seconds**, for up to **3 minutes** (not the header-endpoint/10-poll design originally proposed — see divergences)
+- On `confirmed`: redirects to `/account/orders/[id]`
+- On `payment_failed`: redirects to `/checkout/failed?order=...`
+- On timeout: shows a "taking longer than expected" state with a link to `/account`
 
-Shown while waiting for Flutterwave webhook to confirm/fail the order.
-- Animated spinner
-- "Confirming your payment…"
-- Polls every 3 seconds (max 30 seconds / 10 polls)
-- If still pending after 10 polls: show "Payment is taking longer than expected. We'll email you once confirmed." with "View your orders" link.
+### `/account/orders/[id]` — Order confirmation / status page
+Serves as both the "success" page and the general order-status page. Redirects back to `/checkout/processing` if the order is still `pending_payment`, or to `/checkout/failed` if `payment_failed`; otherwise renders the confirmed order (`OrderConfirmationScreen`). There is no separate `/checkout/success/[orderId]` route.
 
-### `/checkout/success/[orderId]` — Success page
-- "🎁 Order confirmed!" heading
-- Order summary (items, total)
-- "We'll email you when your order ships."
-- CTAs: "Continue shopping", "View this order" → `/account/orders/[orderId]`
-
-### `/checkout/failed` — Failed page
-- "Payment unsuccessful"
-- Reason (if Flutterwave provides one — e.g. "Insufficient funds")
-- "Try again" CTA → returns to checkout with the same cart
-- "Contact support" link
+### `/checkout/failed` — Failed page (`components/order/PaymentFailedScreen.tsx`)
+- "Payment did not go through" (or a `reason` query param, currently never populated — neither `/api/checkout` nor the webhook attach a failure reason to the redirect)
+- "Try again" CTA → calls `POST /api/checkout/retry?order=<id>` and redirects to the returned payment link
+- "Contact support" link → `/contact-us`
 
 ---
 
 ## Backend Logic
 
-### Cart context (`lib/cart/CartContext.tsx`)
+### Cart context (`components/cart/CartContext.tsx`)
 ```typescript
-interface CartItem {
-  catalog_product_id: string
-  variant_combination_key: string | null
-  quantity: number
-  // Display snapshot (NOT used for pricing):
-  title: string
-  image_url: string
-  price_at_add: number
+export interface CartItem {
+  catalog_product_id: string;
+  product_title: string;
+  product_image_url: string | null;
+  combination_key: string | null;
+  selected_options: Record<string, string>;
+  quantity: number;
+  unit_price: number;
+  supplier_product_id: string | null;
 }
 
-// Persisted to localStorage under key 'gifvtme_cart_<userId>'
-// Re-hydrated on mount, synced on every change
+// Persisted to localStorage under the single key "gifvtme.catalog-cart"
+// (CART_STORAGE_KEY) — re-hydrated on mount, synced on every change.
 ```
 
-### `POST /api/checkout`
-```typescript
-// 1. Auth check
-// 2. Parse idempotency_key from header — check if order with this key already exists
-const existing = await supabase.from('orders').select('id, status').eq('idempotency_key', key).single()
-if (existing.data) return { order_id: existing.data.id } // idempotent response
+### `POST /api/checkout` (`app/api/checkout/route.ts`)
+1. Auth check (`getAuthenticatedApiUser`) — 401 if unauthenticated.
+2. Requires an `Idempotency-Key` header — 400 if missing.
+3. Validates the body against `checkoutSchema`.
+4. Looks up an existing order by `idempotency_key` + `buyer_id`. If found, short-circuits into the idempotent-replay path described above — skips straight to Flutterwave initiation against the existing order, no new `orders`/`order_items` rows.
+5. If a `wishlist_item_id` is present, validates it's `catalog` origin, `available`, and matches a cart line (400/404/409 on failure).
+6. Re-fetches current product/variant state from Sanity (`CART_PRICES_QUERY`) and rejects (400, with an `unavailable_items` list) if any product is inactive or any selected variant is unavailable.
+7. Computes server-side prices via `getActivePrice()` per line and the order total — rejects if any price is invalid or the total is zero.
+8. Creates the `orders` row (`status: 'pending_payment'`, `idempotency_key` set) and its `order_items` together via one RPC call, `gifvtme_create_checkout_order` (migration 018) — a single Postgres transaction, so no concurrent request can ever see an order without its items. If either insert fails inside the function, both roll back automatically — no best-effort compensating delete needed.
+9. Calls `initiateFlutterwavePayment()`. On failure, returns 502 and **leaves the order at `pending_payment`** so it stays retryable via `/api/checkout/retry`.
+10. Returns `{ order_id, payment_link }`.
 
-// 3. Re-fetch prices from Sanity for all cart items
-const sanityPrices = await fetchCurrentPrices(cartItems) // calls getActivePrice() per item
+### `POST /api/checkout/retry` (`app/api/checkout/retry/route.ts`)
+Not part of the original design (which assumed retries resubmitted `/api/checkout` with the same idempotency key) — this is a dedicated, separately-designed endpoint that re-initiates payment for an *existing* order by id, without touching Sanity or re-validating cart contents:
+1. Auth + ownership check (order must belong to the caller).
+2. Only allows `pending_payment`/`payment_failed` orders.
+3. Flips `payment_failed` → `pending_payment`, then calls `initiateFlutterwavePayment()` again with the order's stored shipping/amount.
+4. Shares its re-initiation logic with `/api/checkout`'s idempotent-replay path via `lib/checkout/reinitiatePayment.ts`.
 
-// 4. Validate all items are still available
-for (const item of cartItems) {
-  const sanityProduct = sanityPrices[item.catalog_product_id]
-  if (!sanityProduct) throw new Error(`Product ${item.catalog_product_id} no longer available`)
-  if (item.variant_combination_key) {
-    const variant = sanityProduct.variants?.find(v => v.combinationKey === item.variant_combination_key)
-    if (!variant?.available) throw new Error(`Variant no longer available`)
-  }
-}
+### `POST /api/flutterwave/webhook` (`app/api/flutterwave/webhook/route.ts`)
+1. Verifies the `verif-hash` header against `FLUTTERWAVE_SECRET_HASH` via direct string comparison — this is Flutterwave's actual webhook contract (a static shared-secret header), not an HMAC-of-body scheme. Runs before any DB access.
+2. Ignores any event that isn't `charge.completed`.
+3. Resolves the order id from the payment's `meta.order_id` (falling back to parsing it out of `tx_ref`) — not by treating `tx_ref` itself as the order id.
+4. Loads the order; if it's not `pending_payment`, returns 200 without modifying anything (idempotent against duplicate webhooks).
+5. Requires the webhook's amount and currency to exactly match the stored order (normalized to integer kobo) before confirming.
+6. On success: sets `status = 'confirmed'`, stores `flutterwave_tx_id`/`flutterwave_tx_ref`, and (if the order has a `wishlist_item_id`) marks the linked `wishlist_items` row — and its `master_items` row, if any — `purchased`.
+7. On any other charge status: sets `status = 'payment_failed'`.
+8. Always returns 200 except on signature mismatch (401), per Flutterwave's retry-suppression expectation.
 
-// 5. Calculate server-side total
-const total = cartItems.reduce((sum, item) => {
-  return sum + (sanityPrices[item.catalog_product_id].currentPrice * item.quantity)
-}, 0)
-
-// 6. Create orders row (before Flutterwave redirect)
-const order = await supabase.from('orders').insert({
-  user_id: auth.uid(),
-  status: 'pending_payment',
-  total_amount: total,
-  idempotency_key: key,
-  shipping_name: body.shipping.full_name,
-  shipping_phone: body.shipping.phone,
-  shipping_address: body.shipping.address_line_1,
-  shipping_address_2: body.shipping.address_line_2,
-  shipping_city: body.shipping.city,
-  shipping_state: body.shipping.state,
-}).select().single()
-
-// 7. Create order_items (with price snapshots)
-await supabase.from('order_items').insert(cartItems.map(item => ({
-  order_id: order.id,
-  catalog_product_id: item.catalog_product_id,
-  variant_combination_key: item.variant_combination_key,
-  product_title: sanityPrices[item.catalog_product_id].title,
-  product_image_url: sanityPrices[item.catalog_product_id].image_url,
-  unit_price: sanityPrices[item.catalog_product_id].currentPrice,
-  quantity: item.quantity,
-  // total_price is a generated column: quantity * unit_price
-})))
-
-// 8. Save shipping address if requested
-if (body.save_address) await saveAddress(auth.uid(), body.shipping)
-
-// 9. Initiate Flutterwave payment
-const flutterwaveResponse = await initFlutterwavePayment({
-  tx_ref: order.id,
-  amount: total,
-  currency: 'NGN',
-  customer: { email: user.email, name: body.shipping.full_name, phone_number: body.shipping.phone },
-  redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/processing?order_id=${order.id}`,
-})
-
-return { order_id: order.id, payment_url: flutterwaveResponse.data.link }
-```
-
-### `POST /api/flutterwave/webhook`
-```typescript
-// 1. Verify signature
-const hash = crypto.createHmac('sha256', process.env.FLUTTERWAVE_SECRET_HASH)
-  .update(JSON.stringify(body)).digest('hex')
-if (hash !== req.headers['verif-hash']) return 401
-
-// 2. Check event type
-if (body.event !== 'charge.completed') return 200 // ignore other events
-
-// 3. Verify the order amount matches (secondary check)
-const order = await supabase.from('orders').select('total_amount, status').eq('id', body.data.tx_ref).single()
-if (!order.data) return 404
-if (order.data.status !== 'pending_payment') return 200 // already processed (idempotent)
-if (Math.abs(body.data.amount - order.data.total_amount) > 1) return 400 // amount mismatch
-
-// 4. Update status
-const newStatus = body.data.status === 'successful' ? 'confirmed' : 'payment_failed'
-await supabase.from('orders').update({
-  status: newStatus,
-  flutterwave_transaction_id: body.data.id,
-  flutterwave_tx_ref: body.data.tx_ref,
-}).eq('id', body.data.tx_ref)
-
-return 200
-```
-
-### `GET /api/orders/[id]/status` (for processing page polling)
-```typescript
-// Auth check — user must own the order
-const order = await supabase.from('orders').select('status').eq('id', id).eq('user_id', auth.uid()).single()
-return { status: order.data.status }
-```
+### `GET /api/orders/[id]/status`
+Does not exist. `/checkout/processing` polls `orders.status` directly from the browser via the RLS-scoped Supabase client instead — see divergences.
 
 ---
 
 ## Database Changes
 
-**`orders` table** — add `idempotency_key` (migration update needed):
-```sql
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS idempotency_key TEXT UNIQUE;
-```
+`orders` and `order_items` existed live before this repo's migration history began (like `thank_you_messages`/`important_dates` before their own migrations) — there's no single migration file that creates them from scratch. Confirmed columns in use: `id`, `buyer_id`, `total_amount`, `currency`, `status`, `shipping_name`, `shipping_email`, `shipping_phone`, `shipping_address`, `shipping_city`, `shipping_state`, `wishlist_item_id`, `flutterwave_tx_id`, `flutterwave_tx_ref`, `created_at`; `order_items.total_price` is a generated column (`quantity * unit_price`).
 
-**`addresses` table** (new — not yet in any migration):
+**Migration 017** (`gifvtme_migration_017_checkout_idempotency.sql`) adds the one new column:
 ```sql
-CREATE TABLE addresses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  label TEXT, -- "Home", "Work", etc.
-  full_name TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  address_line_1 TEXT NOT NULL,
-  address_line_2 TEXT,
-  city TEXT NOT NULL,
-  state TEXT NOT NULL,
-  is_default BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE INDEX addresses_user_id_idx ON addresses(user_id);
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS idempotency_key text;
 
--- Enforce only one default per user:
-CREATE UNIQUE INDEX addresses_one_default_per_user ON addresses(user_id) WHERE is_default = true;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_idempotency_key_idx
+  ON public.orders (buyer_id, idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
 ```
+Scoped to `(buyer_id, idempotency_key)` rather than `idempotency_key` alone — the app only ever looks up a key alongside its owning `buyer_id` (see `/api/checkout` above), so uniqueness only needs to hold per buyer. A global constraint would let a key collision between two different buyers (implausible with UUIDs, but not impossible given `CheckoutForm.tsx`'s non-UUID fallback generator) permanently block the second buyer's checkout with an unrelated 500.
 
-**`order_items` table** — verify `total_price` generated column exists:
-```sql
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS total_price NUMERIC GENERATED ALWAYS AS (quantity * unit_price) STORED;
-```
+**Migration 018** (`gifvtme_migration_018_checkout_atomic_order.sql`) adds `gifvtme_create_checkout_order(...)`, a plpgsql RPC function that inserts an `orders` row and its `order_items` in one transaction (same pattern as `gifvtme_create_occasion_with_wishlist`, migrations 005/010) — `POST /api/checkout` calls this instead of two separate inserts, closing a race where a concurrent idempotent replay could find and pay against an order that didn't have its items yet.
+
+**`addresses` table:** not built. See divergences.
 
 ---
 
 ## API Endpoints
 
 ### `POST /api/checkout`
-**Auth:** required.
-**Headers:** `Idempotency-Key: <uuid>` (client-generated).
-**Body:**
-```typescript
-{
-  cart_items: CartItemPayload[],
-  shipping: ShippingDetails,
-  save_address: boolean,
-}
-```
-**Response:** `{ order_id: string, payment_url: string }`.
+**Auth:** required. **Headers:** `Idempotency-Key` (required).
+**Body:** `{ cart_items, shipping, preferred_payment?, wishlist_item_id? }` — see `lib/checkout/validation.ts`'s `checkoutSchema` for exact shapes.
+**Response:** `{ order_id, payment_link }` (`payment_link` is `null` on an idempotent replay against an already-resolved order).
+
+### `POST /api/checkout/retry`
+**Auth:** required, must own the order. **Query params:** `order` (UUID).
+**Response:** `{ order_id, payment_link }`.
 
 ### `POST /api/flutterwave/webhook`
-**Auth:** none (verified via `verif-hash` header).
-**Body:** Flutterwave event payload.
-**Response:** `200 OK` always (Flutterwave expects 200 to stop retrying).
+**Auth:** none (verified via `verif-hash` header). **Response:** `200 OK` always (except 401 on bad signature).
 
-### `GET /api/orders/[id]/status`
-**Auth:** required (order owner).
-**Response:** `{ status: OrderStatus }`.
+### `GET /api/cart/prices`
+**Auth:** none. **Purpose:** refreshes current Sanity prices/availability for cart items; also returns recommended products for the cart page. Not in the original spec, but is what actually powers the price-changed banner and unavailable-item detection on both `/cart` and `/checkout`.
+
+`GET /api/orders/[id]/status` — not built. See divergences.
 
 ---
 
 ## Permissions and Authorization
 - Cart: entirely client-side — no auth needed to build a cart.
-- `POST /api/checkout`: requires auth.
+- `POST /api/checkout`, `POST /api/checkout/retry`: require auth (retry also requires order ownership).
 - `POST /api/flutterwave/webhook`: no user auth — verified via Flutterwave signature.
-- `GET /api/orders/[id]/status`: requires auth, must own the order.
-- `addresses` RLS: owner-only CRUD.
+- `/checkout/processing`'s direct Supabase polling relies on RLS to scope `orders` rows to their buyer.
 
 ---
 
 ## Validation
 
+Actual shape (`lib/checkout/validation.ts`):
 ```typescript
-const checkoutSchema = z.object({
-  cart_items: z.array(z.object({
-    catalog_product_id: z.string().min(1),
-    variant_combination_key: z.string().nullable(),
-    quantity: z.number().int().min(1).max(10),
-  })).min(1, "Cart is empty"),
-  shipping: z.object({
-    full_name: z.string().min(2).max(100),
-    phone: z.string().min(7).max(20),
-    address_line_1: z.string().min(5).max(200),
-    address_line_2: z.string().max(200).optional(),
-    city: z.string().min(2).max(100),
-    state: z.enum(NIGERIAN_STATES), // array of all 36 states + FCT
-  }),
-  save_address: z.boolean().default(true),
-})
+export const checkoutCartItemSchema = z.object({
+  catalog_product_id: z.string().trim().min(1),
+  combination_key: z.string().trim().min(1).nullable(),
+  quantity: z.number().int().min(1).max(99),
+  display_price: z.number().positive(), // display-only, never trusted server-side
+});
+
+export const checkoutShippingSchema = z.object({
+  first_name: z.string().trim().min(1),
+  last_name: z.string().trim().min(1),
+  email: z.string().trim().email().toLowerCase(),
+  phone: z.string().trim().regex(/^(\+234|0)[789][01]\d{8}$/),
+  street_address: z.string().trim().min(5),
+  apartment: /* optional */ z.string().optional(),
+  city: z.string().trim().min(2),
+  state: /* one of NIGERIAN_STATES */ z.string(),
+  postal_code: /* optional */ z.string().optional(),
+  delivery_instructions: /* optional, max 500 */ z.string().optional(),
+});
+
+export const checkoutSchema = z.object({
+  cart_items: z.array(checkoutCartItemSchema).min(1),
+  shipping: checkoutShippingSchema,
+  preferred_payment: z.enum(["card", "banktransfer", "ussd"]).optional(),
+  wishlist_item_id: z.string().uuid().optional(),
+});
 ```
 
 ---
@@ -333,90 +264,91 @@ const checkoutSchema = z.object({
 
 | Scenario | Behavior |
 |---|---|
-| Product no longer available | Checkout returns 422: "One or more items in your cart are no longer available. Please remove them and try again." |
-| Variant unavailable | Same as above |
-| Flutterwave initiation fails | 500: "Payment service temporarily unavailable. Please try again in a moment." |
-| Webhook signature invalid | 401 — log the attempt |
-| Amount mismatch in webhook | 400 — log for investigation (potential fraud) |
-| Polling times out (10 polls) | Show "payment taking longer than expected" message — order status will update via webhook eventually |
-| Session expires mid-checkout | Redirect to login with redirect param — cart preserved in localStorage |
+| Product no longer available | 400 with `{ error: "Some items are no longer available", unavailable_items: [...] }` |
+| Variant unavailable | Same as above, per-line reason ("Variant is no longer available" / "Variant is sold out") |
+| Flutterwave initiation fails | 502: `"Payment couldn't start - try again."` — order stays `pending_payment`, retryable |
+| Webhook signature invalid | 401 — logged, zero DB access before this check |
+| Amount/currency mismatch in webhook | Logged, order left `pending_payment` (not confirmed) rather than a hard 400 |
+| Polling times out (3 minutes) | "Taking longer than expected" — order still updates via webhook eventually |
+| Session expires mid-checkout | Redirect to login — cart preserved in localStorage |
+| Missing `Idempotency-Key` header | 400: `"Missing Idempotency-Key header."` |
+| Concurrent duplicate submission (same key) | Handled as an idempotent replay, not a 500 |
 
 ---
 
 ## Loading and Empty States
 
-- **Cart page:** skeleton line items while re-fetching current prices.
-- **Empty cart:** illustrated bag + "Your cart is empty" + CTA.
-- **Checkout — submitting:** "Pay" button disabled + spinner + "Redirecting to payment..."
-- **Processing page:** animated spinner + "Confirming your payment…"
-- **Saved addresses loading:** skeleton rows in the address selector.
+- **Cart page:** price refresh runs in the background (`isRefreshingPrices`); no full-page skeleton.
+- **Empty cart:** illustrated empty state + CTA.
+- **Checkout — submitting:** "Place order" button disabled + spinner + "Processing...".
+- **Processing page:** animated spinner + "Confirming your payment…".
+- **Saved addresses:** not applicable — the selector never renders since it's always fed an empty list.
 
 ---
 
 ## Edge Cases
 
-1. **Price changes (flash sale ends) between cart add and checkout submit.** The server re-fetches Sanity prices at `POST /api/checkout` time. If the price changed, the `order_items.unit_price` is the new price. The user should see the updated total on the checkout page before submitting — implement a "re-validate prices" call on the checkout page mount that compares current Sanity prices against cart `price_at_add` values and shows a banner if any changed.
-
-2. **Cart has items from multiple Gifvtme occasions** (e.g. buying gifts for two different people). This is allowed — the `orders` table does not require all items to come from the same wishlist. However, `orders.wishlist_item_id` can only link to one wishlist item. For multi-wishlist-item orders: create one order with the primary `wishlist_item_id` (first item tied to a wishlist), or set it null if it's a direct shop purchase. **Decision needed: clarify how multi-recipient carts are handled.** Simplest v1 approach: each wishlist item in the cart that was from a specific person's list should trigger its own order — but that's complex. Defer this edge case and assume a single-wishlist-item cart for v1.
-
-3. **Flutterwave webhook fires but the order was already confirmed** (duplicate webhook). The `if order.status !== 'pending_payment' return 200` guard handles this — idempotent behavior, no double-confirmation.
-
-4. **User closes the tab after Flutterwave payment but before returning to `/checkout/processing`.** The webhook still fires and confirms the order. The user can find it in `/account/orders`.
-
-5. **Flutterwave webhook is delayed significantly** (minutes/hours). The order sits at `pending_payment`. The `/checkout/processing` polling times out and shows the "taking longer than expected" message. This is accepted v1 behavior — the order confirms once the webhook arrives.
-
-6. **Cart localStorage is cleared** (user clears browser data mid-checkout). Cart is lost. The `orders` row at `pending_payment` remains in the DB but there's no UI to resume it. A "resume pending order" flow is a future improvement.
+1. **Price changes (flash sale ends) between cart add and checkout submit.** `useCartPriceRefresh` re-fetches Sanity prices on both `/cart` and `/checkout` and patches the cart snapshot in place, showing a banner. The server independently re-fetches and re-prices at `POST /api/checkout` regardless of what the client showed.
+2. **Cart has items from multiple Gifvtme occasions.** Same open question as originally noted — `orders.wishlist_item_id` links to at most one wishlist item; a cart mixing a wishlist-linked item with other items is allowed, but multi-recipient carts remain out of scope for v1.
+3. **Duplicate Flutterwave webhook / duplicate checkout submission.** Both are idempotent — the webhook via its `status !== 'pending_payment'` guard, checkout submission via `idempotency_key` (see above). The order + order_items creation itself is atomic (one transaction, migration 018), so a concurrent duplicate submission can never find and pay against a half-created order.
+4. **User closes the tab after paying but before returning to `/checkout/processing`.** The webhook still confirms the order; visible under `/account/orders`.
+5. **Flutterwave webhook is delayed significantly.** Processing page times out after 3 minutes with a "check back" message; the order confirms once the webhook arrives.
+6. **Cart localStorage is cleared mid-checkout.** Cart is lost; any `pending_payment` order has no resume UI. Unchanged from the original spec — still a future improvement.
 
 ---
 
 ## Analytics / Events
-- `cart.item_added` (product_id, origin: from_wishlist | from_browse)
-- `cart.item_removed`
-- `cart.quantity_changed`
-- `cart.price_updated_banner_shown` (items_changed: number)
-- `checkout.started`
-- `checkout.payment_initiated` (total_amount)
-- `checkout.payment_succeeded`
-- `checkout.payment_failed` (reason)
-- `checkout.payment_timed_out` (order still pending after 10 polls)
+
+Actual event names in use (some differ from what was originally proposed):
+- `cart.viewed`, `cart.prices_refreshed`, `cart.quantity_changed`, `cart.item_removed`
+- `checkout.started`, `checkout.payment_method_selected`, `checkout.shipping_completed`, `checkout.unavailable_items`, `checkout.order_placed`
+- `checkout.payment_succeeded`, `checkout.payment_failed` (fired from the processing page based on polled status)
+- `checkout.payment_retried` (fired from the failed page's retry CTA)
+
+Not currently fired: a dedicated `cart.item_added` event, and `checkout.payment_timed_out` for the processing-page timeout state.
 
 ---
 
 ## Testing Requirements
 
-### Unit tests
-- `getActivePrice`: all cases (no sale, active sale, expired sale, variants).
-- Checkout Zod schema: all valid/invalid combinations.
-- Flutterwave signature verification: correct and incorrect hashes.
+### Unit tests (shipped)
+- `getActivePrice`/`isFlashSaleWindowActive` — `lib/flutterwave/getActivePrice.test.ts`
+- `checkoutSchema` (cart items, shipping fields, phone/state/email validation, optional fields) — `lib/checkout/validation.test.ts`
 
-### Integration tests
-- `POST /api/checkout`: creates `orders` and `order_items` rows with server-fetched prices, never client prices.
-- Idempotency: same `Idempotency-Key` twice → same `order_id` returned, no duplicate `orders` row.
-- Webhook: `charge.completed` → `status='confirmed'`; non-successful status → `status='payment_failed'`.
-- Invalid webhook signature → rejected.
+### Integration tests (shipped)
+- `POST /api/checkout` idempotency: missing header rejected, an existing `pending_payment` order is reused (payment re-initiated, no new order created), an existing resolved order returns `payment_link: null` — `app/api/checkout/route.test.ts`
+- `POST /api/checkout` atomic creation: order + order_items are submitted together in one RPC call before payment starts; on a concurrent-request conflict (23505 from the RPC), payment is initiated against the re-fetched, already-committed order rather than a fresh/incomplete one — `app/api/checkout/route.test.ts`
+- `POST /api/checkout` payment claim: a request that loses the atomic claim on an already-claimed order gets 409 without calling Flutterwave — `app/api/checkout/route.test.ts`
+- `POST /api/flutterwave/webhook`: signature required before any DB access, non-`charge.completed` events ignored, amount mismatch doesn't confirm, already-confirmed orders are untouched (idempotent), non-successful charges mark `payment_failed` — `app/api/flutterwave/webhook/route.test.ts`
 
-### Manual QA
+### Manual QA (unchanged from original)
 - Add items to cart, let a flash sale expire, go to checkout — verify updated prices shown.
-- Complete a full Flutterwave sandbox payment — verify order confirmed, email sent.
+- Complete a full Flutterwave sandbox payment — verify order confirmed.
 - Fail a Flutterwave sandbox payment — verify `/checkout/failed` shown with retry option.
-- Check that `order_items.unit_price` matches the Sanity price at the moment of checkout, not the `price_at_add` value.
+- Double-submit checkout (e.g. slow network, click twice) — verify only one order is created.
 
 ---
 
 ## Acceptance Criteria
-- [ ] Cart persists in localStorage across page reloads for authenticated users.
-- [ ] `POST /api/checkout` always re-fetches prices from Sanity — never trusts client-provided prices.
-- [ ] An `orders` row is created at `pending_payment` before any Flutterwave redirect.
-- [ ] Flutterwave webhook correctly verifies signature before changing order status.
-- [ ] A successful payment results in `orders.status = 'confirmed'` and an automated thank-you triggered.
-- [ ] A failed payment shows `/checkout/failed` with a retry path.
-- [ ] Duplicate webhooks don't double-confirm an order.
+- [x] Cart persists in localStorage across page reloads.
+- [x] `POST /api/checkout` always re-fetches prices from Sanity — never trusts client-provided prices.
+- [x] An `orders` row is created at `pending_payment` before any Flutterwave redirect.
+- [x] Flutterwave webhook correctly verifies signature before changing order status.
+- [x] A successful payment results in `orders.status = 'confirmed'`.
+- [x] A failed payment shows `/checkout/failed` with a retry path.
+- [x] Duplicate webhooks don't double-confirm an order.
+- [x] A duplicated/retried `POST /api/checkout` submission (same `Idempotency-Key`) doesn't create a second order.
+- [x] A concurrent duplicate submission can never initiate payment against an order that doesn't have its order_items yet (order + order_items are created atomically).
+- [x] Two concurrent payment-initiation attempts for the same order can't each start an independent, separately-payable Flutterwave session (atomic payment claim).
 
 ---
 
-## Future Improvements
-- Cart sync across devices (server-persisted cart).
-- "Save for later" from cart.
-- Coupon/discount code support.
-- Multiple shipping addresses per order (buying for multiple people in one cart).
-- Buy now, pay later (BNPL) via Flutterwave PayLater.
+## Divergences from the original spec
+
+Reviewed 2026-08-06 against already-shipped, architecture-documented code (`API_ROUTES.md`, `DATABASE_SCHEMA.md`, `ROADMAP.md`). Idempotency was a genuine gap and has been closed (migration 017 + the header/replay logic above); a follow-up review of that fix found the order-creation path itself wasn't atomic, closed by migration 018 (see "Atomicity" above). Three other divergences were deliberately kept as shipped rather than rewritten to match the original text:
+
+1. **Order-status polling.** The original spec assumed a dedicated `GET /api/orders/[id]/status` endpoint for the processing page to poll. Shipped code instead polls Supabase directly from the browser via RLS, which already works and needs no new route. `API_ROUTES.md` still lists `/api/orders/[id]/status` as a possible future Retool/service-role endpoint (a different purpose — writing status, not customer polling), not something the processing page needs.
+2. **Saved addresses.** The `addresses` table and a working address-book flow were never built — this functionality is now scoped to its own spec, `20-ADDRESS-BOOK.md`, rather than this one. `AddressSelector`/`CheckoutForm` have UI scaffolding for it but are always fed an empty list.
+3. **Success page.** No dedicated `/checkout/success/[orderId]` route exists; `/account/orders/[id]` serves as the confirmation page (it already handles all three post-payment states — pending, failed, confirmed — with its own redirects).
+
+Cosmetic/naming-only divergences left as shipped: `combination_key` (not `variant_combination_key`), `payment_link` (not `payment_url`), cart context at `components/cart/` (not `lib/cart/`), a single global localStorage cart key (not per-user), separate first/last name fields (not `full_name`), and a `/api/checkout/retry` endpoint design for retries (not resubmitting `/api/checkout`).
