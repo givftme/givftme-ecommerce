@@ -191,13 +191,14 @@ Sheet-based compose form (react-hook-form + Zod), same responsive one-component 
 
 `checkout/CheckoutForm.tsx`, `checkout/AddressSelector.tsx`, `checkout/PaymentMethodSelector.tsx`, and `checkout/OrderSummaryPanel.tsx` implement the protected checkout details screen with react-hook-form + Zod validation, Nigerian state selection, future-ready saved-address prefill, Flutterwave payment preference, and responsive form/summary layout.
 
-`order/ProcessingScreen.tsx`, `order/PaymentFailedScreen.tsx`, and `order/OrderConfirmationScreen.tsx` implement the payment processing poller, failed payment retry screen, and confirmed order success screen.
+`order/ProcessingScreen.tsx` and `order/PaymentFailedScreen.tsx` implement the payment processing poller and failed payment retry screen.
+
+`order/OrderCard.tsx`, `order/OrderList.tsx`, `order/OrderStatusBadge.tsx`, `order/OrderTracking.tsx`, and `order/TrackingLink.tsx` implement order tracking (`16-ORDER-TRACKING.md`): the Active/Completed/Cancelled tabbed list at `/account/orders`, the color-coded status badge, and the four-stage progress tracker (Order Placed → Processing → Shipped → Delivered, GSAP pulse on the current step, a red banner in place of the tracker for `cancelled`/`refunded`) on `/account/orders/[id]`. `order/OrderConfirmationScreen.tsx` (the former one-shot post-checkout success screen) was removed 2026-08-07 — `/account/orders/[id]` now serves as the single destination for an order at every stage, so no separate confirmation screen is needed.
 
 `flash-sale/FlashSaleBanner.tsx` and `flash-sale/FlashSaleTimer.tsx` render the active sale banner and countdown. The dedicated `/flash-sale` page is still deferred to the Flash Sales spec.
 
 Review submission components are still not built as of this writing. When building them:
 
-- `OrderTracking` should render the four-stage progress tracker (Order Placed → Inprogress → Shipped → Delivered) matching the Figma desktop order detail screen, driven by `order_status_history` data.
 - `SharedWishlistHeader` / `SharedWishlistItem` / `ClaimedBadge` / `IntentFlagBadge` / `ReminderOptIn` correspond directly to the giver-facing screens (shared wishlist view, item detail, purchase confirmation, claimed success).
 - `FlashSaleTimer` needs to compute remaining time from a Sanity product's sale `endTime` and use `formatCountdown()` from `lib/utils.ts`.
 

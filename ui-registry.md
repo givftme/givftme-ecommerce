@@ -400,22 +400,22 @@ Last updated: 2026-07-20
 **Pattern notes:**
 Payment state screens are full-screen, centered, and quiet. GSAP is reserved for the rotating ring and failed-icon entrance.
 
-### Order Confirmation
+### Order Detail & Tracking
 
-File: components/order/OrderConfirmationScreen.tsx
-Last updated: 2026-07-20
+File: app/account/orders/[id]/page.tsx, components/order/OrderTracking.tsx, components/order/OrderStatusBadge.tsx, components/order/TrackingLink.tsx
+Last updated: 2026-08-07
 
 | Property         | Class                                                                         |
 | ---------------- | ----------------------------------------------------------------------------- |
 | Background       | page `bg-surface`, panels `bg-white`, thumbnails `bg-surface`                 |
-| Border           | panels `border border-stone-100`, dividers `border-stone-100`                 |
-| Border radius    | panels `rounded-2xl`, thumbnails `rounded-xl`                                 |
-| Text — primary   | headline `text-3xl font-bold text-ink`, section title `text-lg font-semibold` |
+| Border           | panels `border border-stone-100`, dividers `border-stone-100`, cancelled banner `border-red-100 bg-red-50` |
+| Border radius    | panels `rounded-2xl`, thumbnails `rounded-xl`, tracker circles `rounded-full` |
+| Text — primary   | headline `text-2xl md:text-3xl font-bold text-ink`, section title `text-lg font-semibold` |
 | Text — secondary | body/item meta `text-sm/text-xs text-muted`                                   |
-| Spacing          | page `py-10`, panels `p-6 md:p-8`, rows `py-4`                                |
+| Spacing          | page `py-10`, panels `p-5 md:p-6`, rows `py-4`                                |
 | Hover state      | buttons use shared variants                                                   |
 | Shadow           | panels `shadow-sm`                                                            |
-| Accent usage     | success icon and order reference `text-brand`                                 |
+| Accent usage     | tracker current-step pulse (GSAP), status badge color by status (`OrderStatusBadge`) |
 
 **Pattern notes:**
-Order confirmation follows the existing success-screen pattern: centered brand icon first, concise status copy, then a compact operational summary.
+Order detail replaces the former one-shot `OrderConfirmationScreen` (removed 2026-08-07 — see `16-ORDER-TRACKING.md`) with a persistent tracking view: a 4-step `OrderTracking` progress bar (or a red "Cancelled"/"Refunded" banner in place of it), order summary, shipping details, a conditional tracking section, and an expandable `<details>` status-history timeline. No separate confirmation screen exists anymore — `/account/orders/[id]` is the single destination for an order at every stage after payment resolves.

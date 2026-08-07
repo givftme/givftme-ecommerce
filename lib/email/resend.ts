@@ -118,3 +118,13 @@ export async function sendThankYouEmail({
 }: RawEmailInput) {
   return sendViaResend({ to, subject, text, html, idempotencyKey });
 }
+
+export async function sendOrderStatusEmail({
+  to,
+  subject,
+  text,
+  html,
+  idempotencyKey,
+}: RawEmailInput) {
+  return sendViaResend({ to, subject, text, html, idempotencyKey });
+}

@@ -97,7 +97,7 @@ lib/
   reminders/     scheduling helpers per reminder source (occasion, invitee, important date) + buildReminderEmail
   important-dates/  Flow 1 domain logic (types, validation, server) for `/dashboard/dates`
   thank-you/     automated + personal thank-you domain logic (types, validation, server, buildThankYouEmail) for `/gifts`
-  orders/        order status transition helpers (to be built)
+  orders/        types, status transition map (`isValidOrderStatusTransition`), buildOrderStatusEmail, and server queries (`getOrdersForUser`/`getOrderDetail`) for `/account/orders`
   reviews/       verified-purchase gating logic (to be built)
   utils.ts       cn(), formatPrice(), formatCountdown(), daysUntil(), pluralize(), wishlistUrl()
 ```
