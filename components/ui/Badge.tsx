@@ -10,6 +10,8 @@ const badgeVariants = cva(
         default: "bg-brand-light text-brand",
         success: "bg-green-50 text-green-700",
         danger: "bg-red-50 text-red-600",
+        warning: "bg-amber-50 text-amber-700",
+        info: "bg-blue-50 text-blue-700",
         muted: "bg-surface text-muted",
         sale: "bg-brand text-white",
       },

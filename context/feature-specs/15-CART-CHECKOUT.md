@@ -113,8 +113,8 @@ Shown while waiting for Flutterwave webhook to confirm/fail the order (`componen
 - On `payment_failed`: redirects to `/checkout/failed?order=...`
 - On timeout: shows a "taking longer than expected" state with a link to `/account`
 
-### `/account/orders/[id]` — Order confirmation / status page
-Serves as both the "success" page and the general order-status page. Redirects back to `/checkout/processing` if the order is still `pending_payment`, or to `/checkout/failed` if `payment_failed`; otherwise renders the confirmed order (`OrderConfirmationScreen`). There is no separate `/checkout/success/[orderId]` route.
+### `/account/orders/[id]` — Order confirmation / status / tracking page
+Serves as the "success" page, the general order-status page, and (since `16-ORDER-TRACKING.md`) the full order tracking page. Redirects back to `/checkout/processing` if the order is still `pending_payment`, or to `/checkout/failed` if `payment_failed`; otherwise renders the 4-step tracker, order summary, shipping details, and status history timeline. There is no separate `/checkout/success/[orderId]` route, and no separate one-shot confirmation screen — `OrderConfirmationScreen` was removed when order tracking shipped since this page now covers that moment too.
 
 ### `/checkout/failed` — Failed page (`components/order/PaymentFailedScreen.tsx`)
 - "Payment did not go through" (or a `reason` query param, currently never populated — neither `/api/checkout` nor the webhook attach a failure reason to the redirect)

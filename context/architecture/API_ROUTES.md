@@ -151,8 +151,23 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Behavior:** ignores unknown orders and duplicate/non-pending orders idempotently with 200. Successful events only confirm the order when the webhook amount and currency match the stored order total and currency. Successful catalog wishlist orders mark the linked `wishlist_items` row, and any linked `master_items` row, as `purchased`.
 **Critical:** makes zero database reads or writes before the signature check passes. See `THIRD_PARTY_INTEGRATIONS.md` for the verification mechanism.
 
-## `/api/orders/[id]/status` (to be built)
-**Method:** PATCH. **Auth:** intended for Retool (service role), not customer-facing. **Purpose:** updates an order's status; relies on the `on_order_status_changed` trigger to log to `order_status_history` automatically. Consider whether this needs to exist as a Next.js route at all, since Retool can write to Supabase directly — only build this if Retool's direct-write approach proves insufficient (e.g. if you need to trigger a Resend email synchronously on status change).
+## `/api/orders`
+**Method:** GET. **Auth:** required. **Purpose:** lists the current user's tracked orders (`16-ORDER-TRACKING.md`) for `/account/orders`.
+**Query params:** `?status=active|completed|cancelled` (maps to `STATUS_GROUPS` in `lib/orders/types.ts`; omitted returns every tracked order, all groups, newest first).
+**Response:** `{ orders: OrderCardData[] }`. `pending_payment`/`payment_failed` orders are never included — those are still being resolved on `/checkout/processing`/`/checkout/failed`, not part of any tracking tab. The spec's tab list omits where `refunded` belongs; this repo groups it into `cancelled` (a refund is always downstream of an order that stopped shipping).
+
+## `/api/orders/[id]`
+**Method:** GET. **Auth:** required (owner — filtered by `buyer_id`, never a 403). **Purpose:** fetches a single order with items and status history for `/account/orders/[id]`.
+**Response:** `{ order: OrderDetail }` — includes shipping fields, tracking fields, `order_items`, and `order_status_history` (oldest first). Missing/non-owned orders return 404 `{ error: "This order doesn't exist." }`.
+
+## `/api/orders/notify` (cron route)
+**Method:** POST. **Auth:** protected by `Authorization: Bearer ${CRON_SECRET}` header, not user auth. Spec text (`16-ORDER-TRACKING.md`) calls for this to run every 5 minutes; scheduled daily instead (`vercel.json`, `30 6 * * *`) for the same reason `/api/reminders` and `/api/thank-you/process` are daily — Vercel's Hobby plan only permits daily cron schedules. A customer status email can now take up to ~24h to arrive rather than ~5 minutes; revisit if the project moves to a Pro plan.
+**Purpose:** sends pending customer-facing status emails — queries `order_status_history WHERE customer_notified = false AND permanently_failed = false AND status IN ('confirmed','shipped','delivered','cancelled','refunded')`, builds the email via `buildOrderStatusEmail` (`lib/orders/buildOrderStatusEmail.ts`), sends through Resend, and sets `customer_notified = true` on success.
+**Concurrency safety:** identical `claimed_at` atomic-claim pattern to `/api/reminders`/`/api/thank-you/process` (not in the spec's literal `Database Changes` SQL, added because it's the same class of correctness gap the checkout race fixes closed — see `ROADMAP.md`). A send failure increments `retry_count` and sets `permanently_failed = true` at 5 (Edge Case #4). The Resend send passes the history row's own id as an `Idempotency-Key`.
+**Response:** `{ notified: number, failed: number }`.
+
+## `/api/orders/[id]/status` (not built — intentionally)
+**Method:** PATCH (never implemented). Per `16-ORDER-TRACKING.md`'s Permissions section: "All writes to `orders.status` happen via Retool with service role — no customer-facing status-change API." Retool writes directly to Supabase; `validate_order_status_transition` (migration 019) enforces valid transitions at the DB level regardless of writer, and `on_order_status_changed` (same migration) logs every change to `order_status_history` automatically. No Next.js route is needed unless a future requirement (e.g. triggering something synchronously on status change) can't be met by Retool's direct write.
 
 ## `/api/purchases`
 **Method:** POST. **Auth:** required. **Purpose:** the external-flow "mark as purchased" action — creates a `purchases` row after a giver confirms they completed an affiliate purchase.
