@@ -9,6 +9,7 @@ const protectedRoutes = [
   "/settings",
   "/checkout",
   "/account",
+  "/reviews",
 ];
 const authOnlyRoutes = [
   "/login",

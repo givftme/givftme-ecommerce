@@ -39,6 +39,7 @@ app/
   cart/                          public until checkout requires auth
   checkout/                      requires auth
   flash-sale/                    public
+  reviews/new/                   requires auth — verified-purchase review submission/edit (17-REVIEWS.md)
 
   w/[id]/                       PUBLIC GIVER-FACING — shared wishlist
     item/[itemId]/                item detail from a giver's perspective
@@ -98,7 +99,7 @@ lib/
   important-dates/  Flow 1 domain logic (types, validation, server) for `/dashboard/dates`
   thank-you/     automated + personal thank-you domain logic (types, validation, server, buildThankYouEmail) for `/gifts`
   orders/        types, status transition map (`isValidOrderStatusTransition`), buildOrderStatusEmail, and server queries (`getOrdersForUser`/`getOrderDetail`) for `/account/orders`
-  reviews/       verified-purchase gating logic (to be built)
+  reviews/       verified-purchase gating (isVerifiedPurchaser), paginated/aggregate queries, create/update/delete, Zod validation — for `/reviews/new` and `/api/reviews`
   utils.ts       cn(), formatPrice(), formatCountdown(), daysUntil(), pluralize(), wishlistUrl()
 ```
 
