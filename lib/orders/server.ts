@@ -62,6 +62,10 @@ const ORDER_DETAIL_SELECT = `
   order_items(id, product_title, product_image_url, quantity, unit_price),
   order_status_history(id, status, changed_at, notes)
 `;
+// Plain `status` again as of migration 024 — order_status_history's legacy
+// old_status/new_status columns (which this briefly routed through instead,
+// see ROADMAP.md) were dropped rather than root-caused, removing the
+// ambiguity rather than working around it.
 
 interface OrderDetailRow {
   id: string;

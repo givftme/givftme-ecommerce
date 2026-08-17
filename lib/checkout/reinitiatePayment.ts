@@ -136,6 +136,10 @@ export async function reinitiateOrderPayment(
     });
 
     if (!payment.ok || !isAllowedFlutterwavePaymentLink(payment.paymentLink)) {
+      console.error("Flutterwave re-initiation rejected.", {
+        orderId: order.id,
+        error: payment.error,
+      });
       await releasePaymentClaim(supabase, order.id, order.buyer_id);
       return { ok: false, status: 502, error: "Payment couldn't start - try again." };
     }

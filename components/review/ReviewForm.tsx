@@ -66,22 +66,33 @@ export function ReviewForm({
           body: values.body || undefined,
         }),
       });
-      const payload = (await response.json()) as { review?: unknown; error?: string };
+      const payload = (await response.json().catch(() => ({}))) as {
+        review?: unknown;
+        error?: string;
+      };
 
       if (!response.ok) {
-        throw new Error(payload.error || "Couldn't submit your review. Please try again.");
+        throw new Error(
+          payload.error || "Couldn't submit your review. Please try again.",
+        );
       }
 
       trackEvent(isEditing ? "review.edited" : "review.submitted", {
         rating: values.rating,
         has_body: Boolean(values.body),
       });
-      toast({ title: isEditing ? "Review updated." : "Review submitted.", variant: "success" });
+      toast({
+        title: isEditing ? "Review updated." : "Review submitted.",
+        variant: "success",
+      });
       router.push(`/product/${productSlug}`);
       router.refresh();
     } catch (error) {
       toast({
-        title: error instanceof Error ? error.message : "Couldn't submit your review. Please try again.",
+        title:
+          error instanceof Error
+            ? error.message
+            : "Couldn't submit your review. Please try again.",
         variant: "danger",
       });
     }
@@ -95,7 +106,9 @@ export function ReviewForm({
     setDeleting(true);
 
     try {
-      const response = await fetch(`/api/reviews/${existingReview.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/reviews/${existingReview.id}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         throw new Error("Delete failed.");
@@ -106,7 +119,10 @@ export function ReviewForm({
       router.push(`/product/${productSlug}`);
       router.refresh();
     } catch {
-      toast({ title: "Couldn't delete your review. Please try again.", variant: "danger" });
+      toast({
+        title: "Couldn't delete your review. Please try again.",
+        variant: "danger",
+      });
       setDeleting(false);
     }
   };
@@ -118,7 +134,10 @@ export function ReviewForm({
           <StarRating
             value={rating}
             onChange={(value) =>
-              form.setValue("rating", value, { shouldDirty: true, shouldValidate: true })
+              form.setValue("rating", value, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
             }
           />
           <p className="text-sm font-medium text-ink">
@@ -142,12 +161,19 @@ export function ReviewForm({
             {body.length}/{REVIEW_BODY_MAX_LENGTH}
           </p>
           {form.formState.errors.body ? (
-            <p className="text-xs font-medium text-red-600">{form.formState.errors.body.message}</p>
+            <p className="text-xs font-medium text-red-600">
+              {form.formState.errors.body.message}
+            </p>
           ) : null}
         </div>
 
         <div className="space-y-3">
-          <Button type="submit" fullWidth size="lg" disabled={form.formState.isSubmitting}>
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            disabled={form.formState.isSubmitting}
+          >
             {form.formState.isSubmitting
               ? "Submitting..."
               : isEditing
@@ -177,10 +203,18 @@ export function ReviewForm({
             <DialogDescription>This can&apos;t be undone.</DialogDescription>
           </DialogHeader>
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDelete(false)}
+            >
               Cancel
             </Button>
-            <Button type="button" disabled={deleting} onClick={() => void deleteReview()}>
+            <Button
+              type="button"
+              disabled={deleting}
+              onClick={() => void deleteReview()}
+            >
               {deleting ? "Deleting..." : "Delete review"}
             </Button>
           </div>

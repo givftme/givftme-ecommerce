@@ -82,14 +82,25 @@ export async function initiateFlutterwavePayment({
     }),
   });
 
-  const payload = (await response.json().catch(() => null)) as
-    | FlutterwavePaymentsResponse
-    | null;
+  const rawBody = await response.text();
+  let payload: FlutterwavePaymentsResponse | null = null;
+  try {
+    payload = JSON.parse(rawBody) as FlutterwavePaymentsResponse;
+  } catch {
+    payload = null;
+  }
 
-  if (!response.ok || payload?.status !== "success" || !payload.data?.link) {
+  if (!response.ok || payload?.status !== "success" || !payload?.data?.link) {
+    // payload?.message alone was masking real failures behind a generic
+    // fallback whenever Flutterwave's body had no `message` field or
+    // wasn't JSON at all (auth failures, proxy/gateway errors) — surface
+    // the actual HTTP status and raw body so callers' console.error calls
+    // are actually diagnostic instead of always showing the same string.
     return {
       ok: false,
-      error: payload?.message || "Payment could not be initiated.",
+      error:
+        payload?.message ||
+        `Flutterwave HTTP ${response.status}: ${rawBody.slice(0, 500) || "(empty body)"}`,
     };
   }
 

@@ -63,7 +63,7 @@ describe("updateReviewSchema", () => {
 
 describe("reviewFormSchema", () => {
   it("requires a rating even though the field is form-optional at the type level", () => {
-    const result = reviewFormSchema.safeParse({ rating: 0, body: "" });
+    const result = reviewFormSchema.safeParse({ body: "" });
 
     expect(result.success).toBe(false);
   });

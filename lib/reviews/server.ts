@@ -278,6 +278,7 @@ export async function updateOwnReview(
     .from("reviews")
     .update(patch)
     .eq("id", reviewId)
+    .eq("user_id", userId)
     .select("id, user_id, rating, body, created_at, updated_at")
     .single();
 
@@ -311,7 +312,11 @@ export async function deleteOwnReview(
     return { ok: false, status: 403, error: "You can only delete your own review." };
   }
 
-  const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
+  const { error } = await supabase
+    .from("reviews")
+    .delete()
+    .eq("id", reviewId)
+    .eq("user_id", userId);
 
   if (error) {
     return { ok: false, status: 500, error: "Couldn't delete your review. Please try again." };

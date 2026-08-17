@@ -17,7 +17,11 @@ import { RatingBreakdown } from "@/components/product/RatingBreakdown";
 import { ReviewCard } from "@/components/review/ReviewCard";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import type { ProductReview, ProductReviewsSummary, ReviewsPage } from "@/lib/sanity/types";
+import type {
+  ProductReview,
+  ProductReviewsSummary,
+  ReviewsPage,
+} from "@/lib/sanity/types";
 
 export function ReviewsListSkeleton() {
   return (
@@ -30,14 +34,49 @@ export function ReviewsListSkeleton() {
   );
 }
 
+// Deleting a review shifts every later review up one slot in the
+// offset-based `/api/reviews` pagination, so a plain local filter would
+// leave an already-loaded page's worth of items stale and cause the next
+// "Load more" to skip whichever review just shifted in. Re-fetching every
+// page already loaded (not just the current one) keeps the loaded list and
+// future pagination consistent, and also returns fresh average/breakdown
+// totals in the same round trip since those are recomputed on every call.
+async function fetchReviewsThroughPage(productId: string, throughPage: number) {
+  const pageNumbers = Array.from({ length: throughPage }, (_, index) => index + 1);
+  const responses = await Promise.all(
+    pageNumbers.map(async (pageNumber) => {
+      const response = await fetch(
+        `/api/reviews?product_id=${encodeURIComponent(productId)}&page=${pageNumber}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Could not load reviews.");
+      }
+
+      return (await response.json()) as ReviewsPage;
+    }),
+  );
+
+  const last = responses[responses.length - 1];
+
+  return {
+    reviews: responses.flatMap((page) => page.reviews),
+    total: last.total,
+    average: last.average,
+    breakdown: last.breakdown,
+  };
+}
+
 export function ReviewsList({
   productId,
   initial,
   currentUserId,
+  onSummaryChange,
 }: {
   productId: string;
   initial: ProductReviewsSummary;
   currentUserId: string | null;
+  onSummaryChange?: (summary: { count: number; avg: number }) => void;
 }) {
   const { toast } = useToast();
   const [reviews, setReviews] = useState<ProductReview[]>(initial.reviews);
@@ -59,8 +98,12 @@ export function ReviewsList({
     try {
       const nextPage = page + 1;
       const response = await fetch(
-        `/api/reviews?product_id=${encodeURIComponent(productId)}&page=${nextPage}`
+        `/api/reviews?product_id=${encodeURIComponent(productId)}&page=${nextPage}`,
       );
+      
+      if (!response.ok) {
+        throw new Error("Could not load reviews.");
+      }
       const payload = (await response.json()) as ReviewsPage;
 
       setReviews((current) => [...current, ...payload.reviews]);
@@ -81,14 +124,38 @@ export function ReviewsList({
     setDeleting(true);
 
     try {
-      const response = await fetch(`/api/reviews/${deleteTarget.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/reviews/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
         throw new Error("Delete failed.");
       }
 
-      setReviews((current) => current.filter((review) => review.id !== deleteTarget.id));
-      setSummary((current) => ({ ...current, count: Math.max(0, current.count - 1) }));
+      try {
+        const refreshed = await fetchReviewsThroughPage(productId, page);
+
+        setReviews(refreshed.reviews);
+        setSummary({
+          count: refreshed.total,
+          avg: refreshed.average,
+          breakdown: refreshed.breakdown,
+        });
+        setHasMore(refreshed.total > refreshed.reviews.length);
+        onSummaryChange?.({ count: refreshed.total, avg: refreshed.average });
+      } catch {
+        // Best-effort fallback if the refetch itself fails — at least drop
+        // the deleted review locally rather than leaving it on screen.
+        // avg/breakdown/hasMore may be briefly stale until the next reload.
+        setReviews((current) =>
+          current.filter((review) => review.id !== deleteTarget.id),
+        );
+        setSummary((current) => ({
+          ...current,
+          count: Math.max(0, current.count - 1),
+        }));
+      }
+
       if (deleteTarget.userId === currentUserId) {
         setCanLeaveReview(true);
       }
@@ -96,7 +163,10 @@ export function ReviewsList({
       toast({ title: "Review deleted.", variant: "success" });
       setDeleteTarget(null);
     } catch {
-      toast({ title: "Couldn't delete your review. Please try again.", variant: "danger" });
+      toast({
+        title: "Couldn't delete your review. Please try again.",
+        variant: "danger",
+      });
     } finally {
       setDeleting(false);
     }
@@ -132,7 +202,12 @@ export function ReviewsList({
       )}
 
       {hasMore ? (
-        <Button type="button" variant="ghost" disabled={loadingMore} onClick={() => void loadMore()}>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={loadingMore}
+          onClick={() => void loadMore()}
+        >
           {loadingMore ? "Loading..." : "Load more reviews"}
         </Button>
       ) : null}
@@ -147,17 +222,28 @@ export function ReviewsList({
         </Link>
       ) : null}
 
-      <Dialog open={Boolean(deleteTarget)} onOpenChange={() => setDeleteTarget(null)}>
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={() => setDeleteTarget(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete this review?</DialogTitle>
             <DialogDescription>This can&apos;t be undone.</DialogDescription>
           </DialogHeader>
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+            >
               Cancel
             </Button>
-            <Button type="button" disabled={deleting} onClick={() => void confirmDelete()}>
+            <Button
+              type="button"
+              disabled={deleting}
+              onClick={() => void confirmDelete()}
+            >
               {deleting ? "Deleting..." : "Delete review"}
             </Button>
           </div>

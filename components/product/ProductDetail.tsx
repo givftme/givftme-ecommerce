@@ -115,6 +115,10 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
     "description"
   );
   const [isAdding, setIsAdding] = useState(false);
+  const [reviewsSummary, setReviewsSummary] = useState({
+    count: reviews.count,
+    avg: reviews.avg,
+  });
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [saleEnded, setSaleEnded] = useState(false);
   const { addItem } = useCart();
@@ -258,14 +262,15 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
             onClick={scrollToReviews}
             className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
           >
-            {reviews.count > 0 ? (
+            {reviewsSummary.count > 0 ? (
               <>
                 <span className="flex items-center gap-1 text-amber-500">
                   <Star className="h-4 w-4" fill="currentColor" />
-                  {reviews.avg.toFixed(1)}
+                  {reviewsSummary.avg.toFixed(1)}
                 </span>
                 <span>
-                  ({reviews.count} {reviews.count === 1 ? "review" : "reviews"})
+                  ({reviewsSummary.count}{" "}
+                  {reviewsSummary.count === 1 ? "review" : "reviews"})
                 </span>
               </>
             ) : (
@@ -418,7 +423,7 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
           <div className="flex gap-2 border-b border-stone-100">
             {[
               { id: "description", label: "Description" },
-              { id: "reviews", label: `Reviews (${reviews.count})` },
+              { id: "reviews", label: `Reviews (${reviewsSummary.count})` },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -428,7 +433,7 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
                   if (tab.id === "reviews") {
                     trackEvent("review.tab.viewed", {
                       product_id: product.catalogProductId,
-                      review_count: reviews.count,
+                      review_count: reviewsSummary.count,
                     });
                   }
                 }}
@@ -461,6 +466,7 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
                 productId={product.catalogProductId}
                 initial={reviews}
                 currentUserId={currentUserId}
+                onSummaryChange={setReviewsSummary}
               />
             </div>
           )}
