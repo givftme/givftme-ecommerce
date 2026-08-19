@@ -8,6 +8,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { AddressSelector, type SavedAddress } from "@/components/checkout/AddressSelector";
 import { OrderSummaryPanel } from "@/components/checkout/OrderSummaryPanel";
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
+import { PriceChangeDialog, type PriceChange } from "@/components/checkout/PriceChangeDialog";
 import { useCart, type CartItem } from "@/components/cart/CartContext";
 import { useCartPriceRefresh } from "@/components/cart/useCartPriceRefresh";
 import { Button } from "@/components/ui/Button";
@@ -45,6 +46,8 @@ interface CheckoutResponse {
   payment_link?: string;
   error?: string;
   unavailable_items?: Array<{ title?: string; reason?: string }>;
+  price_changed?: boolean;
+  price_changes?: PriceChange[];
 }
 
 function generateIdempotencyKey() {
@@ -131,6 +134,11 @@ export function CheckoutForm({
     useCartPriceRefresh();
   const [globalError, setGlobalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [priceChangeConfirmation, setPriceChangeConfirmation] = useState<{
+    priceChanges: PriceChange[];
+    orderId: string;
+    paymentLink?: string;
+  } | null>(null);
   const hasUnavailableItems = unavailableItems.length > 0;
   const [idempotencyState, setIdempotencyState] = useState<{
     signature: string;
@@ -293,6 +301,19 @@ export function CheckoutForm({
       });
       clearPendingWishlistItem();
 
+      if (data.price_changed && data.price_changes?.length) {
+        trackEvent("flash_sale.price_changed_at_checkout", {
+          order_id: data.order_id,
+          changed_item_count: data.price_changes.length,
+        });
+        setPriceChangeConfirmation({
+          priceChanges: data.price_changes,
+          orderId: data.order_id,
+          paymentLink: data.payment_link,
+        });
+        return;
+      }
+
       if (data.payment_link) {
         window.location.assign(data.payment_link);
         return;
@@ -308,6 +329,22 @@ export function CheckoutForm({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const continueToPayment = () => {
+    if (!priceChangeConfirmation) {
+      return;
+    }
+
+    const { orderId, paymentLink } = priceChangeConfirmation;
+    setPriceChangeConfirmation(null);
+
+    if (paymentLink) {
+      window.location.assign(paymentLink);
+      return;
+    }
+
+    router.push(`/checkout/processing?order=${orderId}`);
   };
 
   return (
@@ -553,6 +590,12 @@ export function CheckoutForm({
           </form>
         </Form>
       </div>
+
+      <PriceChangeDialog
+        open={Boolean(priceChangeConfirmation)}
+        priceChanges={priceChangeConfirmation?.priceChanges ?? []}
+        onContinue={continueToPayment}
+      />
     </section>
   );
 }

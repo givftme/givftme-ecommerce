@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getActivePrice, isFlashSaleWindowActive } from "./getActivePrice";
+import { getActivePrice, isFlashSaleWindowActive, isWithinGracePeriod } from "./getActivePrice";
 import type { SanityCheckoutProduct } from "./getActivePrice";
 
 const NOW = new Date("2026-08-01T12:00:00.000Z");
@@ -99,6 +99,55 @@ describe("getActivePrice", () => {
     });
 
     expect(() => getActivePrice(product, "green")).toThrow();
+  });
+
+  it("honors salePrice within the 5-minute grace period after saleEndTime", () => {
+    const saleEnd = new Date("2026-08-01T11:57:00.000Z"); // 3 minutes before NOW
+    const product = baseProduct({
+      salePrice: 7000,
+      saleStartTime: new Date("2026-07-01T00:00:00.000Z").toISOString(),
+      saleEndTime: saleEnd.toISOString(),
+    });
+
+    expect(getActivePrice(product, null, NOW)).toBe(7000);
+  });
+
+  it("returns basePrice once the grace period has elapsed (>5 minutes after saleEndTime)", () => {
+    const saleEnd = new Date("2026-08-01T11:50:00.000Z"); // 10 minutes before NOW
+    const product = baseProduct({
+      salePrice: 7000,
+      saleStartTime: new Date("2026-07-01T00:00:00.000Z").toISOString(),
+      saleEndTime: saleEnd.toISOString(),
+    });
+
+    expect(getActivePrice(product, null, NOW)).toBe(10000);
+  });
+});
+
+describe("isWithinGracePeriod", () => {
+  it("is false when the sale hasn't ended yet", () => {
+    expect(
+      isWithinGracePeriod(
+        { salePrice: 1000, saleStartTime: PAST, saleEndTime: FUTURE },
+        NOW
+      )
+    ).toBe(false);
+  });
+
+  it("is true within 5 minutes after saleEndTime", () => {
+    const saleEnd = new Date(NOW.getTime() - 2 * 60 * 1000).toISOString();
+
+    expect(
+      isWithinGracePeriod({ salePrice: 1000, saleStartTime: PAST, saleEndTime: saleEnd }, NOW)
+    ).toBe(true);
+  });
+
+  it("is false more than 5 minutes after saleEndTime", () => {
+    const saleEnd = new Date(NOW.getTime() - 6 * 60 * 1000).toISOString();
+
+    expect(
+      isWithinGracePeriod({ salePrice: 1000, saleStartTime: PAST, saleEndTime: saleEnd }, NOW)
+    ).toBe(false);
   });
 });
 

@@ -113,20 +113,26 @@ export const NEW_PRODUCTS_QUERY = defineQuery(/* groq */ `
   }
 `);
 
+const ACTIVE_FLASH_SALE_FILTER = /* groq */ `
+  _type == "product" &&
+  status == "active" &&
+  defined(salePrice) &&
+  salePrice > 0 &&
+  defined(saleStartTime) &&
+  defined(saleEndTime) &&
+  dateTime(saleStartTime) <= dateTime($now) &&
+  dateTime(saleEndTime) > dateTime($now)
+`;
+
 export const FLASH_SALE_PRODUCTS_QUERY = defineQuery(/* groq */ `
-  *[
-    _type == "product" &&
-    status == "active" &&
-    defined(salePrice) &&
-    salePrice > 0 &&
-    defined(saleStartTime) &&
-    defined(saleEndTime) &&
-    dateTime(saleStartTime) <= dateTime($now) &&
-    dateTime(saleEndTime) > dateTime($now)
-  ]
-  | order(saleEndTime asc) [0...$limit] {
+  *[${ACTIVE_FLASH_SALE_FILTER}]
+  | order(saleEndTime asc) [$offset...$offset + $limit] {
     ${PRODUCT_CARD_FRAGMENT}
   }
+`);
+
+export const FLASH_SALE_PRODUCTS_COUNT_QUERY = defineQuery(/* groq */ `
+  count(*[${ACTIVE_FLASH_SALE_FILTER}])
 `);
 
 export const OCCASION_PAGE_QUERY = defineQuery(/* groq */ `

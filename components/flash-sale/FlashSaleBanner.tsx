@@ -7,9 +7,10 @@ import { trackEvent } from "@/lib/analytics";
 
 interface FlashSaleBannerProps {
   saleEndTime?: string | null;
+  maxDiscountPercent?: number | null;
 }
 
-export function FlashSaleBanner({ saleEndTime }: FlashSaleBannerProps) {
+export function FlashSaleBanner({ saleEndTime, maxDiscountPercent }: FlashSaleBannerProps) {
   if (!saleEndTime) {
     return null;
   }
@@ -22,8 +23,14 @@ export function FlashSaleBanner({ saleEndTime }: FlashSaleBannerProps) {
             <Zap className="h-5 w-5" fill="currentColor" />
           </span>
           <span>
-            Flash Sale - ends in{" "}
-            <FlashSaleTimer endTime={saleEndTime} className="inline-block" />
+            Flash Sale
+            {maxDiscountPercent ? ` – Up to ${maxDiscountPercent}% off` : null}
+            {" · Ends in "}
+            <FlashSaleTimer
+              endTime={saleEndTime}
+              className="inline-block text-white"
+              disableUrgencyColor
+            />
           </span>
         </div>
         <Link

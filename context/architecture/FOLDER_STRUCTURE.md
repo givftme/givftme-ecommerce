@@ -72,11 +72,11 @@ components/
   layout/        Navbar, Footer, MobileBottomNav, PageWrapper
   product/       ProductCard, ProductGrid, (ProductDetail, VariantSelector — to be added)
   cart/          CartItem, CartSummary, EmptyCart
-  checkout/      CheckoutForm, AddressForm, PaymentSelector, OrderSummaryPanel
+  checkout/      CheckoutForm, AddressForm, PaymentSelector, OrderSummaryPanel, PriceChangeDialog
   order/         OrderCard, OrderList, OrderTracking, OrderStatusBadge, TrackingLink
   wishlist/      WishlistItem, WishlistGrid, ShareSettingsSheet, SharedWishlistHeader, SharedWishlistItem, ClaimedBadge, IntentFlagBadge, ReminderOptIn, AuthGateSheet
   review/        ReviewCard, ReviewsList, StarRating, RatingBreakdown
-  flash-sale/    FlashSaleBanner, FlashSaleTimer
+  flash-sale/    FlashSaleBanner, FlashSaleTimer, FlashSaleNavbarStrip
   occasion/      user-created occasion wishlist UI (creation flow, detail page, reactivation) plus occasion-museum display cards
   reminders/     Flow 1 important-dates UI (list, card, add/edit form) for `/dashboard/dates`
   gifts/         "Gifts received" UI (list, card, personal thank-you compose sheet) for `/gifts`

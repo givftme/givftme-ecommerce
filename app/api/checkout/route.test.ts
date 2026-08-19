@@ -280,12 +280,19 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     });
 
     const response = await POST(postRequest(validBody, withIdempotencyKey()));
-    const json = (await response.json()) as { order_id?: string; payment_link?: string };
+    const json = (await response.json()) as {
+      order_id?: string;
+      payment_link?: string;
+      price_changed?: boolean;
+      price_changes?: unknown[];
+    };
 
     expect(response.status).toBe(200);
     expect(json).toEqual({
       order_id: "order-new-1",
       payment_link: "https://checkout.flutterwave.com/v3/hosted/pay/new1",
+      price_changed: false,
+      price_changes: [],
     });
 
     // order + order_items were submitted together as one RPC call, not as
@@ -353,5 +360,39 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     expect(mockedInitiateFlutterwavePayment).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: "order-race-1", amount: 5000 })
     );
+  });
+
+  it("flags price_changed when the server-computed price differs from the client's display_price", async () => {
+    // Client last saw the flash sale price (4000); by the time this request
+    // is priced server-side, the sale has ended, so the server correctly
+    // charges basePrice (5000) instead.
+    mockedSanityFetch.mockResolvedValue([sanityProduct]);
+    mockCreateOrderClient({
+      initialLookup: { data: null, error: null },
+      rpcResult: { data: "order-new-2", error: null },
+    });
+    mockedInitiateFlutterwavePayment.mockResolvedValue({
+      ok: true,
+      paymentLink: "https://checkout.flutterwave.com/v3/hosted/pay/new2",
+    });
+
+    const bodyWithStalePrice = {
+      ...validBody,
+      cart_items: [{ ...validBody.cart_items[0], display_price: 4000 }],
+    };
+
+    const response = await POST(postRequest(bodyWithStalePrice, withIdempotencyKey()));
+    const json = (await response.json()) as {
+      order_id?: string;
+      price_changed?: boolean;
+      price_changes?: Array<{ title: string; old_price: number; new_price: number }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(json.order_id).toBe("order-new-2");
+    expect(json.price_changed).toBe(true);
+    expect(json.price_changes).toEqual([
+      { title: "Gift", old_price: 4000, new_price: 5000 },
+    ]);
   });
 });

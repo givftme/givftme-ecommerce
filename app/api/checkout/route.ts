@@ -85,11 +85,18 @@ function getProductImageUrl(product: CartPriceProduct) {
   return product.images?.[0]?.url || null;
 }
 
+interface PriceChange {
+  title: string;
+  old_price: number;
+  new_price: number;
+}
+
 function prepareOrderItems(
   body: CheckoutInput,
   products: CartPriceProduct[]
 ) {
   const orderItems: PreparedOrderItem[] = [];
+  const priceChanges: PriceChange[] = [];
   let totalAmount = 0;
 
   for (const item of body.cart_items) {
@@ -106,6 +113,19 @@ function prepareOrderItems(
       throw new Error(`Invalid price for product: ${product._id}`);
     }
 
+    // 18-FLASH-SALES.md Edge Case #2: the client's display_price reflects
+    // whatever was last shown (possibly before a flash sale ended between
+    // page load and submit). The order is always created at the correct
+    // server-computed unitPrice regardless — this just tells the client
+    // when to warn the buyer before redirecting to payment.
+    if (unitPrice !== item.display_price) {
+      priceChanges.push({
+        title: product.title || "Untitled gift",
+        old_price: item.display_price,
+        new_price: unitPrice,
+      });
+    }
+
     orderItems.push({
       catalog_product_id: item.catalog_product_id,
       product_title: product.title || "Untitled gift",
@@ -119,7 +139,7 @@ function prepareOrderItems(
     totalAmount += unitPrice * item.quantity;
   }
 
-  return { orderItems, totalAmount };
+  return { orderItems, totalAmount, priceChanges };
 }
 
 async function validateWishlistItem(
@@ -365,6 +385,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       order_id: orderId,
       payment_link: payment.paymentLink,
+      price_changed: prepared.priceChanges.length > 0,
+      price_changes: prepared.priceChanges,
     });
   } catch (error) {
     console.error("Flutterwave initiation failed.", error);
