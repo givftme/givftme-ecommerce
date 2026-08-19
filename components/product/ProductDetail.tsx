@@ -238,6 +238,7 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
                 price={unitPrice}
                 compareAtPrice={compareAtPrice ?? undefined}
                 size="lg"
+                isOnFlashSale={saleActive}
               />
             ) : (
               <p className="text-lg font-semibold text-muted">Price not listed</p>

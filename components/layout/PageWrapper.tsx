@@ -2,6 +2,10 @@ import { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { PublicPageShell } from "@/components/layout/PublicPageShell";
 import { createClient } from "@/lib/supabase/server";
+import { getMaxFlashSaleDiscountPercent, normalizeProductCards } from "@/lib/sanity/catalog";
+import { sanityFetch } from "@/lib/sanity/fetch";
+import { FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
+import type { ProductCardData } from "@/lib/sanity/types";
 
 export interface PageWrapperProps {
   children: ReactNode;
@@ -62,12 +66,25 @@ export async function PageWrapper({
 
   const resolvedUserName = userName ?? profileName ?? getUserDisplayName(user);
 
+  // Powers the navbar's flash sale strip on every public page — a small,
+  // short-revalidated fetch (see FLASH_SALE_PRODUCTS_QUERY's usage
+  // elsewhere) rather than per-page prop drilling.
+  const rawFlashSaleProducts = await sanityFetch<ProductCardData[]>(
+    FLASH_SALE_PRODUCTS_QUERY,
+    { now: new Date().toISOString(), offset: 0, limit: 8 }
+  );
+  const flashSaleProducts = normalizeProductCards(rawFlashSaleProducts);
+  const flashSaleEndTime = flashSaleProducts[0]?.saleEndTime ?? null;
+  const flashSaleMaxDiscountPercent = getMaxFlashSaleDiscountPercent(flashSaleProducts);
+
   return (
     <PublicPageShell
       userName={resolvedUserName}
       avatarUrl={avatarUrl}
       isAuthenticated={resolvedIsAuthenticated}
       searchQuery={searchQuery}
+      flashSaleEndTime={flashSaleEndTime}
+      flashSaleMaxDiscountPercent={flashSaleMaxDiscountPercent}
     >
       {children}
     </PublicPageShell>

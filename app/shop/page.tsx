@@ -19,7 +19,7 @@ export default async function ShopPage() {
   const [rawProducts, totalProducts, flashSaleProducts] = await Promise.all([
     sanityFetch<ProductCardData[]>(SHOP_PRODUCTS_QUERY, { offset: 0, limit: 16 }),
     sanityFetch<number>(SHOP_PRODUCTS_COUNT_QUERY),
-    sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, limit: 1 }),
+    sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, offset: 0, limit: 1 }),
   ]);
   const products = normalizeProductCards(rawProducts);
   const hasFlashSale = flashSaleProducts.length > 0;

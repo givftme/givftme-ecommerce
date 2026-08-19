@@ -114,6 +114,25 @@ export function normalizeProductCards(products: RawProduct[] = []) {
   return products.map(normalizeProductCard).filter((product) => product.id);
 }
 
+// Used by the flash sale banner/navbar strip's "Up to X% off" copy.
+export function getMaxFlashSaleDiscountPercent(products: ProductCardData[]) {
+  const percents = products
+    .filter(
+      (product) =>
+        product.isOnFlashSale &&
+        typeof product.price === "number" &&
+        product.compareAtPrice &&
+        product.compareAtPrice > product.price
+    )
+    .map((product) =>
+      Math.round(
+        ((product.compareAtPrice! - product.price!) / product.compareAtPrice!) * 100
+      )
+    );
+
+  return percents.length > 0 ? Math.max(...percents) : null;
+}
+
 export function normalizeProductFull(product: RawProduct): ProductFullData {
   const card = normalizeProductCard(product);
 
