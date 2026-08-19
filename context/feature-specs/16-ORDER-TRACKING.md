@@ -7,7 +7,7 @@ Built from this spec (migration 019, `lib/orders/`, `/api/orders`, `/api/orders/
 - **Notify cron runs daily, not every 5 minutes.** `vercel.json` schedules `/api/orders/notify` at `30 6 * * *` — the project is on Vercel's Hobby plan, which only permits daily cron schedules (same reason `/api/reminders` and `/api/thank-you/process` are daily). A customer status email can take up to ~24h to arrive, not 5 minutes.
 - **`refunded` orders show in the Cancelled tab.** The spec's tab list (Active/Completed/Cancelled) never says where `refunded` belongs — grouped with `cancelled` since a refund is always downstream of an order that stopped shipping.
 - **`delivered`'s email links to the order, not a review flow.** Reviews aren't built yet (`ROADMAP.md` "Not started"), so `buildOrderStatusEmail`'s delivered template can't link to one.
-- **The backward-status-guard transition map is implemented verbatim**, including its one internal inconsistency: Functional Requirement #3's prose says cancellation is allowed "from any non-terminal status," but the map in Backend Logic only allows `cancelled` from `confirmed`/`under_review`/`forwarded`/`shipped` — not from `pending_payment`/`payment_failed`. The map was implemented as literally given rather than guessing which is correct.
+- **The backward-status-guard transition map originally shipped with one internal inconsistency**, implemented verbatim rather than guessed at: Functional Requirement #3's prose says cancellation is allowed "from any non-terminal status," but the map in Backend Logic only allowed `cancelled` from `confirmed`/`under_review`/`forwarded`/`shipped` — not from `pending_payment`/`payment_failed`. Resolved 2026-08-12 by explicit developer decision in favor of the broader FR3 rule — `gifvtme_migration_021_cancel_from_pending.sql` redefines `validate_order_status_transition()` to also allow `pending_payment`/`payment_failed` → `cancelled`; the map below and `lib/orders/statusTransitions.ts` both reflect the resolved rule.
 - **`order_status_history` gained `retry_count`/`permanently_failed`/`claimed_at`**, beyond the spec's literal `Database Changes` SQL — required by the spec's own Edge Case #4 and to give `/api/orders/notify` the same atomic-claim concurrency guard every other cron in this repo already has.
 - **`OrderConfirmationScreen` (the pre-existing one-shot post-checkout success screen) was deleted.** `/account/orders/[id]` now covers that same moment as part of the general tracking view, so keeping both would have been a duplicate.
 - **`order.status_changed` and `order.customer_notified` analytics are not wired.** Retool writes `orders.status` directly against Supabase via service role — there's no Next.js code path to instrument, and no established server-side analytics sink beyond the client-facing `trackEvent()`/`/api/analytics` pair the rest of this app uses. `orders.list.viewed`, `order.detail.viewed`, and `order.tracking_link_clicked` are wired.
@@ -129,8 +129,8 @@ CREATE OR REPLACE FUNCTION validate_order_status_transition()
 RETURNS TRIGGER AS $$
 DECLARE
   valid_transitions JSONB := '{
-    "pending_payment": ["confirmed", "payment_failed"],
-    "payment_failed": ["pending_payment"],
+    "pending_payment": ["confirmed", "payment_failed", "cancelled"],
+    "payment_failed": ["pending_payment", "cancelled"],
     "confirmed": ["under_review", "cancelled"],
     "under_review": ["forwarded", "cancelled"],
     "forwarded": ["shipped", "cancelled"],

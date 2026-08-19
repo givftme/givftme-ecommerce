@@ -38,6 +38,11 @@ describe("isValidOrderStatusTransition", () => {
     expect(VALID_TRANSITIONS.cancelled).toEqual([]);
     expect(VALID_TRANSITIONS.refunded).toEqual([]);
   });
+
+  it("allows cancelling from pending_payment and payment_failed (FR3: any non-terminal status)", () => {
+    expect(isValidOrderStatusTransition("pending_payment", "cancelled")).toBe(true);
+    expect(isValidOrderStatusTransition("payment_failed", "cancelled")).toBe(true);
+  });
 });
 
 describe("assertValidOrderStatusTransition", () => {

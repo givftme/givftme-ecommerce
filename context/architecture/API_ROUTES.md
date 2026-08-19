@@ -189,8 +189,19 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Method:** GET. **Auth:** required. **Purpose:** the "Gifts received" page's data source — renamed from the spec's `/api/dashboard/gifts` since no route in this repo is namespaced under `/api/dashboard` (matches the flat `/api/important-dates` naming convention instead).
 **Response:** `{ gifts: GiftReceived[] }` — merges external purchases and confirmed catalog orders (`confirmed`/`under_review`/`forwarded`/`shipped`/`delivered`) for the receiver's own wishlist items, each with `autoThankYouSent`/`personalThankYouSent` flags, sorted by purchase date descending.
 
-## `/api/reviews` (to be built)
-**Method:** POST. **Auth:** required. **Purpose:** create a review. Must verify the user has a completed order containing the referenced `catalog_product_id` before allowing the insert (business rule #13) — this check should happen in the route handler, not rely solely on RLS, since the verified-purchase logic is more complex than a simple ownership check.
+## `/api/reviews`
+**Method:** POST. **Auth:** required. **Purpose:** create or update a review (upsert by auth user + product), per `17-REVIEWS.md`.
+**Body:** `{ catalog_product_id: string, rating: number, body?: string }`.
+**Behavior:** verifies the user has a `delivered` order containing `catalog_product_id` (business rule #13, `isVerifiedPurchaser` in `lib/reviews/server.ts`) before allowing the insert. This is the primary gate (it's what produces the friendly 403 message below) — the same orders/order_items join is also expressed directly in `reviews`' INSERT/UPDATE RLS `WITH CHECK` clauses (migration 020) as defense-in-depth, so a client writing straight through PostgREST with a valid session, bypassing this route, still can't create or repoint a review at an unpurchased product. If a review already exists for this user+product, updates it in place instead of inserting (so `/reviews/new` can POST unconditionally for both the create and edit paths). Ineligible: 403 `{ error }`. A `23505` unique-violation on insert (a race the existence check missed) returns 409 `{ error }` — implemented exactly as the spec's own Backend Logic pseudocode, even though its separate Edge Case #2 describes that same race resolving silently instead; not reconciled, same "implement literally, document the contradiction" call as migration 019's transition-map inconsistency.
+**Success (201):** `{ review }`.
+
+**Method:** GET. **Auth:** none. **Purpose:** paginated reviews for a product (spec FR9 — 10 per page, newest first), used by `ReviewsList`'s "Load more" and available to any other client.
+**Query params:** `product_id` (required), `page` (default 1).
+**Response:** `{ reviews, total, average, breakdown }` — `average`/`breakdown` are recomputed from every review for the product on each call (aggregates are never a stored column, spec FR8), not just the current page.
+
+## `/api/reviews/[id]`
+**Method:** PATCH. **Auth:** required, must be the review's author. **Purpose:** update own review. **Body:** `{ rating?: number, body?: string }` (at least one). **Response:** `{ review }`. Non-owned/missing reviews return 403/404.
+**Method:** DELETE. **Auth:** required, must be the review's author. **Purpose:** hard-delete own review (spec FR6's v1 simplification — aggregates recompute from the remaining rows automatically since they're query-derived, not stored). **Response:** `{ deleted: true }`.
 
 ## `/api/webhooks` (folder exists, currently empty)
 Reserved for future webhook handlers beyond Flutterwave (e.g. if Resend or a dropshipping supplier API needs a webhook later). Currently unused — do not assume anything here is implemented.

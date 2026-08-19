@@ -48,12 +48,16 @@ export function OrderTracking({ status }: { status: OrderStatus }) {
   }
 
   const currentIndex = STEPS.findIndex((step) => step.id === currentStep);
+  // Once delivered — the final step — there's no "next" step left to be
+  // in progress toward, so it renders as complete (checkmark, no pulse)
+  // rather than perpetually "current" with a bare, unchecked "4".
+  const isDelivered = currentIndex === STEPS.length - 1;
 
   return (
     <div className="flex items-start">
       {STEPS.map((step, index) => {
-        const isComplete = index < currentIndex;
-        const isCurrent = index === currentIndex;
+        const isComplete = index < currentIndex || (index === currentIndex && isDelivered);
+        const isCurrent = index === currentIndex && !isDelivered;
 
         return (
           <Fragment key={step.id}>

@@ -350,6 +350,10 @@ export async function POST(request: Request) {
     });
 
     if (!payment.ok || !payment.paymentLink) {
+      console.error("Flutterwave initiation rejected.", {
+        orderId,
+        error: payment.error,
+      });
       // Keep pending_payment so retry can reuse the traceable order row —
       // but release the claim gifvtme_create_checkout_order took on
       // creation, so an immediate retry isn't blocked as "already in

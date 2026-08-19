@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PortableText } from "@portabletext/react";
-import { Heart, HelpCircle, MessageCircle, Shirt, Star, Truck } from "lucide-react";
+import { Heart, HelpCircle, Shirt, Star, Truck } from "lucide-react";
 import type { SanityImageSource } from "@sanity/image-url";
 import { Button } from "@/components/ui/Button";
 import {
@@ -22,8 +22,8 @@ import { useToast } from "@/components/ui/Toast";
 import { useCart } from "@/components/cart/CartContext";
 import { FlashSaleTimer } from "@/components/flash-sale/FlashSaleTimer";
 import { ProductImageGallery } from "@/components/product/ProductImageGallery";
-import { RatingBreakdown } from "@/components/product/RatingBreakdown";
 import { VariantSelector } from "@/components/product/VariantSelector";
+import { ReviewsList } from "@/components/review/ReviewsList";
 import { WishlistPickerSheet } from "@/components/shared/WishlistPickerSheet";
 import { urlFor } from "@/sanity/lib/image";
 import { trackEvent } from "@/lib/analytics";
@@ -38,6 +38,7 @@ import type {
 interface ProductDetailProps {
   product: ProductFullData;
   reviews: ProductReviewsSummary;
+  currentUserId: string | null;
 }
 
 function optionsMatch(
@@ -105,7 +106,7 @@ const portableTextComponents = {
   },
 };
 
-export function ProductDetail({ product, reviews }: ProductDetailProps) {
+export function ProductDetail({ product, reviews, currentUserId }: ProductDetailProps) {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
     {}
   );
@@ -113,8 +114,11 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
   const [activeTab, setActiveTab] = useState<"description" | "reviews">(
     "description"
   );
-  const [visibleReviewCount, setVisibleReviewCount] = useState(10);
   const [isAdding, setIsAdding] = useState(false);
+  const [reviewsSummary, setReviewsSummary] = useState({
+    count: reviews.count,
+    avg: reviews.avg,
+  });
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [saleEnded, setSaleEnded] = useState(false);
   const { addItem } = useCart();
@@ -258,14 +262,15 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
             onClick={scrollToReviews}
             className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand"
           >
-            {reviews.count > 0 ? (
+            {reviewsSummary.count > 0 ? (
               <>
                 <span className="flex items-center gap-1 text-amber-500">
                   <Star className="h-4 w-4" fill="currentColor" />
-                  {reviews.avg.toFixed(1)}
+                  {reviewsSummary.avg.toFixed(1)}
                 </span>
                 <span>
-                  ({reviews.count} {reviews.count === 1 ? "review" : "reviews"})
+                  ({reviewsSummary.count}{" "}
+                  {reviewsSummary.count === 1 ? "review" : "reviews"})
                 </span>
               </>
             ) : (
@@ -418,12 +423,20 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
           <div className="flex gap-2 border-b border-stone-100">
             {[
               { id: "description", label: "Description" },
-              { id: "reviews", label: `Reviews (${reviews.count})` },
+              { id: "reviews", label: `Reviews (${reviewsSummary.count})` },
             ].map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as "description" | "reviews")}
+                onClick={() => {
+                  setActiveTab(tab.id as "description" | "reviews");
+                  if (tab.id === "reviews") {
+                    trackEvent("review.tab.viewed", {
+                      product_id: product.catalogProductId,
+                      review_count: reviewsSummary.count,
+                    });
+                  }
+                }}
                 className={cn(
                   "px-4 py-3 text-sm font-semibold transition-colors",
                   activeTab === tab.id
@@ -448,68 +461,13 @@ export function ProductDetail({ product, reviews }: ProductDetailProps) {
               )}
             </div>
           ) : (
-            <div className="mt-8 space-y-6">
-              <RatingBreakdown reviews={reviews} />
-
-              {reviews.reviews.slice(0, visibleReviewCount).map((review) => (
-                <article
-                  key={review.id}
-                  className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-light text-sm font-semibold text-brand">
-                        {(review.reviewerName || "G").charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-ink">
-                          {review.reviewerName || "Gifvtme customer"}
-                        </p>
-                        {review.createdAt ? (
-                          <p className="text-xs text-muted">
-                            {new Date(review.createdAt).toLocaleDateString("en-NG", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex gap-1 text-amber-500">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className="h-4 w-4"
-                          fill={star <= review.rating ? "currentColor" : "none"}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  {review.body ? (
-                    <p className="mt-4 text-sm leading-6 text-muted">
-                      {review.body}
-                    </p>
-                  ) : null}
-                </article>
-              ))}
-
-              {reviews.reviews.length > visibleReviewCount ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setVisibleReviewCount((count) => count + 10)}
-                >
-                  Read More Reviews
-                </Button>
-              ) : null}
-
-              {reviews.canLeaveReview ? (
-                <Button type="button">
-                  <MessageCircle className="h-4 w-4" />
-                  Leave a review
-                </Button>
-              ) : null}
+            <div className="mt-8">
+              <ReviewsList
+                productId={product.catalogProductId}
+                initial={reviews}
+                currentUserId={currentUserId}
+                onSummaryChange={setReviewsSummary}
+              />
             </div>
           )}
         </div>

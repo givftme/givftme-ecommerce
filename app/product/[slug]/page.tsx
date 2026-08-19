@@ -33,7 +33,7 @@ export default async function ProductPage({
   const product = normalizeProductFull(rawProduct);
   const collectionIds = product.collections.map((collection) => collection.id);
   const supabase = await createClient();
-  const [reviews, relatedRaw] = await Promise.all([
+  const [reviews, relatedRaw, currentUser] = await Promise.all([
     getProductReviewsSummary(supabase, product.catalogProductId),
     collectionIds.length > 0
       ? sanityFetch<ProductCardData[]>(RELATED_PRODUCTS_QUERY, {
@@ -41,6 +41,7 @@ export default async function ProductPage({
           collectionIds,
         })
       : Promise.resolve([]),
+    supabase.auth.getUser(),
   ]);
   const relatedProducts = normalizeProductCards(relatedRaw);
   const displayPrice = product.price ?? product.compareAtPrice ?? 0;
@@ -77,7 +78,11 @@ export default async function ProductPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(jsonLd) }}
       />
-      <ProductDetail product={product} reviews={reviews} />
+      <ProductDetail
+        product={product}
+        reviews={reviews}
+        currentUserId={currentUser.data.user?.id || null}
+      />
       <RelatedProducts products={relatedProducts} />
     </PageWrapper>
   );

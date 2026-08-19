@@ -103,10 +103,13 @@ export interface ProductFullData extends ProductCardData {
 
 export interface ProductReview {
   id: string;
+  userId: string;
   rating: number;
   body?: string | null;
   createdAt?: string | null;
+  updatedAt?: string | null;
   reviewerName?: string | null;
+  reviewerAvatarUrl?: string | null;
 }
 
 export interface RatingBreakdownRow {
@@ -121,4 +124,12 @@ export interface ProductReviewsSummary {
   breakdown: RatingBreakdownRow[];
   reviews: ProductReview[];
   canLeaveReview: boolean;
+  hasMore: boolean;
+}
+
+export interface ReviewsPage {
+  reviews: ProductReview[];
+  total: number;
+  average: number;
+  breakdown: RatingBreakdownRow[];
 }
