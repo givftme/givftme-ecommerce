@@ -133,7 +133,7 @@ export function LoginForm({
       </Form>
 
       <p className="pt-10 text-center text-sm text-muted">
-        Already have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link
           href={withRedirect("/signup", redirectTo)}
           className="font-semibold text-ink"
