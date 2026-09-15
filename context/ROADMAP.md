@@ -12,6 +12,7 @@ This file should be updated frequently — at minimum every time a feature moves
 ## Current status (update this section as work progresses)
 
 ### Done
+- Production build route configuration fix (2026-09-15) — `/api/thank-you/process` now exports the literal `maxDuration = 300`; Next.js cannot statically resolve the previous `MAX_DURATION_SECONDS` identifier in route configuration. Production build (including TypeScript and page generation) and targeted ESLint pass.
 - Supabase schema — migration 001 (core wishlist/occasion/reminder/purchase tables) and migration 002 (e-commerce additions: orders, order_items, order_status_history, origin fields)
 - Sanity schema — supplier, occasion, collection, product (with hybrid simple/complex variant model)
 - Auth — signup, login, callback, email verification page, middleware-based route protection
