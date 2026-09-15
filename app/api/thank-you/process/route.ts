@@ -8,9 +8,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const MAX_RETRIES = 5;
 const BATCH_LIMIT = 50;
 const MAX_CONCURRENCY = 5;
-const MAX_DURATION_SECONDS = 300;
 
-export const maxDuration = MAX_DURATION_SECONDS;
+// Next.js requires a literal value for statically analyzed route config.
+export const maxDuration = 300;
 
 // Same staleness window as /api/reminders — long enough that this cron is
 // never expected to still be running, so an older claim is assumed abandoned

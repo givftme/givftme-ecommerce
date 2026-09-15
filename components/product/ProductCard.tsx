@@ -73,12 +73,12 @@ export function ProductCard({
         </Link>
 
         {showBadges && product.isOnFlashSale && (
-          <Badge variant="sale" className="absolute left-3 top-3">
+          <Badge variant="sale" className="absolute bottom-3 left-3 z-10">
             Flash sale
             {product.saleEndTime ? (
               <>
                 {" · "}
-                <FlashSaleTimer endTime={product.saleEndTime} />
+                <FlashSaleTimer endTime={product.saleEndTime} disableUrgencyColor />
               </>
             ) : null}
           </Badge>
@@ -87,8 +87,8 @@ export function ProductCard({
           <Badge
             variant="sale"
             className={cn(
-              "absolute left-3",
-              product.isOnFlashSale ? "top-12" : "top-3"
+              "absolute left-3 z-10",
+              product.isOnFlashSale ? "bottom-12" : "bottom-3"
             )}
           >
             -{discountPercent}%
@@ -157,6 +157,7 @@ export function ProductCard({
           <PriceDisplay
             price={product.price}
             compareAtPrice={product.compareAtPrice ?? undefined}
+            isOnFlashSale={product.isOnFlashSale}
           />
         ) : (
           <p className="text-sm font-semibold text-muted">Price not listed</p>

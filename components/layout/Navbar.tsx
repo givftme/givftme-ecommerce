@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { FlashSaleNavbarStrip } from "@/components/flash-sale/FlashSaleNavbarStrip";
 import { cn } from "@/lib/utils";
 
 gsap.registerPlugin(useGSAP);
@@ -39,6 +40,8 @@ export interface NavbarProps {
   avatarUrl?: string;
   isAuthenticated?: boolean;
   searchQuery?: string;
+  flashSaleEndTime?: string | null;
+  flashSaleMaxDiscountPercent?: number | null;
 }
 
 export function Navbar({
@@ -48,6 +51,8 @@ export function Navbar({
   avatarUrl,
   isAuthenticated = false,
   searchQuery,
+  flashSaleEndTime,
+  flashSaleMaxDiscountPercent,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
@@ -216,6 +221,11 @@ export function Navbar({
           </button>
         </div>
       </div>
+
+      <FlashSaleNavbarStrip
+        saleEndTime={flashSaleEndTime}
+        maxDiscountPercent={flashSaleMaxDiscountPercent}
+      />
 
       <nav className="hidden bg-brand md:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 lg:px-8">

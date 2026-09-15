@@ -5,6 +5,7 @@ export interface PriceDisplayProps {
   compareAtPrice?: number;
   size?: "sm" | "md" | "lg";
   className?: string;
+  isOnFlashSale?: boolean;
 }
 
 const sizeClasses = {
@@ -18,12 +19,19 @@ export function PriceDisplay({
   compareAtPrice,
   size = "md",
   className,
+  isOnFlashSale,
 }: PriceDisplayProps) {
   const hasDiscount = compareAtPrice != null && compareAtPrice > price;
 
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span className={cn("font-semibold text-ink", sizeClasses[size])}>
+      <span
+        className={cn(
+          "font-semibold",
+          isOnFlashSale ? "text-brand" : "text-ink",
+          sizeClasses[size]
+        )}
+      >
         {formatPrice(price)}
       </span>
       {hasDiscount && (

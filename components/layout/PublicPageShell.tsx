@@ -14,6 +14,8 @@ interface PublicPageShellProps {
   avatarUrl?: string;
   isAuthenticated?: boolean;
   searchQuery?: string;
+  flashSaleEndTime?: string | null;
+  flashSaleMaxDiscountPercent?: number | null;
 }
 
 function CartAwareChrome({
@@ -22,6 +24,8 @@ function CartAwareChrome({
   avatarUrl,
   isAuthenticated,
   searchQuery,
+  flashSaleEndTime,
+  flashSaleMaxDiscountPercent,
 }: PublicPageShellProps) {
   const { totalItems, pulseKey } = useCart();
 
@@ -34,6 +38,8 @@ function CartAwareChrome({
         avatarUrl={avatarUrl}
         isAuthenticated={isAuthenticated}
         searchQuery={searchQuery}
+        flashSaleEndTime={flashSaleEndTime}
+        flashSaleMaxDiscountPercent={flashSaleMaxDiscountPercent}
       />
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
       <Footer />

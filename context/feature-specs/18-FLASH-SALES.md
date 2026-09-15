@@ -1,7 +1,9 @@
 # Feature: Flash Sales
 
+**Status: Done.** Built in two passes — the pricing/display core shipped during the Gift Museum/Catalog (`13`) pass; this document reflects the gap-closing pass completed 2026-08-19 (see `context/ROADMAP.md`), which closed the remaining gaps (the dedicated page, the navbar strip, the checkout grace period, the checkout price-changed confirmation, timer styling, badge placement) and reconciled this file with shipped reality. Read this as documentation of what's actually running, not aspirational design.
+
 ## Overview
-Time-limited discounts on catalog products. Configured entirely in Sanity Studio via `salePrice`, `saleStartTime`, and `saleEndTime` fields on the product document. Surfaces across the platform: homepage banner, navbar strip, a dedicated `/flash-sale` page, and on individual product cards and detail pages. Includes a countdown timer (GSAP-animated at ≤60 seconds). Checkout always uses the authoritative server-fetched price with a 5-minute grace period for users actively checking out when a sale ends.
+Time-limited discounts on catalog products. Configured entirely in Sanity Studio via `salePrice`, `saleStartTime`, and `saleEndTime` fields on the product document. Surfaces across the platform: homepage banner, navbar strip, a dedicated `/flash-sale` page, and on individual product cards and detail pages. Includes a countdown timer (GSAP-animated at ≤60 seconds). Checkout always uses the authoritative server-fetched price, with a 5-minute grace period for a buyer who was already mid-checkout when a sale ends.
 
 ---
 
@@ -13,193 +15,75 @@ Time-limited discounts on catalog products. Configured entirely in Sanity Studio
 
 ---
 
-## User Stories
-- As a shopper, I see a flash sale banner on the homepage and in the navbar so I don't miss it.
-- As a shopper, I can browse all current flash sale products on a dedicated page.
-- As a shopper, I see a countdown timer on a product card and detail page while a sale is active.
-- As a shopper, when the timer hits zero the sale price updates immediately (no page reload required).
-- As a shopper, if I'm mid-checkout when a sale ends, the correct price at checkout time is charged.
-
----
-
 ## Functional Requirements
-1. A product is "on flash sale" when `NOW()` is between `saleStartTime` and `saleEndTime` in Sanity, and `salePrice` is set and less than `basePrice`.
+1. A product is "on flash sale" when `NOW()` is between `saleStartTime` and `saleEndTime` in Sanity, and `salePrice` is set and less than `basePrice`. `isFlashSaleWindowActive` (`lib/flutterwave/getActivePrice.ts`, checkout-authoritative) and `isFlashSaleActive` (`lib/sanity/catalog.ts`, display-only) both implement this check independently — kept separate rather than unified, since the display path also needs to distinguish "was on sale, just ended" (see `useCartPriceRefresh.ts`'s `hasSaleJustEnded`) from "never on sale," which the checkout path doesn't care about.
 2. Sale detection and countdown are computed client-side from the `saleEndTime` value fetched with the product.
-3. When a sale ends (timer reaches zero): re-fetch the product from Sanity, display the regular `basePrice`. No page reload — the `FlashSaleTimer` component drives a state update on expiry.
-4. `/flash-sale` page: lists all currently active flash sale products.
+3. When a sale ends (timer reaches zero): `FlashSaleTimer`'s `onComplete` callback fires, and callers (`ProductDetail`) re-fetch/re-render to show the regular `basePrice`. No page reload.
+4. `/flash-sale` page (`app/flash-sale/page.tsx`, `revalidate = 30`): lists all currently active flash sale products via `ProductExplorer` (the same grid/filter/sort/load-more component `/shop` uses) against a new `/api/flash-sale/products` load-more endpoint.
 5. `FlashSaleBanner`: homepage hero banner for active sales. Shows when at least one active flash sale product exists; hidden otherwise.
-6. `FlashSaleNavbarStrip`: a thin red strip below the main navbar (desktop) or above the bottom nav (mobile), e.g. "⚡ Flash Sale – Up to 40% off · Ends in 2:34:11". Only shown when a sale is active.
-7. At checkout: `POST /api/checkout` calls `getActivePrice()` server-side (re-fetches Sanity) — this is the price always charged, regardless of what was displayed client-side.
-8. 5-minute grace period: if a sale ended within the last 5 minutes and the user has an active `pending_payment` order (created before the sale ended), honor the sale price. **This grace period is implemented in `getActivePrice()` on the server — check if `saleEndTime` is within the last 5 minutes AND an order was created before `saleEndTime`.**
-9. Flash sale badge on product cards: "SALE" or "X% off" badge (bottom-left of product image).
+6. `FlashSaleNavbarStrip`: a thin red strip in `Navbar`, below the main header row, shown on both mobile and desktop in the same position (the spec's original "above the mobile bottom nav" placement was skipped — `MobileBottomNav` is a separate fixed-position component, and duplicating layout logic for a single-page divergence wasn't worth it). Fed by a lightweight Sanity fetch added to `PageWrapper.tsx` (the shared server component every public page already routes through) and threaded down through `PublicPageShell` → `Navbar`, the same prop-passing pattern already used for `cartCount`/`userName`. Only shown when an active sale exists.
+7. At checkout: `POST /api/checkout` calls `getActivePrice()` server-side (re-fetches Sanity via `CART_PRICES_QUERY`) — this is the price always charged, regardless of what was displayed client-side.
+8. **5-minute grace period — redefined from the original spec, developer-confirmed.** The original design ("honor the sale price if `saleEndTime` is within the last 5 minutes AND an order was created before `saleEndTime`") assumes an order can pre-date the price check. In this codebase, order creation and price computation happen in the same `POST /api/checkout` call — there's no earlier "order created" moment to check against, so that condition can never hold. Implemented instead as a pure time-based window: `isWithinGracePeriod` (`lib/flutterwave/getActivePrice.ts`) honors `salePrice` for any checkout priced within 5 minutes after `saleEndTime`, full stop. A client-supplied "checkout started at" timestamp was considered and rejected — it would be spoofable (a malicious client could always send an old timestamp to claim expired pricing), and bounding it safely would collapse back to the same time-window check anyway, with more code. Tradeoff accepted: someone adding the item to cart fresh within that 5-minute window (not just someone already mid-checkout) also gets the discount — a small, bounded, time-boxed leak, not a fraud vector.
+9. Flash sale badge on product cards: "Flash sale" pill (bottom-left of product image, per spec — moved from an earlier top-left placement), plus a separate "-X%" discount badge stacked above it when both apply.
 
 ---
 
 ## Non-Functional Requirements
-- Timer updates every second on the client without causing performance issues — use `setInterval` inside `useGSAP` or a dedicated timer hook, not a re-render-heavy pattern.
-- The `/flash-sale` page uses `revalidate = 30` (shorter than the standard 60s) to keep the product list fresh.
+- Timer updates every second on the client (`FlashSaleTimer`, `setInterval` + `useGSAP`), not a re-render-heavy pattern.
+- The `/flash-sale` page uses `revalidate = 30` (shorter than the standard 60s elsewhere).
 - Flash sale configuration is entirely in Sanity Studio — no code changes needed to run a sale.
 
 ---
 
 ## UI Requirements
 
-### `FlashSaleTimer` component
+### `FlashSaleTimer` component (`components/flash-sale/FlashSaleTimer.tsx`)
 
-Props: `endTime: Date`, `onExpire: () => void`
+Props: `endTime: string`, `onComplete?: () => void`, `className?: string`, `disableUrgencyColor?: boolean`.
 
-**Display states:**
-- `>= 1 hour`: "Ends in 2:34:11" (HH:MM:SS)
-- `< 1 hour and > 60 seconds`: "Ends in 34:11" (MM:SS), amber text
-- `<= 60 seconds`: "Ends in 0:47" (red text, GSAP pulse animation on each tick)
-- `0:00 reached`: calls `onExpire()` → parent re-fetches product and hides timer
+**Display states** (local `formatFlashSaleCountdown`, separate from the shared `formatCountdown()` in `lib/utils.ts` — that one is also used by `VerifyOtpScreen`'s unrelated OTP countdown and keeps its fixed `HH:MM:SS` shape):
+- `>= 1 hour`: `H:MM:SS`
+- `< 1 hour, > 60 seconds`: `MM:SS`, amber text (`text-amber-600`)
+- `<= 60 seconds`: `MM:SS`, red text (`text-red-600`), continuous GSAP pulse (`scale 1.05`, yoyo, `repeat: -1`) — a different animation curve than an early draft of this spec proposed (one-shot pulse per tick), left as shipped since it already reads as urgent and reworking it wasn't worth the churn.
+- `0:00` reached: calls `onComplete()`.
 
-**GSAP pulse at ≤60 seconds:**
-```javascript
-useGSAP(() => {
-  if (seconds <= 60) {
-    gsap.fromTo(timerRef.current,
-      { scale: 1 },
-      { scale: 1.08, duration: 0.15, yoyo: true, repeat: 1, ease: 'power1.inOut' }
-    )
-  }
-}, { dependencies: [seconds] })
-```
+**`disableUrgencyColor`:** the built-in amber/red text coloring is invisible on a brand-red background. Every caller that places the timer inside a `bg-brand` container (`FlashSaleBanner`, `FlashSaleNavbarStrip`, `ProductCard`'s sale badge) passes this prop; `ProductDetail`'s "Sale ends in" strip (on a light `bg-brand-light` background) does not, so its urgency coloring works normally.
 
 ### `FlashSaleBanner` component (homepage)
-
-Full-width banner (brand red background):
-- Left: "⚡ Flash Sale" + "Up to X% off · Ends in [timer]"
-- Right: "Shop now →" CTA linking to `/flash-sale`
-- Hidden when no active sale products exist.
+Full-width `bg-brand` banner: "⚡ Flash Sale – Up to X% off · Ends in [timer] · Shop now →", linking to `/flash-sale`. Hidden when no active sale exists. `maxDiscountPercent` is computed via `getMaxFlashSaleDiscountPercent` (`lib/sanity/catalog.ts`) from the fetched sale products.
 
 ### `FlashSaleNavbarStrip` component
-
-Single-line strip: brand red bg, white text. "⚡ Flash Sale – Up to 40% off · Ends in 2:34:11 · [Shop now]". Shown in `Navbar` component when an active sale exists. Hidden when sale ends.
+Single-line strip, same copy pattern as the banner, rendered inside `Navbar`'s `<header>` below the logo/search row.
 
 ### `/flash-sale` — Flash sale page
-
-**Hero section:**
-- "⚡ Flash Sale" heading
-- "Offers end in [FlashSaleTimer]" (driven by the soonest-ending active sale)
-- Countdown in large format
-
-**Product grid:**
-- 2 col mobile, 3–4 desktop
-- Each card uses `ProductCard` with the sale badge variant
-- "SALE" badge + "X% off" chip on each card
-- Sale price (brand red) + original price (strikethrough)
-
-**Empty state** (no active flash sales): "No flash sales right now. Check back soon!" + CTA to browse the regular catalog.
+Hero: "⚡ Flash Sale" heading + soonest-ending `FlashSaleTimer` (large format) + "Up to X% off" when computable. Product grid via `ProductExplorer` (2/3/4-col responsive, filter/sort/load-more built in). Empty state: "No flash sales right now. Check back soon!" + a link to `/shop`.
 
 ### Product card — flash sale state
-
-`ProductCard` additions when `isOnFlashSale`:
-- Sale badge overlay: bottom-left corner, "SALE" pill (brand red bg, white text)
-- Sale price displayed in brand red, original price struck through alongside it
+`ProductCard` additions when `isOnFlashSale`: "Flash sale" badge (bottom-left, brand-red pill, `z-10` so it stays visible above the card's hover-reveal add-to-cart overlay), stacked with a "-X%" badge when both apply, and `PriceDisplay`'s `isOnFlashSale` prop rendering the price in brand red.
 
 ### Product detail page — flash sale state
-
-Already specified in `06-GIFT-MUSEUM-CATALOG.md`. Additions:
-- `FlashSaleTimer` between price section and add-to-cart button
-- "🔥 Flash sale price" label above the sale price
+Already specified in `06-GIFT-MUSEUM-CATALOG.md`/`13-GIFT-MUSEUM-CATALOG.md`. `ProductDetail` shows `FlashSaleTimer` + a "Sale ends in" label between the price section and add-to-cart button, and `PriceDisplay`'s brand-red sale price.
 
 ---
 
 ## Backend Logic
 
-### `getActivePrice(product, orderCreatedAt?)` with grace period
-```typescript
-// lib/sanity/pricing.ts
-export function getActivePrice(
-  product: SanityProduct,
-  orderCreatedAt?: Date
-): { price: number, isFlashSale: boolean } {
-  const now = new Date()
-  const saleStart = product.saleStartTime ? new Date(product.saleStartTime) : null
-  const saleEnd = product.saleEndTime ? new Date(product.saleEndTime) : null
-  
-  // Standard flash sale check
-  const saleActive = saleStart && saleEnd && saleStart <= now && saleEnd > now
-  
-  // Grace period: sale ended within last 5 minutes AND order was created before sale ended
-  const graceActive = saleStart && saleEnd
-    && saleEnd <= now
-    && (now.getTime() - saleEnd.getTime()) <= 5 * 60 * 1000
-    && orderCreatedAt
-    && orderCreatedAt < saleEnd
-  
-  if ((saleActive || graceActive) && product.salePrice && product.salePrice < product.basePrice) {
-    return { price: product.salePrice, isFlashSale: true }
-  }
-  
-  // Variant pricing (cheapest available)
-  if (product.hasVariants && product.variants?.length) {
-    const prices = product.variants.filter(v => v.available).map(v => v.price)
-    if (prices.length) return { price: Math.min(...prices), isFlashSale: false }
-  }
-  
-  return { price: product.basePrice, isFlashSale: false }
-}
-```
+### `getActivePrice(product, combinationKey, now?)` (`lib/flutterwave/getActivePrice.ts`)
+Checkout-authoritative pricing. Returns a plain `number` (not `{ price, isFlashSale }` — a separate `isFlashSaleWindowActive` helper covers the boolean). Handles: no-sale, active sale, the grace period (`isWithinGracePeriod`, see FR #8), variant pricing, and clamps `salePrice` to the base/variant price if a Sanity data-entry error sets `salePrice` higher than the price it's supposed to discount.
 
-### GROQ query for active flash sale products
-```groq
-*[_type == "product"
-  && defined(salePrice)
-  && defined(saleStartTime)
-  && defined(saleEndTime)
-  && saleStartTime <= now()
-  && saleEndTime > now()
-  && salePrice < basePrice
-] {
-  _id, title, slug, basePrice, salePrice, saleStartTime, saleEndTime,
-  "primaryImage": images[0], hasVariants,
-  "variants": variants[]{ price, available }
-} | order(saleEndTime asc)
-```
-
-### Check if any active flash sale exists (for navbar strip / banner visibility)
-```typescript
-// Runs on layout level — cached with short revalidation
-const hasActiveFlashSale = await sanity.fetch(`
-  count(*[_type == "product" && saleStartTime <= now() && saleEndTime > now()]) > 0
-`)
-```
+### GROQ queries (`lib/sanity/queries.ts`)
+`FLASH_SALE_PRODUCTS_QUERY` — active sale products (`status == "active"`, `salePrice > 0`, within the sale window), paginated via `$offset`/`$limit`, ordered `saleEndTime asc`. `FLASH_SALE_PRODUCTS_COUNT_QUERY` shares the same filter for the `/flash-sale` page's total count and `/api/flash-sale/products`'s pagination.
 
 ---
 
 ## Database Changes
-No new Supabase tables. Sanity schema changes required:
-
-**Add to `product.ts` Sanity schema** (if not already added during Gift Museum feature build):
-```typescript
-defineField({ name: 'salePrice', title: 'Sale Price (₦)', type: 'number',
-  description: 'Must be less than the regular price.',
-  validation: Rule => Rule.min(0)
-}),
-defineField({ name: 'saleStartTime', title: 'Sale Start Time', type: 'datetime' }),
-defineField({ name: 'saleEndTime', title: 'Sale End Time', type: 'datetime',
-  validation: Rule => Rule.min(Rule.valueOfField('saleStartTime'))
-}),
-```
-
-**Sanity Studio validation rule** (prevent `salePrice >= basePrice`):
-```typescript
-// In product.ts schema:
-validation: Rule => Rule.custom((salePrice, context) => {
-  const { basePrice } = context.document as any
-  if (salePrice && basePrice && salePrice >= basePrice) {
-    return 'Sale price must be less than the regular price'
-  }
-  return true
-})
-```
+No Supabase tables. Sanity schema (`sanity/schemaTypes/product.ts`): `salePrice` (number, `min(0)` + a custom rule rejecting `salePrice >= basePrice`), `saleStartTime`/`saleEndTime` (datetime, with `saleEndTime`'s own custom rule rejecting an end time before the start time).
 
 ---
 
 ## API Endpoints
-No new API routes specific to flash sales. The `/flash-sale` page is a server component fetching from Sanity. The `FlashSaleTimer` expiry re-fetches Sanity client-side via a client component using the Sanity client.
+- `GET /api/flash-sale/products` — load-more pagination for `/flash-sale`, mirrors `/api/shop/products` against the flash-sale query. See `API_ROUTES.md`.
+- `POST /api/checkout` — unchanged route, extended response. See `API_ROUTES.md` for the full `price_changed`/`price_changes` shape.
 
 ---
 
@@ -210,8 +94,8 @@ No new API routes specific to flash sales. The `/flash-sale` page is a server co
 ---
 
 ## Validation
-- Sanity Studio validation: `salePrice < basePrice`, `saleEndTime > saleStartTime`.
-- Runtime guard in `getActivePrice`: `salePrice < basePrice` check prevents misconfigured sales showing a higher "sale" price.
+- Sanity Studio: `salePrice < basePrice`, `saleEndTime` not before `saleStartTime`.
+- Runtime guard in `getActivePrice`: clamps a misconfigured `salePrice >= basePrice` down to the correct price rather than showing an inflated "sale."
 
 ---
 
@@ -219,76 +103,54 @@ No new API routes specific to flash sales. The `/flash-sale` page is a server co
 
 | Scenario | Behavior |
 |---|---|
-| Product `salePrice >= basePrice` (misconfiguration) | `getActivePrice` returns `basePrice`, no flash sale shown |
-| Timer hits zero, re-fetch fails | Show regular price from last cached data; hide timer; log error |
-| No active flash sales | `/flash-sale` shows empty state; banner/navbar strip hidden |
-
----
-
-## Loading and Empty States
-
-- **`/flash-sale` page loading:** skeleton hero + skeleton product grid.
-- **No active sales:** "No flash sales right now. Check back soon!" + regular catalog CTA.
-- **Timer between server render and client hydration:** a non-interactive static countdown display from the server render, replaced by the live client timer on hydration. Use `suppressHydrationWarning` on the timer element to prevent React hydration mismatch on the seconds digit.
+| Product `salePrice >= basePrice` (misconfiguration) | Blocked at the Sanity Studio level; `getActivePrice` also clamps defensively if one slips through |
+| Sale ends mid-checkout | `getActivePrice`'s grace period covers the first 5 minutes; past that, `POST /api/checkout` still creates the order at the correct price and reports `price_changed: true` so `CheckoutForm.tsx` can show `PriceChangeDialog` before redirecting to payment |
+| No active flash sales | `/flash-sale` shows the empty state; banner/navbar strip hidden |
 
 ---
 
 ## Edge Cases
 
-1. **Sale starts while a user is on the product detail page.** The page is server-rendered with ISR (60s revalidation). The sale price won't appear until the next ISR refresh. For the flash sale banner: it's a client component that re-checks on mount — it should appear within 60 seconds of the sale starting. Acceptable.
-
-2. **Sale ends exactly when a user is at the checkout payment step.** The `POST /api/checkout` server call happens after the sale ends → `getActivePrice` returns the regular price → user is charged the regular price. The checkout page should ideally show a "Heads up — this sale just ended" message if the server-returned price differs from what the user saw. Implement: return `price_changed: true` from `POST /api/checkout` if any item's server price differs from the client-sent price, and show a confirmation dialog before redirecting to Flutterwave.
-
-3. **Multiple simultaneous flash sales.** The navbar strip should show the one ending soonest (for maximum urgency). The `/flash-sale` page shows all. The homepage banner shows the most prominent (highest discount % or editorial pick — leave this to content team configuration in Sanity by ordering documents).
-
-4. **`FlashSaleTimer` renders on the server (SSR) and then re-hydrates on the client.** The seconds digit will differ between server render and client — use `suppressHydrationWarning` on the timer's seconds span, or render the timer client-only (`"use client"` with a `mounted` state check).
-
-5. **Product added to a wishlist during a flash sale.** The `wishlist_items` row stores a price snapshot. When the sale ends, the wishlist card still shows the (now stale) sale price. For catalog items, wishlist item cards should re-fetch the current Sanity price on display rather than relying on the snapshot — or show the snapshot with a "price may have changed" note. **v1 recommendation: use the snapshot for display, re-fetch at purchase time (checkout). The price discrepancy is a known UX issue, not a financial risk.**
+1. **Sale starts while a user is on the product detail page.** ISR-driven (`revalidate = 60` on `/product/[slug]`); the sale price appears on the next revalidation. Acceptable, unchanged from the original design.
+2. **Sale ends exactly when a user is at the checkout payment step.** `POST /api/checkout` compares its server-computed `unitPrice` against the client's submitted `display_price`; on a mismatch it still creates the order at the correct price and returns `price_changed: true` + a `price_changes` list. `CheckoutForm.tsx` shows `PriceChangeDialog` (a blocking confirmation, "Continue to pay") before redirecting to the Flutterwave payment link, instead of silently redirecting at a different price than what the buyer last saw.
+3. **Multiple simultaneous flash sales.** The navbar strip and banner show the soonest-ending (via `FLASH_SALE_PRODUCTS_QUERY`'s `order(saleEndTime asc)`) and the max discount percent across the fetched set. `/flash-sale` shows all.
+4. **`FlashSaleTimer` renders on the server and re-hydrates on the client.** Handled by lazy-initializing state from `Date.now()` on mount rather than an explicit `suppressHydrationWarning`.
+5. **Product added to a wishlist during a flash sale.** Unchanged from the original design: the wishlist item stores a price snapshot for display; checkout always re-fetches the live price regardless.
 
 ---
 
 ## Analytics / Events
-- `flash_sale.banner_viewed`
-- `flash_sale.navbar_strip_viewed`
-- `flash_sale.page_viewed` (active_product_count)
-- `flash_sale.product_card_clicked` (product_id)
-- `flash_sale.timer_expired` (product_id — tracks how many users see a sale end in real-time)
-- `flash_sale.price_changed_at_checkout` (product_id — tracks the grace period edge case frequency)
+Uses this repo's established `museum.*`/domain-prefixed event naming rather than the `flash_sale.*` prefix an earlier draft of this spec used — consistent with every other catalog-adjacent feature (`museum.search.*`, `museum.shop.*`, etc.):
+- `museum.flash_sale_banner.clicked`
+- `museum.flash_sale_strip.clicked`
+- `museum.flash_sale.page_viewed` (`active_product_count`)
+- `flash_sale.price_changed_at_checkout` (`order_id`, `changed_item_count`) — kept under the original prefix since it's checkout-domain, not museum-browsing-domain.
 
 ---
 
 ## Testing Requirements
-
-### Unit tests
-- `getActivePrice`: all cases — no sale, sale active, sale expired, within 5-min grace period, sale price >= base price (guard).
-- Timer countdown logic: correct formatting for >1hr, <1hr, ≤60s.
-
-### Integration tests
-- GROQ flash sale query: returns only products where `now()` is within `saleStartTime–saleEndTime`.
-- `POST /api/checkout` uses server-fetched sale price, not client-sent price.
-- Grace period: order created before `saleEndTime`, checkout POST runs 3 minutes after `saleEndTime` → sale price honored.
-- No grace period: order created before `saleEndTime`, checkout POST runs 6 minutes after `saleEndTime` → regular price charged.
+- `lib/flutterwave/getActivePrice.test.ts`: no-sale, active sale, expired sale, variant pricing, `salePrice` clamping, within-grace-period, past-grace-period.
+- `app/api/checkout/route.test.ts`: `price_changed`/`price_changes` returned when the server price differs from the submitted `display_price`.
 
 ### Manual QA
-- Add a flash sale to a product in Sanity Studio. Wait up to 60 seconds. Verify sale price + timer appear on the product detail page and in the product card.
-- Let the timer count down to zero (or set a short `saleEndTime`). Verify the regular price is shown without a page reload.
-- Start a checkout during a sale, let the sale expire, submit the checkout — verify correct price is charged.
+- Add a flash sale to a product in Sanity Studio. Verify sale price + badge/timer appear on the product card, detail page, banner, and navbar strip.
+- Let the timer count down through the 1hr/60s format-and-color thresholds; verify the GSAP pulse at ≤60s.
+- Let a sale expire mid-checkout; verify `PriceChangeDialog` appears before payment redirect, and that the order was created at the correct (new) price.
 
 ---
 
 ## Acceptance Criteria
-- [ ] Flash sale fields (`salePrice`, `saleStartTime`, `saleEndTime`) exist on the Sanity product schema with correct validation.
-- [ ] Flash sale badge and sale price appear on product cards and detail pages when a sale is active.
-- [ ] `FlashSaleTimer` counts down correctly and switches to brand red + GSAP pulse at ≤60 seconds.
-- [ ] When the timer hits zero, the regular price is shown immediately without a page reload.
-- [ ] The `/flash-sale` page shows only currently active sale products.
-- [ ] `getActivePrice()` always returns the correct price server-side (sale, grace period, or regular).
-- [ ] A product configured with `salePrice >= basePrice` does not show a flash sale.
+- [x] Flash sale fields (`salePrice`, `saleStartTime`, `saleEndTime`) exist on the Sanity product schema with correct validation.
+- [x] Flash sale badge and sale price appear on product cards and detail pages when a sale is active.
+- [x] `FlashSaleTimer` counts down correctly and switches to brand red + GSAP pulse at ≤60 seconds.
+- [x] When the timer hits zero, the regular price is shown without a page reload.
+- [x] The `/flash-sale` page shows only currently active sale products.
+- [x] `getActivePrice()` always returns the correct price server-side (sale, grace period, or regular).
+- [x] A product configured with `salePrice >= basePrice` does not show a flash sale.
 
 ---
 
 ## Future Improvements
 - Per-variant flash sale pricing (different variants at different sale prices).
-- Flash sale scheduling via Sanity — set it and forget it.
 - Waitlist / notification for upcoming (scheduled but not yet active) flash sales.
 - Flash sale analytics dashboard in Retool showing conversion uplift.
