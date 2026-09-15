@@ -157,7 +157,7 @@ export function SignupForm({ redirectTo }: { redirectTo?: string | null }) {
       </Form>
 
       <p className="mt-auto pt-10 text-center text-sm text-muted">
-        Already have an account?{" "}
+        Don&apos;t have an account?{" "}
         <Link
           href={withRedirect("/login", redirectTo)}
           className="font-semibold text-ink"
