@@ -12,6 +12,7 @@ This file should be updated frequently — at minimum every time a feature moves
 ## Current status (update this section as work progresses)
 
 ### Done
+- Checkout price-warning replay fix (2026-09-15) — initial and concurrent-conflict idempotency replays return the original `price_changed`/`price_changes`, including for confirmed orders. Migration 025 saves the mismatch snapshot atomically during order creation; **written, not applied to the live database; apply before deploying the route**. Lost-response regression tests cover pending and confirmed orders.
 - Production build route configuration fix (2026-09-15) — `/api/thank-you/process` now exports the literal `maxDuration = 300`; Next.js cannot statically resolve the previous `MAX_DURATION_SECONDS` identifier in route configuration. Production build (including TypeScript and page generation) and targeted ESLint pass.
 - Supabase schema — migration 001 (core wishlist/occasion/reminder/purchase tables) and migration 002 (e-commerce additions: orders, order_items, order_status_history, origin fields)
 - Sanity schema — supplier, occasion, collection, product (with hybrid simple/complex variant model)
