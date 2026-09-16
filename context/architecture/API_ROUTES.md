@@ -136,6 +136,7 @@ All API routes live under `app/api/` in this repo. This file should be kept curr
 **Response:** `{ products, recommended_products }`, where `products` contain active pricing/variant fields from `CART_PRICES_QUERY` and `recommended_products` are normalized `ProductCardData` rows.
 
 ## `/api/checkout`
+**Price-warning replays:** migration 025 persists `orders.price_changes` during `gifvtme_create_checkout_order`, using the original client `display_price` and server `unit_price` from the item payload. Both existing-order lookup paths return that saved list and derive `price_changed` from it, including when the order is already resolved (`payment_link: null`). Replays never recompute the warning from current catalog prices or the replay body. Legacy orders return an empty list. Apply migration 025 before deploying this route.
 **Method:** POST. **Auth:** required. **Purpose:** creates a pending catalog order, snapshots server-fetched Sanity prices into `order_items`, and initiates a Flutterwave hosted payment.
 **Headers:** `Idempotency-Key` (required) — a client-generated opaque string, unique per logical checkout attempt.
 **Request:** `{ cart_items, shipping, preferred_payment?, wishlist_item_id? }`. `cart_items[]` includes `{ catalog_product_id, combination_key, quantity, display_price }`, but `display_price` is ignored server-side for the actual charge — it's only compared against the server-computed price to detect a stale flash sale price (see below).
