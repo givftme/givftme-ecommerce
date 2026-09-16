@@ -7,6 +7,7 @@ import { TrustBadges } from "@/app/_components/home/TrustBadges";
 import { NewsletterSignup } from "@/components/shared/NewsletterSignup";
 import { TrackView } from "@/components/shared/TrackView";
 import {
+  getMaxFlashSaleDiscountPercent,
   normalizeOccasion,
   normalizeProductCards,
 } from "@/lib/sanity/catalog";
@@ -26,7 +27,7 @@ export default async function Page() {
   const [rawOccasions, rawFeatured, rawSale, rawNew] = await Promise.all([
     sanityFetch<Partial<MuseumOccasion>[]>(OCCASIONS_QUERY),
     sanityFetch<ProductCardData[]>(FEATURED_PRODUCTS_QUERY, { limit: 8 }),
-    sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, limit: 8 }),
+    sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, offset: 0, limit: 8 }),
     sanityFetch<ProductCardData[]>(NEW_PRODUCTS_QUERY, { limit: 8 }),
   ]);
   const occasions: OccasionCategory[] = rawOccasions
@@ -54,7 +55,10 @@ export default async function Page() {
   return (
     <PageWrapper>
       <TrackView event="museum.home.viewed" properties={{}} />
-      <FlashSaleBanner saleEndTime={saleProducts[0]?.saleEndTime} />
+      <FlashSaleBanner
+        saleEndTime={saleProducts[0]?.saleEndTime}
+        maxDiscountPercent={getMaxFlashSaleDiscountPercent(saleProducts)}
+      />
       <Hero />
       <OccasionCategories occasions={occasions} />
       <ProductSection

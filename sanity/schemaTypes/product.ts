@@ -190,7 +190,18 @@ export const product = defineType({
       title: "Flash sale price (NGN)",
       type: "number",
       group: "variants",
-      validation: (rule) => rule.min(0),
+      validation: (rule) =>
+        rule
+          .min(0)
+          .custom((salePrice, context) => {
+            const basePrice = context.document?.basePrice as number | undefined;
+
+            if (salePrice != null && basePrice != null && salePrice >= basePrice) {
+              return "Sale price must be less than the regular price.";
+            }
+
+            return true;
+          }),
     }),
     defineField({
       name: "saleStartTime",

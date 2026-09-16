@@ -14,15 +14,28 @@ import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
 
+interface CheckoutOrder extends ReinitiatableOrder {
+  price_changes: PriceChange[];
+}
+
+const CHECKOUT_ORDER_SELECT =
+  "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, price_changes";
+
 async function respondForExistingOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  order: ReinitiatableOrder,
+  order: CheckoutOrder,
   preferredPayment: CheckoutInput["preferred_payment"]
 ) {
+  const priceChanges = order.price_changes;
+  const response = {
+    order_id: order.id,
+    price_changed: priceChanges.length > 0,
+    price_changes: priceChanges,
+  };
   if (!["pending_payment", "payment_failed"].includes(order.status)) {
     // Already resolved (e.g. confirmed) — nothing to (re)pay, just hand back
     // the order id so the client can route to the processing/order page.
-    return NextResponse.json({ order_id: order.id, payment_link: null });
+    return NextResponse.json({ ...response, payment_link: null });
   }
 
   const result = await reinitiateOrderPayment(supabase, order, preferredPayment);
@@ -31,7 +44,7 @@ async function respondForExistingOrder(
     return jsonError(result.error, result.status);
   }
 
-  return NextResponse.json({ order_id: order.id, payment_link: result.paymentLink });
+  return NextResponse.json({ ...response, payment_link: result.paymentLink });
 }
 
 interface CartPriceProduct extends SanityCheckoutProduct {
@@ -48,6 +61,7 @@ interface PreparedOrderItem {
   supplier_product_id: string | null;
   quantity: number;
   unit_price: number;
+  display_price: number;
 }
 
 function findProduct(products: CartPriceProduct[], productId: string) {
@@ -85,11 +99,18 @@ function getProductImageUrl(product: CartPriceProduct) {
   return product.images?.[0]?.url || null;
 }
 
+interface PriceChange {
+  title: string;
+  old_price: number;
+  new_price: number;
+}
+
 function prepareOrderItems(
   body: CheckoutInput,
   products: CartPriceProduct[]
 ) {
   const orderItems: PreparedOrderItem[] = [];
+  const priceChanges: PriceChange[] = [];
   let totalAmount = 0;
 
   for (const item of body.cart_items) {
@@ -106,6 +127,19 @@ function prepareOrderItems(
       throw new Error(`Invalid price for product: ${product._id}`);
     }
 
+    // 18-FLASH-SALES.md Edge Case #2: the client's display_price reflects
+    // whatever was last shown (possibly before a flash sale ended between
+    // page load and submit). The order is always created at the correct
+    // server-computed unitPrice regardless — this just tells the client
+    // when to warn the buyer before redirecting to payment.
+    if (unitPrice !== item.display_price) {
+      priceChanges.push({
+        title: product.title || "Untitled gift",
+        old_price: item.display_price,
+        new_price: unitPrice,
+      });
+    }
+
     orderItems.push({
       catalog_product_id: item.catalog_product_id,
       product_title: product.title || "Untitled gift",
@@ -115,11 +149,12 @@ function prepareOrderItems(
         variant?.supplierProductId || product.supplierProductId || null,
       quantity: item.quantity,
       unit_price: unitPrice,
+      display_price: item.display_price,
     });
     totalAmount += unitPrice * item.quantity;
   }
 
-  return { orderItems, totalAmount };
+  return { orderItems, totalAmount, priceChanges };
 }
 
 async function validateWishlistItem(
@@ -215,9 +250,7 @@ export async function POST(request: Request) {
 
   const { data: existingOrder, error: existingOrderError } = await supabase
     .from("orders")
-    .select(
-      "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone"
-    )
+    .select(CHECKOUT_ORDER_SELECT)
     .eq("idempotency_key", idempotencyKey)
     .eq("buyer_id", user.id)
     .maybeSingle();
@@ -229,7 +262,7 @@ export async function POST(request: Request) {
   if (existingOrder) {
     return respondForExistingOrder(
       supabase,
-      existingOrder as ReinitiatableOrder,
+      existingOrder as CheckoutOrder,
       parsed.data.preferred_payment
     );
   }
@@ -313,9 +346,7 @@ export async function POST(request: Request) {
     // normal existing-order replay.
     const { data: raceOrder, error: raceOrderError } = await supabase
       .from("orders")
-      .select(
-        "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone"
-      )
+      .select(CHECKOUT_ORDER_SELECT)
       .eq("idempotency_key", idempotencyKey)
       .eq("buyer_id", user.id)
       .maybeSingle();
@@ -326,7 +357,7 @@ export async function POST(request: Request) {
 
     return respondForExistingOrder(
       supabase,
-      raceOrder as ReinitiatableOrder,
+      raceOrder as CheckoutOrder,
       parsed.data.preferred_payment
     );
   }
@@ -365,6 +396,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       order_id: orderId,
       payment_link: payment.paymentLink,
+      price_changed: prepared.priceChanges.length > 0,
+      price_changes: prepared.priceChanges,
     });
   } catch (error) {
     console.error("Flutterwave initiation failed.", error);

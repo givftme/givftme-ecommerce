@@ -148,6 +148,7 @@ describe("POST /api/checkout — idempotency", () => {
         shipping_email: "ada@example.com",
         shipping_name: "Ada Okoye",
         shipping_phone: "08012345678",
+        price_changes: [],
       },
       error: null,
     });
@@ -163,6 +164,8 @@ describe("POST /api/checkout — idempotency", () => {
     expect(json).toEqual({
       order_id: "order-1",
       payment_link: "https://checkout.flutterwave.com/v3/hosted/pay/abc123",
+      price_changed: false,
+      price_changes: [],
     });
     // The idempotency lookup, then the atomic payment claim — no new order
     // (and no separate insert) was created.
@@ -182,6 +185,7 @@ describe("POST /api/checkout — idempotency", () => {
           shipping_email: "ada@example.com",
           shipping_name: "Ada Okoye",
           shipping_phone: "08012345678",
+          price_changes: [],
         },
         error: null,
       },
@@ -207,6 +211,7 @@ describe("POST /api/checkout — idempotency", () => {
         shipping_email: "ada@example.com",
         shipping_name: "Ada Okoye",
         shipping_phone: "08012345678",
+        price_changes: [],
       },
       error: null,
     });
@@ -215,7 +220,12 @@ describe("POST /api/checkout — idempotency", () => {
     const json = (await response.json()) as { order_id?: string; payment_link?: string | null };
 
     expect(response.status).toBe(200);
-    expect(json).toEqual({ order_id: "order-2", payment_link: null });
+    expect(json).toEqual({
+      order_id: "order-2",
+      payment_link: null,
+      price_changed: false,
+      price_changes: [],
+    });
     expect(mockedInitiateFlutterwavePayment).not.toHaveBeenCalled();
   });
 });
@@ -269,6 +279,68 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     mockedSanityFetch.mockResolvedValue([sanityProduct]);
   });
 
+  it.each(["pending_payment", "confirmed"])(
+    "preserves the original price warning after a lost response (%s)",
+    async (status) => {
+      const { rpc } = mockCreateOrderClient({
+        initialLookup: { data: null, error: null },
+        rpcResult: { data: "order-lost-response", error: null },
+      });
+      mockedInitiateFlutterwavePayment.mockResolvedValue({
+        ok: true,
+        paymentLink: "https://checkout.flutterwave.com/v3/hosted/pay/original",
+      });
+      const body = {
+        ...validBody,
+        cart_items: [{ ...validBody.cart_items[0], display_price: 4000 }],
+      };
+      const original = await POST(postRequest(body, withIdempotencyKey()));
+      expect(original.status).toBe(200);
+      // The server completed the request, but the buyer never received it.
+      const originalJson = await original.json();
+      const payload = rpc.mock.calls[0][1];
+      expect(payload.p_order_items[0]).toMatchObject({
+        display_price: 4000,
+        unit_price: 5000,
+      });
+      // Model the snapshot persisted by the atomic RPC, using its input.
+      const persistedChanges = payload.p_order_items.map(
+        (item: { product_title: string; display_price: number; unit_price: number }) => ({
+          title: item.product_title,
+          old_price: item.display_price,
+          new_price: item.unit_price,
+        })
+      );
+      const { builder } = mockOrdersOnlyClient({
+        data: {
+          id: "order-lost-response",
+          buyer_id: "user-1",
+          total_amount: payload.p_total_amount,
+          currency: "NGN",
+          status,
+          shipping_email: "ada@example.com",
+          shipping_name: "Ada Okoye",
+          shipping_phone: "08012345678",
+          price_changes: persistedChanges,
+        },
+        error: null,
+      });
+      // Replay after the initial claim's staleness window; catalog changes
+      // must not alter either the stored charge or its original warning.
+      mockedSanityFetch.mockResolvedValue([{ ...sanityProduct, basePrice: 9000 }]);
+      const replay = await POST(postRequest(body, withIdempotencyKey()));
+      expect(replay.status).toBe(200);
+      expect(await replay.json()).toEqual({
+        ...originalJson,
+        payment_link: status === "confirmed" ? null : originalJson.payment_link,
+      });
+      expect(builder.select).toHaveBeenCalledWith(expect.stringContaining("price_changes"));
+      expect(rpc).toHaveBeenCalledTimes(1);
+      expect(mockedSanityFetch).toHaveBeenCalledTimes(1);
+      expect(mockedInitiateFlutterwavePayment).toHaveBeenCalledTimes(status === "confirmed" ? 1 : 2);
+    }
+  );
+
   it("creates the order and its items atomically via one RPC call before starting payment", async () => {
     const { rpc } = mockCreateOrderClient({
       initialLookup: { data: null, error: null },
@@ -280,12 +352,19 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     });
 
     const response = await POST(postRequest(validBody, withIdempotencyKey()));
-    const json = (await response.json()) as { order_id?: string; payment_link?: string };
+    const json = (await response.json()) as {
+      order_id?: string;
+      payment_link?: string;
+      price_changed?: boolean;
+      price_changes?: unknown[];
+    };
 
     expect(response.status).toBe(200);
     expect(json).toEqual({
       order_id: "order-new-1",
       payment_link: "https://checkout.flutterwave.com/v3/hosted/pay/new1",
+      price_changed: false,
+      price_changes: [],
     });
 
     // order + order_items were submitted together as one RPC call, not as
@@ -319,6 +398,7 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
       shipping_email: "ada@example.com",
       shipping_name: "Ada Okoye",
       shipping_phone: "08012345678",
+      price_changes: [{ title: "Gift", old_price: 3500, new_price: 5000 }],
     };
     const { rpc, from } = mockCreateOrderClient({
       initialLookup: { data: null, error: null },
@@ -340,6 +420,8 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     expect(json).toEqual({
       order_id: "order-race-1",
       payment_link: "https://checkout.flutterwave.com/v3/hosted/pay/race1",
+      price_changed: true,
+      price_changes: committedOrder.price_changes,
     });
 
     // Only one create attempt was made — this request lost the race and
@@ -353,5 +435,39 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
     expect(mockedInitiateFlutterwavePayment).toHaveBeenCalledWith(
       expect.objectContaining({ orderId: "order-race-1", amount: 5000 })
     );
+  });
+
+  it("flags price_changed when the server-computed price differs from the client's display_price", async () => {
+    // Client last saw the flash sale price (4000); by the time this request
+    // is priced server-side, the sale has ended, so the server correctly
+    // charges basePrice (5000) instead.
+    mockedSanityFetch.mockResolvedValue([sanityProduct]);
+    mockCreateOrderClient({
+      initialLookup: { data: null, error: null },
+      rpcResult: { data: "order-new-2", error: null },
+    });
+    mockedInitiateFlutterwavePayment.mockResolvedValue({
+      ok: true,
+      paymentLink: "https://checkout.flutterwave.com/v3/hosted/pay/new2",
+    });
+
+    const bodyWithStalePrice = {
+      ...validBody,
+      cart_items: [{ ...validBody.cart_items[0], display_price: 4000 }],
+    };
+
+    const response = await POST(postRequest(bodyWithStalePrice, withIdempotencyKey()));
+    const json = (await response.json()) as {
+      order_id?: string;
+      price_changed?: boolean;
+      price_changes?: Array<{ title: string; old_price: number; new_price: number }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(json.order_id).toBe("order-new-2");
+    expect(json.price_changed).toBe(true);
+    expect(json.price_changes).toEqual([
+      { title: "Gift", old_price: 4000, new_price: 5000 },
+    ]);
   });
 });
