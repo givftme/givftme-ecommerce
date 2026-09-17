@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
-import { Gift } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Gift } from "lucide-react";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { OrderTracking } from "@/components/order/OrderTracking";
 import { TrackingLink } from "@/components/order/TrackingLink";
@@ -93,6 +94,9 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
 
   return (
     <div>
+      <Link href="/account/orders" className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-brand hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand">
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> All orders
+      </Link>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-ink md:text-3xl">

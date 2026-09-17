@@ -184,7 +184,7 @@ export function ProfileForm({
           onClick={() => fileInputRef.current?.click()}
           disabled={isAvatarBusy}
           aria-label="Change profile photo"
-          className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-light text-2xl font-semibold text-brand"
+          className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-light text-2xl font-semibold text-brand focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
         >
           {currentAvatarUrl ? (
             <img src={currentAvatarUrl} alt="" className="h-full w-full object-cover" />
@@ -204,33 +204,37 @@ export function ProfileForm({
           onChange={handleAvatarSelect}
           className="hidden"
         />
-        <div className="flex flex-col gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isAvatarBusy}
-          >
-            Change photo
-          </Button>
-          {currentAvatarUrl && (
+        <div className="min-w-0 space-y-2">
+          <p className="text-sm font-semibold text-ink">Profile photo</p>
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              variant="text"
+              variant="ghost"
               size="sm"
-              onClick={handleRemoveAvatar}
+              onClick={() => fileInputRef.current?.click()}
               disabled={isAvatarBusy}
-              className="text-muted"
             >
-              Remove photo
+              Change photo
             </Button>
-          )}
+            {currentAvatarUrl && (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                onClick={handleRemoveAvatar}
+                disabled={isAvatarBusy}
+                className="text-muted"
+              >
+                Remove photo
+              </Button>
+            )}
+          </div>
+          <p className="text-xs leading-5 text-muted">JPEG, PNG or WebP, up to 5MB</p>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 border-t border-stone-100 pt-8">
           <FormField
             control={form.control}
             name="full_name"
@@ -274,7 +278,7 @@ export function ProfileForm({
                   maxLength={THANK_YOU_MAX_LENGTH}
                   placeholder={DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER}
                 />
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <p className="text-xs text-muted">
                     This is sent automatically to anyone who buys you a gift.
                   </p>

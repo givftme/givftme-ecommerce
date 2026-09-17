@@ -32,21 +32,21 @@ export function AccountShell({ name, email, avatarUrl, children }: {
             <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Back to Account
           </Link>
         )}
-        <div className="grid items-start gap-6 lg:grid-cols-3 lg:gap-8">
-          <aside className={cn("min-w-0 rounded-2xl border border-stone-100 bg-white p-5 md:p-6", !isHub && "hidden lg:block")}>
+        <div className="rounded-2xl border border-stone-100 bg-white lg:flex">
+          <aside className={cn("min-w-0 p-5 md:p-6 lg:flex lg:w-80 lg:shrink-0 lg:flex-col lg:border-r lg:border-stone-100", !isHub && "hidden")}>
             <div className="flex items-center gap-3 border-b border-stone-100 pb-6">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-light text-lg font-semibold text-brand">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                ) : name.trim().charAt(0).toUpperCase()}
+                ) : name.trim().charAt(0).toUpperCase() || "?"}
               </div>
               <div className="min-w-0">
                 <p className="break-words text-base font-semibold text-ink">{name}</p>
                 {email && <p className="mt-1 break-all text-sm text-muted">{email}</p>}
               </div>
             </div>
-            <nav aria-label="Account" className="mt-4">
+            <nav aria-label="Account" className="mt-6 mb-8">
               <ul className="space-y-2">
                 {sections.map(({ href, label, description, icon: Icon }) => {
                   const active = pathname === href || pathname.startsWith(`${href}/`);
@@ -65,9 +65,9 @@ export function AccountShell({ name, email, avatarUrl, children }: {
                 })}
               </ul>
             </nav>
-            <div className="mt-8 border-t border-stone-100 pt-5"><SignOutButton /></div>
+            <div className="mt-auto border-t border-stone-100 pt-5"><SignOutButton /></div>
           </aside>
-          <div className={cn("min-w-0 rounded-2xl border border-stone-100 bg-white p-5 md:p-8 lg:col-span-2", isHub && "hidden lg:block")}>
+          <div className={cn("min-w-0 flex-1 p-5 md:p-8 lg:p-10", isHub && "hidden lg:block")}>
             {children}
           </div>
         </div>
