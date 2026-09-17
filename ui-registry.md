@@ -419,3 +419,23 @@ Last updated: 2026-08-07
 
 **Pattern notes:**
 Order detail replaces the former one-shot `OrderConfirmationScreen` (removed 2026-08-07 — see `16-ORDER-TRACKING.md`) with a persistent tracking view: a 4-step `OrderTracking` progress bar (or a red "Cancelled"/"Refunded" banner in place of it), order summary, shipping details, a conditional tracking section, and an expandable `<details>` status-history timeline. No separate confirmation screen exists anymore — `/account/orders/[id]` is the single destination for an order at every stage after payment resolves.
+
+### Account shell and settings
+
+File: components/account/AccountShell.tsx, components/account/SignOutButton.tsx, app/account/layout.tsx
+Last updated: 2026-09-17
+
+| Property | Class |
+| --- | --- |
+| Background | page `bg-surface`, navigation and content `bg-white` |
+| Border | `border border-stone-100` |
+| Border radius | panels `rounded-2xl`, rows and supporting panels `rounded-xl` |
+| Primary text | `text-ink`, headings `text-2xl font-bold`, row labels `text-sm font-semibold` |
+| Secondary text | `text-sm leading-6 text-muted` |
+| Spacing | panels `p-5`, navigation `space-y-2`, sections `mt-8` |
+| Hover and focus | `hover:bg-surface`, `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand` |
+| Shadow | none |
+| Accent | active row `bg-brand-light text-brand`, shared text button for sign out |
+
+**Pattern notes:**
+One navigation component becomes the mobile Account hub and the desktop sidebar. Nested mobile screens return through Back to Account. Keep identity text wrappable, icons decorative, and active sections marked with `aria-current`. Account pages inherit the authenticated layout and must not add another PageWrapper. Sign out stays below navigation with pending and retryable error states.

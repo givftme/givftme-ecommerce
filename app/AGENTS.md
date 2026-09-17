@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains App Router pages, layouts, server actions, and API handlers. You can use the root AGENTS.md and existing feature specifications for product rules.
+This directory contains App Router pages, layouts, server actions, and API handlers. You can use the root AGENTS.md for product boundaries and inspect existing routes for current behavior.
 
 ## Key files
 
@@ -27,8 +27,10 @@ Pages default to server components. Existing dynamic pages and API handlers awai
 
 The dashboard layout authenticates the viewer and ensures an evergreen wishlist exists. The shared wishlist layout only provides toast context. A layout or proxy redirect does not replace authorization inside a route handler.
 
-## Related specs
+## Related context
 
-See [feature specifications](../context/feature-specs/) and [API context](api/AGENTS.md).
+See [project context](../AGENTS.md) and [API context](api/AGENTS.md).
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._
+
+Account routes share `account/layout.tsx`, which authenticates the viewer and installs `PageWrapper` and `AccountShell`. Nested Account pages provide content only, while data reads and mutations retain their own ownership checks.

@@ -4,8 +4,8 @@
     "architect": {
       "source": "JavaScript-Mastery-Pro/skills",
       "sourceType": "github",
-      "skillPath": ".agents/skills/architect/SKILL.md",
-      "computedHash": "69553720011f887eacc9b1832b781f868978b6118866ff886c6b9a94cb283076"
+      "skillPath": "skills/architect/SKILL.md",
+      "computedHash": "ff57c65a06ca4047420113d1eaa18e5002bc657224688b9350a1f06d77204327"
     },
     "imprint": {
       "source": "JavaScript-Mastery-Pro/skills",

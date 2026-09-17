@@ -14,14 +14,12 @@ import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 import {
   DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER,
   profileSchema,
   type ProfileFormValues,
 } from "@/lib/account/validation";
 import { removeAvatar, uploadAvatar } from "@/app/account/profile/avatar";
-import { DeleteAccountDialog } from "@/app/account/profile/DeleteAccountDialog";
 
 const ADD_NAME_BANNER_DISMISSED_KEY = "profile_add_name_banner_dismissed";
 const THANK_YOU_MAX_LENGTH = 500;
@@ -48,8 +46,6 @@ export function ProfileForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showAddNameBanner, setShowAddNameBanner] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -163,14 +159,6 @@ export function ProfileForm({
     router.refresh();
   };
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    trackEvent("auth.signed_out");
-    router.push("/");
-    router.refresh();
-  };
 
   return (
     <div className="space-y-8">
@@ -316,32 +304,6 @@ export function ProfileForm({
           </Button>
         </form>
       </Form>
-
-      <div className="border-t border-stone-200 pt-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Danger zone
-        </h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleSignOut}
-            disabled={isSigningOut}
-          >
-            Sign out
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setDeleteDialogOpen(true)}
-            className={cn("border-red-200 text-red-600 hover:bg-red-50")}
-          >
-            Delete account
-          </Button>
-        </div>
-      </div>
-
-      <DeleteAccountDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} />
     </div>
   );
 }

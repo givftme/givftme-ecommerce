@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains customer API handlers, payment callbacks, and scheduled jobs. You can find the request and response contracts in `context/architecture/API_ROUTES.md` from the repository root.
+This directory contains customer API handlers, payment callbacks, and scheduled jobs. You can inspect exported handlers, domain validation schemas, and colocated tests for current request and response contracts.
 
 ## Key files
 
@@ -28,10 +28,10 @@ Existing dynamic handlers await `context.params`. Route tests sit beside handler
 
 Scheduled jobs and payment webhooks use their own authentication contracts. Their access checks are distinct from a customer session. A scheduled endpoint existing in this directory does not mean it is configured in `vercel.json`.
 
-Checkout and external purchase marking remain separate flows. You can consult root AGENTS.md and the relevant feature specification before changing either contract.
+Checkout and external purchase marking remain separate flows. You can consult root AGENTS.md and inspect the relevant handler and tests before changing either contract.
 
-## Related specs
+## Related context
 
-See [API routes](../../context/architecture/API_ROUTES.md) and [error handling](../../context/architecture/ERROR_HANDLING.md). The audit flagged stale reminder delivery and pricing descriptions in the latter for human review.
+See [project context](../../AGENTS.md), [domain context](../../lib/AGENTS.md), and [response helpers](../../lib/api/response.ts).
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

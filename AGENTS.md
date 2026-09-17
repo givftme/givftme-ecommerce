@@ -10,43 +10,71 @@ This file is the entry point for any AI coding agent working in this repository.
 
 ## Read order
 
-1. `context/PROJECT_OVERVIEW.md` — what Gifvtme is, the two-transaction-flow architecture, v1 scope boundaries
-2. `context/PRD.md` — why decisions were made, so you don't relitigate settled debates
-3. `context/BUSINESS_RULES.md` — hard invariants, check before touching purchase/pricing/order/auth logic
-4. `context/ROADMAP.md` — current build status, so you know what's actually done vs not started
+Start with this file for repository-wide instructions and scope boundaries.
 
-Then the relevant deeper file depending on the task: `architecture/` for system/data/API questions, `design/` for UI questions, `engineering/` for code-level conventions.
+The current product specification lives in `docs/product/`. For product
+planning, feature scope, architecture, or behavior decisions, read
+`docs/product/README.md` and the relevant product documents it references
+before treating existing implementation as intended product behavior.
 
-## Non-negotiable scope boundaries
+The repository is an existing brownfield application. Inspect the current
+implementation, tests, and the relevant nested `AGENTS.md` before making
+changes. Reuse existing functionality where it remains compatible with the
+current product specification.
 
-Do not build, without an explicit instruction to do so in this specific session:
-- Group gifting payment flows (no collecting/holding/refunding money for pooled gifts)
-- A custom admin dashboard (Retool is the intentional v1 operational interface)
-- An in-app wallet or stored customer balance
-- A social feed
-- Automated supplier API integration (order forwarding is manual in v1)
-- Multi-currency support (Naira only)
-- Native mobile apps (web-first)
+Existing behavior is not automatically a product requirement. Where the
+implementation conflicts with `docs/product/`, identify the difference as
+migration or completion work rather than preserving the existing behavior
+by default.
 
-If a task description seems to imply one of these, stop and flag the conflict rather than proceeding. See `context/PROJECT_OVERVIEW.md` and `context/BUSINESS_RULES.md` rules 21–24.
+Historical references in comments, `memory.md`, or deleted `context/`
+documents are not current product specifications.
 
 ## The one thing to never get wrong
 
-`wishlist_items.origin` (`external` | `catalog`) determines which of two completely separate transaction flows an item follows. Before writing any code touching purchases, checkout, or pricing, confirm which flow you're in. See `context/architecture/ARCHITECTURE.md` for the full flow breakdown and `context/BUSINESS_RULES.md` rules 4–6.
+`wishlist_items.origin` (`external` | `catalog`) determines which of two completely separate transaction flows an item follows. Before writing any code touching purchases, checkout, or pricing, confirm which flow you're in. External gifts use affiliate redirects and purchase marking in `app/api/purchases/route.ts`. Catalog gifts use checkout and Flutterwave payment verification in `app/api/checkout/route.ts` and `app/api/flutterwave/webhook/route.ts`. External items never belong in catalog checkout.
 
 ## Working conventions
 
-- Check `context/architecture/FOLDER_STRUCTURE.md` before creating a new file — there's likely an established place for it.
-- Check `context/design/COMPONENT_LIBRARY.md` before building a new component — extend an existing one if it's close, and never build separate mobile/desktop component files (one responsive component per concept).
-- Check `context/architecture/API_ROUTES.md` before building a new API route, and update that file when you add or change one.
-- Follow `context/engineering/CODING_STANDARDS.md` for TypeScript, import paths, server/client component splits, and naming.
+- You can check nearby files and the nested AGENTS.md before choosing a location for new code.
+- You can check `components/AGENTS.md`, existing primitives, and `ui-registry.md` before building a component. Extend an existing component when suitable; keep one responsive component per concept.
+- You can check `app/api/AGENTS.md`, existing handlers, and their tests before adding or changing an API route.
+- TypeScript uses strict mode and the `@/` root alias. Pages default to server components; interactive components declare `"use client"`. Domain types and Zod validation live under `lib/`.
 - All prices are Naira, formatted via `formatPrice()` in `lib/utils.ts` — never hardcode a currency symbol or accept a currency parameter.
 - All GROQ queries live in `lib/sanity/queries.ts` — never write GROQ inline.
 
 ## When you're unsure
 
-Prefer asking a clarifying question over making an assumption when the ambiguity touches: money (pricing, payments, refunds), data visibility (who can see what), or anything listed in `context/BUSINESS_RULES.md`. For lower-stakes ambiguity (e.g. exact spacing, minor copy wording), it's fine to make a reasonable choice and note the assumption rather than blocking on it — match the existing patterns in the codebase as the tiebreaker.
+Prefer asking a clarifying question over making an assumption when ambiguity touches money (pricing, payments, refunds), data visibility, or the scope boundaries above. For minor spacing or copy choices, you can match existing patterns and note the assumption.
+
+The earlier audit found a pricing conflict: the removed business rules prohibited a grace period, but `lib/flutterwave/getActivePrice.ts` implements five minutes after sale expiry. Removing the documents did not resolve that product decision. You can confirm the intended rule before changing this behavior.
 
 ## Keeping context current
 
-If you complete a feature, update `context/ROADMAP.md`'s status section in the same change. If you make a new architectural or product decision during a task, add it to `context/PRD.md` or `context/BUSINESS_RULES.md` as appropriate rather than letting it live only in chat history or a commit message. If you add an API route, component, or env variable, update the corresponding doc (`API_ROUTES.md`, `COMPONENT_LIBRARY.md`, `ENV_VARIABLES.md`) in the same change — these files are meant to stay accurate, not become stale documentation.
+The current product source of truth lives in `docs/product/`. Product
+requirements should remain there rather than being duplicated throughout
+nested AGENTS.md files.
+
+Record confirmed global repository conventions and durable engineering
+decisions here. Record area-specific engineering conventions in the relevant
+nested AGENTS.md.
+
+Keep `README.md`, `.env.local.example`, and `ui-registry.md` aligned when a
+change affects their guidance.
+
+Planning artifacts belong under `docs/scope/`, and feature specifications
+produced by architecture work belong under `docs/specs/`.
+
+## Commands
+
+You can use npm from the repository root: `npm ci` to install locked dependencies, `npm run dev` for development, `npm run build` for production compilation, `npm start` to serve the build, `npm run lint` for ESLint, and `npm test` for Vitest. You can run `npx tsc --noEmit` for a separate type check.
+
+Vitest discovers colocated `*.test.ts` files and excludes `.agents/`. The `@/` alias resolves from the repository root in TypeScript and Vitest.
+
+## Context files
+
+- [app/AGENTS.md](app/AGENTS.md) (Route placement, layouts, and providers.)
+- [app/api/AGENTS.md](app/api/AGENTS.md) (API authentication, validation, and handler tests.)
+- [components/AGENTS.md](components/AGENTS.md) (Shared UI and cart context.)
+- [lib/AGENTS.md](lib/AGENTS.md) (Domain helpers, service boundaries, and tests.)
+- [sanity/AGENTS.md](sanity/AGENTS.md) (Studio schemas and storefront integration.)
