@@ -61,11 +61,6 @@ export function Navbar({
   const mobileCartRef = useRef<HTMLAnchorElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const accountHref = isAuthenticated ? "/account" : "/login";
-  const accountPrimaryLabel = userName
-    ? `Welcome, ${userName}`
-    : isAuthenticated
-      ? "Welcome back"
-      : "Welcome";
   const accountSecondaryLabel = isAuthenticated ? "My Account" : "Sign In / Log In";
 
   useGSAP(
@@ -139,20 +134,10 @@ export function Navbar({
         </form>
 
         <div className="hidden items-center gap-6 md:flex">
-          <button
-            type="button"
-            className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
-          >
-            <QrCode className="h-6 w-6" strokeWidth={1.5} />
-            <span className="text-left leading-tight">
-              Download the
-              <br />
-              givftme app
-            </span>
-          </button>
 
           <Link
             href={accountHref}
+            aria-label={accountSecondaryLabel}
             className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink"
           >
             {isAuthenticated && avatarUrl ? (
@@ -168,11 +153,6 @@ export function Navbar({
             ) : (
               <User className="h-6 w-6" strokeWidth={1.5} />
             )}
-            <span className="text-left leading-tight">
-              {accountPrimaryLabel}
-              <br />
-              {accountSecondaryLabel}
-            </span>
           </Link>
 
           <Link

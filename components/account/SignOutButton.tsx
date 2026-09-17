@@ -1,14 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/analytics";
 
 export function SignOutButton() {
-  const router = useRouter();
   const busy = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +22,8 @@ export function SignOutButton() {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || data.session) throw new Error("Session is still active.");
       trackEvent("auth.signed_out");
-      router.replace("/");
-      router.refresh();
+      // Discard the private router cache and shared layout after session removal.
+      window.location.replace("/");
     } catch {
       setError("Couldn't sign out. Please try again.");
       busy.current = false;

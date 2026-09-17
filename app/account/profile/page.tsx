@@ -38,7 +38,7 @@ export default async function ProfilePage() {
     <div>
       <h1 className="text-3xl font-bold text-ink">Profile</h1>
       <p className="mt-2 text-sm text-muted">
-        Update how you appear to others and manage your account.
+        Your personal details, profile photo and a little thanks for your gifters.
       </p>
 
       <div className="mt-8">

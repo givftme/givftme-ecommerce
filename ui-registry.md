@@ -428,7 +428,7 @@ Last updated: 2026-09-17
 | Property | Class |
 | --- | --- |
 | Background | page `bg-surface`, navigation and content `bg-white` |
-| Border | `border border-stone-100` |
+| Border | shared panel `border border-stone-100`, desktop sidebar divider `border-r border-stone-100` |
 | Border radius | panels `rounded-2xl`, rows and supporting panels `rounded-xl` |
 | Primary text | `text-ink`, headings `text-2xl font-bold`, row labels `text-sm font-semibold` |
 | Secondary text | `text-sm leading-6 text-muted` |
@@ -438,4 +438,4 @@ Last updated: 2026-09-17
 | Accent | active row `bg-brand-light text-brand`, shared text button for sign out |
 
 **Pattern notes:**
-One navigation component becomes the mobile Account hub and the desktop sidebar. Nested mobile screens return through Back to Account. Keep identity text wrappable, icons decorative, and active sections marked with `aria-current`. Account pages inherit the authenticated layout and must not add another PageWrapper. Sign out stays below navigation with pending and retryable error states.
+One navigation component becomes the mobile Account hub and the desktop sidebar within a shared white panel. Nested mobile screens return through Back to Account; order details also link to All orders. Keep identity text wrappable, icons decorative, and active sections marked with `aria-current`. Account pages inherit the authenticated layout and must not add another PageWrapper. Sign out stays at the bottom of navigation with pending and retryable error states. Profile photo actions wrap on narrow screens and remain above a divided form section.
