@@ -18,7 +18,7 @@ export async function generateMetadata({
   const { wishlist, status } = await getSharedWishlist(id);
 
   if (status !== "ok" || !wishlist) {
-    return { title: "Shared wishlist · Gifvtme" };
+    return { title: "Shared wishlist · Givftme" };
   }
 
   const receiverName = getDisplayName(wishlist.owner.full_name);
@@ -29,8 +29,8 @@ export async function generateMetadata({
     ? `${receiverName}'s Wishlist for ${occasionLabel}`
     : `${receiverName}'s Wishlist`;
   const description = occasionLabel
-    ? `Help ${receiverName} celebrate their ${occasionLabel} — view their wishlist on Gifvtme.`
-    : `See what ${receiverName} is wishing for on Gifvtme.`;
+    ? `Help ${receiverName} celebrate their ${occasionLabel} — view their wishlist on Givftme.`
+    : `See what ${receiverName} is wishing for on Givftme.`;
 
   return {
     title,
