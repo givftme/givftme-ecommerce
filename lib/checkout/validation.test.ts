@@ -47,18 +47,24 @@ describe("checkoutSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts an optional wishlist_item_id when it's a valid uuid", () => {
+  // wishlist_item_id used to be accepted here and came from localStorage,
+  // which let a signed in buyer name any wishlist item they could read. The
+  // association is now derived on the server from the caller's own claim,
+  // so the field is gone rather than validated (spec 0002, AC-38).
+  it("ignores a client supplied wishlist_item_id", () => {
     const result = checkoutSchema.safeParse(
       build({ wishlist_item_id: "123e4567-e89b-42d3-a456-426614174000" })
     );
 
     expect(result.success).toBe(true);
+    expect(result.data).not.toHaveProperty("wishlist_item_id");
   });
 
-  it("rejects a non-uuid wishlist_item_id", () => {
-    const result = checkoutSchema.safeParse(build({ wishlist_item_id: "not-a-uuid" }));
+  it("defaults order_source to self", () => {
+    const result = checkoutSchema.safeParse(build({}));
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    expect(result.data?.order_source).toBe("self");
   });
 
   it("rejects an empty cart", () => {

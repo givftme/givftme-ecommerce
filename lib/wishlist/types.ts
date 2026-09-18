@@ -35,6 +35,12 @@ export interface WishlistItem {
   order_status?: string | null;
   buyer_name?: string | null;
   catalog_unavailable?: boolean;
+  /**
+   * Somebody has reserved this gift. A boolean and nothing more: who
+   * reserved it is never exposed, and this is always false for the
+   * wishlist's own owner (spec 0002, AC-20 and AC-21).
+   */
+  is_reserved?: boolean;
 }
 
 export interface WishlistDetail {

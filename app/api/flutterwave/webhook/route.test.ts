@@ -23,6 +23,9 @@ function webhookRequest(body: unknown, signature: string | null) {
   });
 }
 
+// Confirming and failing an order are now single transactional RPCs
+// (gifvtme_confirm_gift_order / gifvtme_fail_gift_order, migration 027),
+// so this mock records rpc calls rather than a sequence of table updates.
 function mockOrderClient(order: Record<string, unknown> | null) {
   const builder: Record<string, unknown> = {};
   builder.select = vi.fn(() => builder);
@@ -33,9 +36,13 @@ function mockOrderClient(order: Record<string, unknown> | null) {
     resolve({ error: null });
 
   const from = vi.fn(() => builder);
-  // @ts-expect-error only .from is read by this route
-  mockedCreateServiceClient.mockReturnValue({ from });
-  return { from, builder };
+  const rpc = vi.fn().mockResolvedValue({
+    data: { outcome: "ok", already_confirmed: false, claim_conflict: false },
+    error: null,
+  });
+  // @ts-expect-error only .from and .rpc are read by this route
+  mockedCreateServiceClient.mockReturnValue({ from, rpc });
+  return { from, builder, rpc };
 }
 
 const successfulChargePayload = {
@@ -96,19 +103,20 @@ describe("POST /api/flutterwave/webhook", () => {
     expect(mockedCreateServiceClient).not.toHaveBeenCalled();
   });
 
-  it("confirms the order when the signature, event, and amount all match", async () => {
-    const { builder } = mockOrderClient(baseOrder);
+  it("confirms the order in one transaction when signature, event, and amount all match", async () => {
+    const { rpc } = mockOrderClient(baseOrder);
 
     const response = await POST(webhookRequest(successfulChargePayload, SECRET_HASH));
 
     expect(response.status).toBe(200);
-    expect(builder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "confirmed" })
+    expect(rpc).toHaveBeenCalledWith(
+      "gifvtme_confirm_gift_order",
+      expect.objectContaining({ p_order_id: baseOrder.id })
     );
   });
 
   it("does not confirm the order when the webhook amount doesn't match", async () => {
-    const { builder } = mockOrderClient(baseOrder);
+    const { rpc } = mockOrderClient(baseOrder);
 
     const response = await POST(
       webhookRequest(
@@ -121,11 +129,11 @@ describe("POST /api/flutterwave/webhook", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(builder.update).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("does not confirm the order when the webhook currency doesn't match", async () => {
-    const { builder } = mockOrderClient(baseOrder);
+    const { rpc } = mockOrderClient(baseOrder);
 
     const response = await POST(
       webhookRequest(
@@ -138,20 +146,20 @@ describe("POST /api/flutterwave/webhook", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(builder.update).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("is idempotent for an order that's already been confirmed", async () => {
-    const { builder } = mockOrderClient({ ...baseOrder, status: "confirmed" });
+    const { rpc } = mockOrderClient({ ...baseOrder, status: "confirmed" });
 
     const response = await POST(webhookRequest(successfulChargePayload, SECRET_HASH));
 
     expect(response.status).toBe(200);
-    expect(builder.update).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("marks the order payment_failed for a non-successful charge status", async () => {
-    const { builder } = mockOrderClient(baseOrder);
+    const { rpc } = mockOrderClient(baseOrder);
 
     const response = await POST(
       webhookRequest(
@@ -164,8 +172,9 @@ describe("POST /api/flutterwave/webhook", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(builder.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "payment_failed" })
+    expect(rpc).toHaveBeenCalledWith(
+      "gifvtme_fail_gift_order",
+      expect.objectContaining({ p_order_id: baseOrder.id })
     );
   });
 });

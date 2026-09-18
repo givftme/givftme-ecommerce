@@ -125,65 +125,49 @@ export async function POST(request: Request) {
       return ok();
     }
 
-    const { error: updateError } = await supabase
-      .from("orders")
-      .update({
-        status: "confirmed",
-        flutterwave_tx_id: txId,
-        flutterwave_tx_ref: payload.data.tx_ref,
-      })
-      .eq("id", order.id);
+    // One RPC, one Postgres transaction. This used to be four sequential
+    // REST calls whose failures were console.error and nothing else, so a
+    // blip between them could leave a paid order with its wishlist item
+    // still showing as available and no path that repaired it. The claim's
+    // move to 'purchased' happens inside this same transaction, and this
+    // is the only place in the product that can make that move at all
+    // (spec 0002, AC-19).
+    const { data: confirmData, error: confirmError } = await supabase.rpc(
+      "gifvtme_confirm_gift_order",
+      {
+        p_order_id: order.id,
+        p_tx_id: txId,
+        p_tx_ref: payload.data.tx_ref ?? null,
+      }
+    );
 
-    if (updateError) {
-      console.error("Could not confirm Flutterwave order.", updateError);
+    if (confirmError) {
+      console.error("Could not confirm Flutterwave order.", confirmError);
       return ok();
     }
 
-    if (order.wishlist_item_id) {
-      const { error: itemUpdateError } = await supabase
-        .from("wishlist_items")
-        .update({ status: "purchased" })
-        .eq("id", order.wishlist_item_id);
+    const confirmResult = confirmData as {
+      outcome?: string;
+      already_confirmed?: boolean;
+      claim_conflict?: boolean;
+    } | null;
 
-      if (itemUpdateError) {
-        console.error("Could not mark wishlist item purchased.", itemUpdateError);
-      }
-
-      const { data: wishlistItem, error: wishlistItemError } = await supabase
-        .from("wishlist_items")
-        .select("master_item_id")
-        .eq("id", order.wishlist_item_id)
-        .maybeSingle();
-
-      if (wishlistItemError) {
-        console.error("Could not load linked master item.", wishlistItemError);
-      }
-
-      const masterItemId = (wishlistItem as { master_item_id?: string | null } | null)
-        ?.master_item_id;
-
-      if (masterItemId) {
-        const { error: masterUpdateError } = await supabase
-          .from("master_items")
-          .update({ status: "purchased" })
-          .eq("id", masterItemId);
-
-        if (masterUpdateError) {
-          console.error("Could not mark master item purchased.", masterUpdateError);
-        }
-      }
+    if (confirmResult?.claim_conflict) {
+      // The money was captured, so the order stands. The reservation had
+      // already lapsed and somebody else may hold the item now, so this
+      // needs a person rather than an automatic overwrite (spec AC-34).
+      console.error("Confirmed a gift order whose claim had moved on.", {
+        orderId: order.id,
+      });
     }
 
     return ok();
   }
 
-  const { error: failedError } = await supabase
-    .from("orders")
-    .update({
-      status: "payment_failed",
-      flutterwave_tx_id: txId,
-    })
-    .eq("id", order.id);
+  const { error: failedError } = await supabase.rpc("gifvtme_fail_gift_order", {
+    p_order_id: order.id,
+    p_tx_id: txId,
+  });
 
   if (failedError) {
     console.error("Could not mark Flutterwave order failed.", failedError);

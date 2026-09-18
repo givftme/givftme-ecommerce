@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -12,7 +12,6 @@ import { PriceChangeDialog, type PriceChange } from "@/components/checkout/Price
 import { useCart, type CartItem } from "@/components/cart/CartContext";
 import { useCartPriceRefresh } from "@/components/cart/useCartPriceRefresh";
 import { Button } from "@/components/ui/Button";
-import { clearPendingWishlistItem, getPendingWishlistItem } from "@/lib/checkout/pendingWishlistItem";
 import {
   Form,
   FormField,
@@ -75,7 +74,6 @@ function generateIdempotencyKey() {
 // idempotency lookup, and create a duplicate order for the same cart.
 function getCheckoutSignature(
   items: CartItem[],
-  wishlistItemId: string | null,
   shipping: CheckoutShippingValues
 ) {
   const cartPart = items
@@ -94,7 +92,7 @@ function getCheckoutSignature(
     shipping.delivery_instructions ?? "",
   ].join(":");
 
-  return `${wishlistItemId ?? ""}|${cartPart}|${shippingPart}`;
+  return `${cartPart}|${shippingPart}`;
 }
 
 function getDefaultValues({
@@ -144,22 +142,6 @@ export function CheckoutForm({
     signature: string;
     key: string;
   } | null>(null);
-  const wishlistItemId = useMemo(() => {
-    if (!isHydrated) {
-      return null;
-    }
-
-    const pending = getPendingWishlistItem();
-
-    if (
-      pending &&
-      items.some((item) => item.catalog_product_id === pending.catalogProductId)
-    ) {
-      return pending.wishlistItemId;
-    }
-
-    return null;
-  }, [isHydrated, items]);
   const form = useForm<CheckoutFormInput, unknown, CheckoutFormValues>({
     resolver: zodResolver(checkoutFormSchema),
     mode: "onBlur",
@@ -246,7 +228,7 @@ export function CheckoutForm({
       })),
       shipping: values.shipping,
       preferred_payment: values.preferred_payment,
-      wishlist_item_id: wishlistItemId ?? undefined,
+      order_source: "self",
     });
 
     if (!payload.success) {
@@ -259,11 +241,7 @@ export function CheckoutForm({
       has_saved_address: savedAddresses.length > 0,
     });
 
-    const checkoutSignature = getCheckoutSignature(
-      items,
-      wishlistItemId,
-      payload.data.shipping
-    );
+    const checkoutSignature = getCheckoutSignature(items, payload.data.shipping);
     let idempotencyKey: string;
 
     if (idempotencyState && idempotencyState.signature === checkoutSignature) {
@@ -299,7 +277,6 @@ export function CheckoutForm({
         total_value: totalPrice,
         item_count: items.length,
       });
-      clearPendingWishlistItem();
 
       if (data.price_changed && data.price_changes?.length) {
         trackEvent("flash_sale.price_changed_at_checkout", {

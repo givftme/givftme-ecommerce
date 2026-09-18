@@ -314,7 +314,8 @@ export const getSharedWishlist = cache(async (shareId: string) => {
   await autoAcceptInvite({ invite: normalized.invite, user });
 
   const withImages = await signSharedImages(normalized);
-  const wishlist = await attachCatalogAvailability(withImages);
+  const withAvailability = await attachCatalogAvailability(withImages);
+  const wishlist = await attachReservedState(supabase, withAvailability);
 
   return {
     user,
@@ -322,6 +323,51 @@ export const getSharedWishlist = cache(async (shareId: string) => {
     status: "ok" as SharedWishlistAccess,
   };
 });
+
+/**
+ * Marks which gifts somebody has already reserved.
+ *
+ * `wishlist_items_with_status` is the only place this is readable, and it
+ * exposes a boolean and nothing else: never the claimant, never their
+ * name, never when. The view also returns false for the wishlist's own
+ * owner, so loading your own list never hints that a gift is on its way
+ * (spec 0002, AC-20 and AC-21).
+ *
+ * A failure here leaves every gift looking available, which is the safe
+ * way round: the reservation itself is still enforced by a unique index
+ * when somebody tries to take it.
+ */
+async function attachReservedState(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  wishlist: SharedWishlist
+): Promise<SharedWishlist> {
+  if (wishlist.items.length === 0) {
+    return wishlist;
+  }
+
+  const { data, error } = await supabase
+    .from("wishlist_items_with_status")
+    .select("id, is_reserved")
+    .eq("wishlist_id", wishlist.id);
+
+  if (error || !data) {
+    return wishlist;
+  }
+
+  const reserved = new Set(
+    (data as Array<{ id: string; is_reserved: boolean | null }>)
+      .filter((row) => row.is_reserved)
+      .map((row) => row.id)
+  );
+
+  return {
+    ...wishlist,
+    items: wishlist.items.map((item) => ({
+      ...item,
+      is_reserved: reserved.has(item.id),
+    })),
+  };
+}
 
 export function getSharedWishlistItem(
   wishlist: SharedWishlist,
