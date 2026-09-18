@@ -107,3 +107,22 @@ export function getReminderScheduleCopy(
 ) {
   return `We'll remind you 2 weeks and 3 days before ${occasionTitle} on ${formatOccasionDate(occasionDate)}.`;
 }
+
+/**
+ * Item counts must come from the items themselves, never from the existence of
+ * the wishlist container. Deletion is a soft delete (`status: 'archived'`, see
+ * the item DELETE handler), so an archived row still exists and would otherwise
+ * keep counting after the owner removed it. This mirrors the archived filter in
+ * `getOwnedWishlistDetail` and the visible count in `WishlistItemList`, so every
+ * owner-facing surface reports the same number.
+ */
+export function countVisibleWishlistItems(
+  items: Array<{ status?: string | null }> | null | undefined,
+): number {
+  if (!items) {
+    return 0;
+  }
+
+  return items.filter((item) => (item.status || "available") !== "archived")
+    .length;
+}

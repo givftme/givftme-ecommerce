@@ -16,7 +16,8 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
 import type { WishlistDetail, WishlistItem } from "@/lib/wishlist/types";
-import { AddItemSheet } from "@/components/wishlist/AddItemSheet";
+import { revalidateWishlistViews } from "@/app/(dashboard)/wishlists/actions";
+import { AddItemSheet, type AddItemMode } from "@/components/wishlist/AddItemSheet";
 import { EditItemSheet } from "@/components/wishlist/EditItemSheet";
 import { EmptyWishlist } from "@/components/wishlist/EmptyWishlist";
 import { WishlistItemCard } from "@/components/wishlist/WishlistItemCard";
@@ -48,11 +49,19 @@ function moveItem(items: WishlistItem[], itemId: string, direction: -1 | 1) {
   return next.map((row, sortOrder) => ({ ...row, sort_order: sortOrder }));
 }
 
-export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
+export function WishlistItemList({
+  wishlist,
+  initialAddMode,
+}: {
+  wishlist: WishlistDetail;
+  initialAddMode?: AddItemMode;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = useState(() => sortItems(wishlist.items));
-  const [addOpen, setAddOpen] = useState(false);
+  const [serverItems, setServerItems] = useState(wishlist.items);
+  const [addOpen, setAddOpen] = useState(Boolean(initialAddMode));
+  const [addMode, setAddMode] = useState<AddItemMode>(initialAddMode || "catalog");
   const [editingItem, setEditingItem] = useState<WishlistItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<WishlistItem | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
@@ -60,6 +69,17 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
   const [savedOrder, setSavedOrder] = useState(items);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+
+  // `items` is seeded once, so a refreshed server render would otherwise be
+  // shadowed by the state from before the mutation: the page would show fresh
+  // counts from the server and stale cards from local state. Re-seed whenever
+  // the server hands us a new item list, except mid reorder where the local
+  // order is the edit in progress. This is React's documented way to adjust
+  // state when a prop changes, and it re-renders before anything is painted.
+  if (!reorderMode && serverItems !== wishlist.items) {
+    setServerItems(wishlist.items);
+    setItems(sortItems(wishlist.items));
+  }
 
   const sortedItems = useMemo(() => sortItems(items), [items]);
   const availableItems = useMemo(
@@ -72,6 +92,19 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
   );
   const visibleCount = availableItems.length + purchasedItems.length;
 
+  // Every owner-facing surface has to agree with committed server state, not
+  // just the card we touched: refresh this route and invalidate the sibling
+  // routes whose cached payloads back/forward navigation would otherwise reuse.
+  const syncServerState = () => {
+    router.refresh();
+    void revalidateWishlistViews(wishlist.id);
+  };
+
+  const openAddSheet = (mode: AddItemMode = "catalog") => {
+    setAddMode(mode);
+    setAddOpen(true);
+  };
+
   const handleItemAdded = (item: WishlistItem) => {
     setItems((current) =>
       sortItems([
@@ -79,14 +112,14 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
         { ...item, sort_order: current.length ? current.length : item.sort_order },
       ])
     );
-    router.refresh();
+    syncServerState();
   };
 
   const handleItemUpdated = (item: WishlistItem) => {
     setItems((current) =>
       current.map((currentItem) => (currentItem.id === item.id ? item : currentItem))
     );
-    router.refresh();
+    syncServerState();
   };
 
   const removeItemFromState = (item: WishlistItem) => {
@@ -128,10 +161,12 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
       }
 
       trackEvent("wishlist.item.deleted", { wishlist_item_id: deleteTarget.id });
+      // Only drop the card once the server confirmed the delete, so a failed
+      // mutation never looks like a successful removal.
       removeItemFromState(deleteTarget);
       toast({ title: "Item hidden from your list.", variant: "success" });
       setDeleteTarget(null);
-      router.refresh();
+      syncServerState();
     } catch {
       toast({ title: "Couldn't delete item. Try again.", variant: "danger" });
     }
@@ -173,7 +208,7 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
       trackEvent("wishlist.reordered", { item_count: orderedIds.length });
       toast({ title: "New order saved.", variant: "success" });
       setReorderMode(false);
-      router.refresh();
+      syncServerState();
     } catch {
       setItems(savedOrder);
       toast({ title: "Couldn't save new order.", variant: "danger" });
@@ -232,17 +267,17 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
                 {reorderMode ? (isSavingOrder ? "Saving..." : "Done") : "Reorder"}
               </button>
             )}
-            <Button type="button" onClick={() => setAddOpen(true)}>
+            <Button type="button" onClick={() => openAddSheet("catalog")}>
               <Plus className="h-4 w-4" />
-              Add item
+              Add gifts
             </Button>
           </div>
         </div>
 
         {visibleCount === 0 ? (
-          <EmptyWishlist onAdd={() => setAddOpen(true)} />
+          <EmptyWishlist wishlistId={wishlist.id} onAdd={openAddSheet} />
         ) : availableItems.length === 0 ? (
-          <EmptyWishlist onAdd={() => setAddOpen(true)} allGifted />
+          <EmptyWishlist wishlistId={wishlist.id} onAdd={openAddSheet} allGifted />
         ) : (
           <div className="mt-6 space-y-3">
             {availableItems.map((item, index) => (
@@ -288,6 +323,8 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
         wishlistId={wishlist.id}
         open={addOpen}
         onOpenChange={setAddOpen}
+        mode={addMode}
+        onModeChange={setAddMode}
         existingItems={items}
         onItemAdded={handleItemAdded}
       />
@@ -302,7 +339,10 @@ export function WishlistItemList({ wishlist }: { wishlist: WishlistDetail }) {
           }
         }}
         onItemUpdated={handleItemUpdated}
-        onItemDeleted={removeItemFromState}
+        onItemDeleted={(item) => {
+          removeItemFromState(item);
+          syncServerState();
+        }}
       />
 
       <ShareSettingsSheet

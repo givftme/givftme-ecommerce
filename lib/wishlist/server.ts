@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
+import { countVisibleWishlistItems } from "@/lib/wishlist/display";
 import {
   getWishlistStoragePathFromImageRef,
   WISHLIST_IMAGES_BUCKET,
@@ -132,7 +133,9 @@ export async function getWishlistSummaries(
 ) {
   const { data, error } = await supabase
     .from("wishlists")
-    .select("id, title, type, visibility, prices_visible, wishlist_items(id)")
+    .select(
+      "id, title, type, visibility, prices_visible, wishlist_items(id, status)",
+    )
     .eq("user_id", userId)
     .order("created_at", { ascending: true });
 
@@ -142,7 +145,7 @@ export async function getWishlistSummaries(
 
   return (data || []).map((wishlist) => {
     const row = wishlist as Omit<WishlistSummary, "item_count"> & {
-      wishlist_items?: Array<{ id: string }>;
+      wishlist_items?: Array<{ id: string; status?: string | null }>;
     };
 
     return {
@@ -151,7 +154,7 @@ export async function getWishlistSummaries(
       type: row.type,
       visibility: row.visibility,
       prices_visible: row.prices_visible,
-      item_count: row.wishlist_items?.length || 0,
+      item_count: countVisibleWishlistItems(row.wishlist_items),
     };
   });
 }

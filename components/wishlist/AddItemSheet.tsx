@@ -11,10 +11,12 @@ import {
   Minus,
   Plus,
   ShoppingCart,
+  Store,
   Upload,
 } from "lucide-react";
+import Link from "next/link";
 import { useForm, useWatch } from "react-hook-form";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,7 @@ import { Sheet, SheetContent } from "@/components/ui/Sheet";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 import type { ScrapedProduct } from "@/lib/scraper/microlink";
 import { isWishlistStoragePath } from "@/lib/wishlist/images";
 import type { WishlistItem } from "@/lib/wishlist/types";
@@ -38,6 +41,13 @@ import {
 import { uploadWishlistImage } from "@/components/wishlist/uploadWishlistImage";
 
 const FETCH_SLOW_THRESHOLD_MS = 5000;
+
+/**
+ * The owner's gift sources, in the order we present them. The Gifvtme
+ * catalogue leads; the external URL and manual paths stay available as
+ * clearly labelled alternatives.
+ */
+export type AddItemMode = "catalog" | "url" | "manual";
 
 function hostnameOf(url: string) {
   try {
@@ -82,6 +92,8 @@ export function AddItemSheet({
   onItemAdded,
   isExclusive = false,
   draftMode = false,
+  mode,
+  onModeChange,
 }: {
   wishlistId?: string;
   open: boolean;
@@ -90,6 +102,8 @@ export function AddItemSheet({
   onItemAdded: (item: WishlistItem) => void;
   isExclusive?: boolean;
   draftMode?: boolean;
+  mode?: AddItemMode;
+  onModeChange?: (mode: AddItemMode) => void;
 }) {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -99,7 +113,14 @@ export function AddItemSheet({
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(0);
   const [allowGroupPayment, setAllowGroupPayment] = useState(true);
-  const [activeTab, setActiveTab] = useState<"url" | "manual">("url");
+  const defaultMode: AddItemMode = draftMode || !wishlistId ? "url" : "catalog";
+  const [internalMode, setInternalMode] = useState<AddItemMode>(defaultMode);
+  const activeTab = mode ?? internalMode;
+
+  const setActiveTab = (nextMode: AddItemMode) => {
+    setInternalMode(nextMode);
+    onModeChange?.(nextMode);
+  };
   const [isFetching, setIsFetching] = useState(false);
   const [fetchSlow, setFetchSlow] = useState(false);
   const [scrapeError, setScrapeError] = useState<string | null>(null);
@@ -143,7 +164,7 @@ export function AddItemSheet({
     setUploadPreview(null);
     setQuantity(0);
     setAllowGroupPayment(true);
-    setActiveTab("url");
+    setActiveTab(defaultMode);
     setIsFetching(false);
     setFetchSlow(false);
     setScrapeError(null);
@@ -207,6 +228,13 @@ export function AddItemSheet({
 
   const switchToUrlTab = () => {
     setActiveTab("url");
+  };
+
+  const switchToCatalogTab = () => {
+    scrapeAbortRef.current?.abort();
+    setIsFetching(false);
+    setFetchSlow(false);
+    setActiveTab("catalog");
   };
 
   const handleFetch = async () => {
@@ -423,30 +451,92 @@ export function AddItemSheet({
                 </p>
               </div>
 
-              <div className="mt-5 inline-flex rounded-xl bg-surface p-1">
-                <button
-                  type="button"
-                  onClick={switchToUrlTab}
-                  className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "url"
-                      ? "bg-white text-ink shadow-sm"
-                      : "text-muted"
-                  }`}
-                >
-                  Add from URL
-                </button>
-                <button
-                  type="button"
-                  onClick={switchToManualTab}
-                  className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === "manual"
-                      ? "bg-white text-ink shadow-sm"
-                      : "text-muted"
-                  }`}
-                >
-                  Add manually
-                </button>
-              </div>
+              {activeTab === "catalog" ? (
+                /* Catalogue first. The owner only drops to a URL or manual
+                   entry after choosing to, so an empty wishlist never opens
+                   straight into external entry. */
+                <div className="mt-5">
+                  <Link
+                    href={`/shop?wishlist=${wishlistId}`}
+                    className={cn(
+                      buttonVariants({ variant: "filled", size: "lg" }),
+                      "w-full",
+                    )}
+                  >
+                    <Store className="h-5 w-5" />
+                    Browse Gifvtme
+                  </Link>
+                  <p className="mt-3 text-[13px] leading-5 text-muted">
+                    Pick a gift from the Gifvtme store and we&apos;ll save it
+                    straight to this wishlist.
+                  </p>
+
+                  <div className="mt-6 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-stone-100" />
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                      Or add from elsewhere
+                    </span>
+                    <span className="h-px flex-1 bg-stone-100" />
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    <button
+                      type="button"
+                      onClick={switchToUrlTab}
+                      className="w-full rounded-xl border border-stone-200 px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
+                    >
+                      Paste a product link
+                      <span className="mt-0.5 block text-xs font-normal text-muted">
+                        From Jumia, Konga, Instagram and other shops
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={switchToManualTab}
+                      className="w-full rounded-xl border border-stone-200 px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
+                    >
+                      Add manually
+                      <span className="mt-0.5 block text-xs font-normal text-muted">
+                        Type the details in yourself
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 inline-flex rounded-xl bg-surface p-1">
+                  {!draftMode && wishlistId && (
+                    <button
+                      type="button"
+                      onClick={switchToCatalogTab}
+                      className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors"
+                    >
+                      Gifvtme
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={switchToUrlTab}
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === "url"
+                        ? "bg-white text-ink shadow-sm"
+                        : "text-muted"
+                    }`}
+                  >
+                    Add from URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={switchToManualTab}
+                    className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                      activeTab === "manual"
+                        ? "bg-white text-ink shadow-sm"
+                        : "text-muted"
+                    }`}
+                  >
+                    Add manually
+                  </button>
+                </div>
+              )}
 
               {activeTab === "url" && !hasFetchedPreview && (
                 <div className="mt-4">

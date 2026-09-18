@@ -18,6 +18,7 @@ import {
   deleteUnsentInviteeReminders,
   scheduleInviteeReminders,
 } from "@/lib/reminders/scheduleInviteeReminders";
+import { countVisibleWishlistItems } from "@/lib/wishlist/display";
 import {
   getNextSortOrder,
   getOwnedWishlistDetail,
@@ -27,7 +28,7 @@ import type { WishlistItem } from "@/lib/wishlist/types";
 
 interface OccasionWishlistRow {
   id: string;
-  wishlist_items?: Array<{ id: string }>;
+  wishlist_items?: Array<{ id: string; status?: string | null }>;
 }
 
 interface PulledMasterItemRow {
@@ -96,7 +97,7 @@ export async function getOccasionSummaries(
         archived_at,
         wishlists (
           id,
-          wishlist_items ( id )
+          wishlist_items ( id, status )
         )
       `
     )
@@ -116,7 +117,7 @@ export async function getOccasionSummaries(
       return {
         ...occasion,
         wishlist_id: wishlist?.id || null,
-        item_count: wishlist?.wishlist_items?.length || 0,
+        item_count: countVisibleWishlistItems(wishlist?.wishlist_items),
       };
     })
     .sort((a, b) => {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Gift, Loader2, Plus } from "lucide-react";
+import { revalidateWishlistViews } from "@/app/(dashboard)/wishlists/actions";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { Button } from "@/components/ui/Button";
 import {
@@ -83,6 +84,11 @@ export function WishlistPickerSheet({
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // An owner who came here from a specific wishlist's "Browse Gifvtme" action
+  // should land back on that wishlist, not be asked to choose again. The id is
+  // only honoured when it matches one of the viewer's own wishlists, and the
+  // items API re-checks ownership regardless.
+  const preferredWishlistId = searchParams.get("wishlist");
   const search = searchParams.toString();
   const redirectPath = `${pathname}${search ? `?${search}` : ""}`;
 
@@ -130,6 +136,9 @@ export function WishlistPickerSheet({
       toast({ title: "Added to your wishlist ✓", variant: "success" });
       onAdded?.(product.catalogProductId);
       onOpenChange(false);
+      // The wishlist pages were rendered before this add; invalidate them so
+      // their item counts reflect the row we just committed.
+      void revalidateWishlistViews(wishlist.id);
     } catch (error) {
       toast({
         title:
@@ -179,6 +188,17 @@ export function WishlistPickerSheet({
           return;
         }
 
+        const preferred = preferredWishlistId
+          ? loadedWishlists.find(
+              (wishlist) => wishlist.id === preferredWishlistId,
+            )
+          : undefined;
+
+        if (preferred) {
+          await addToWishlist(preferred);
+          return;
+        }
+
         if (loadedWishlists.length === 1) {
           await addToWishlist(loadedWishlists[0]);
           return;
@@ -206,7 +226,7 @@ export function WishlistPickerSheet({
     // addToWishlist closes over transient saving state; running this only when
     // a product is chosen avoids retry loops while the user watches the sheet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, product?.id]);
+  }, [open, product?.id, preferredWishlistId]);
 
   return (
     <>

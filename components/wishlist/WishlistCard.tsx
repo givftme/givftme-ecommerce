@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Gift, Share2 } from "lucide-react";
+import { Gift, Link2, PencilLine, Share2, Store } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { buttonVariants } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { WishlistTitleEditor } from "@/components/wishlist/WishlistTitleEditor";
 
 export function WishlistCard({ wishlist }: { wishlist: WishlistSummary }) {
   const [shareOpen, setShareOpen] = useState(false);
+  const isEmpty = wishlist.item_count === 0;
 
   return (
     <section className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
@@ -34,28 +35,67 @@ export function WishlistCard({ wishlist }: { wishlist: WishlistSummary }) {
         </div>
       </div>
 
-      {wishlist.item_count === 0 && (
-        <div className="mt-5 rounded-xl bg-surface px-4 py-3 text-sm text-muted">
-          Add things you&apos;d love to receive.
+      {isEmpty ? (
+        /* An empty wishlist gets an intentional empty state, never the
+           populated "View wishlist" treatment. Source order is catalogue
+           first, then the external link and manual paths. */
+        <>
+          <div className="mt-5 rounded-xl bg-surface px-4 py-3 text-sm text-muted">
+            Nothing on your list yet. Start with the Gifvtme store.
+          </div>
+
+          <Link
+            href={`/shop?wishlist=${wishlist.id}`}
+            className={cn(buttonVariants({ variant: "filled" }), "mt-5 h-11 w-full")}
+          >
+            <Store className="h-4 w-4" />
+            Browse Gifvtme - add your first gift
+          </Link>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Link
+              href={`/wishlists/${wishlist.id}?add=url`}
+              className={cn(buttonVariants({ variant: "ghost" }), "h-11")}
+            >
+              <Link2 className="h-4 w-4" />
+              Paste product link
+            </Link>
+            <Link
+              href={`/wishlists/${wishlist.id}?add=manual`}
+              className={cn(buttonVariants({ variant: "ghost" }), "h-11")}
+            >
+              <PencilLine className="h-4 w-4" />
+              Add manually
+            </Link>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className={cn(buttonVariants({ variant: "text" }), "mt-3 h-10 w-full")}
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </button>
+        </>
+      ) : (
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Link
+            href={`/wishlists/${wishlist.id}`}
+            className={cn(buttonVariants({ variant: "filled" }), "h-11")}
+          >
+            View wishlist
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className={cn(buttonVariants({ variant: "ghost" }), "h-11")}
+          >
+            <Share2 className="h-4 w-4" />
+            Share
+          </button>
         </div>
       )}
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <Link
-          href={`/wishlists/${wishlist.id}`}
-          className={cn(buttonVariants({ variant: "filled" }), "h-11")}
-        >
-          View wishlist
-        </Link>
-        <button
-          type="button"
-          onClick={() => setShareOpen(true)}
-          className={cn(buttonVariants({ variant: "ghost" }), "h-11")}
-        >
-          <Share2 className="h-4 w-4" />
-          Share
-        </button>
-      </div>
 
       <ShareSettingsSheet
         open={shareOpen}
