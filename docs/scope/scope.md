@@ -120,13 +120,25 @@ Code: `components/wishlist/AddItemSheet.tsx`, `app/api/scrape/route.ts`, `lib/sc
 
 Dependency: reuse feature 2 and verify saved items through feature 3. The product names Jumia and Konga as likely readable, and Amazon, Temu, Shein, and Instagram as likely fallback cases; successful scraping of every merchant is not a launch promise. Confirm treatment of unknown or foreign prices before implementation. Preserve source currency context without introducing currency conversion or changing Naira display rules.
 
-### 9. Guest gifting and delivery promises · in-progress · needs a decision · GA
+### 9. Guest gifting and delivery promises · in-progress · GA
 
-**Work:** Migrate authenticated checkout into a complete guest path while retaining catalog pricing, variants, payment verification, retry handling, and order machinery. Both `app/checkout/page.tsx` and the checkout API currently require a user. The shipping form has delivery instructions but no promised window or gift message contract.
+**Work:** Complete the wishlist gift path behind the existing authentication boundary, retaining catalog pricing, variants, payment verification, retry handling, and order machinery. Browsing a shared wishlist stays public; reserving and buying require an account, with the purchase context carried across signup by a server held intent rather than the current `localStorage` association. The shipping form has delivery instructions but no promised window or gift message contract.
 
-**Done when:** a visitor buys a catalog gift from a shared wishlist through confirmation and subsequent order access without creating an account; external gifts retain affiliate redirects and purchase marking; guest claims and retries remain secure and idempotent; recipient details, a real delivery window, gift note, wrapping choice, and surprise handling survive through fulfilment; address visibility is restricted to its permitted purchase purpose; signup is a soft offer after gift selection or purchase, never a payment toll; prices remain server authoritative and formatted in Naira.
+**Done when:** a visitor browses a shared wishlist without an account, and is prompted to sign up or sign in when they reserve or buy, returning after authentication to the exact gift and step they chose rather than a generic page; they then buy a catalog gift through confirmation and order access; external gifts retain affiliate redirects and purchase marking; guest claims and retries remain secure and idempotent; recipient details, a real delivery window, gift note, wrapping choice, and surprise handling survive through fulfilment; address visibility is restricted to its permitted purchase purpose; signup is a soft offer after gift selection or purchase, never a payment toll; prices remain server authoritative and formatted in Naira.
 
-1. [ ] Design it (spec): `/architect guest gifting and delivery promises`
+1. [x] Design it (spec): `/architect guest gifting and delivery promises`
+2. [ ] Build it: `/develop guest gifting and delivery promises`
+   - [ ] Thread a signed out visitor through signup to a paid gift: claims table with its one active claim index, server held purchase intent with an opaque cookie, the resume step that binds the account and revalidates, authenticated claim API, gift checkout route, checkout deriving the wishlist from the caller's own claim, removal of the localStorage association, and transactional confirm and fail RPCs replacing the webhook's sequential updates. Covers AC-1 to AC-13, AC-15 to AC-20, AC-24, AC-26, AC-27, AC-31, AC-33, AC-34, AC-38
+     - Built 2026-09-18: all application code is written and green (type check, lint, build, and 180 tests). Left unticked because `gifvtme_migration_026_gift_claims_and_intents.sql` and `gifvtme_migration_027_gift_order_transactions.sql` have not been applied to a database, so nothing in the slice runs yet. Apply both, confirm the schema is live, then tick. Code in `lib/gift/`, `app/api/gift/intent/`, `app/gift/resume/`, `app/api/wishlists/items/[itemId]/claim/`, `app/w/[id]/gift/[itemId]/checkout/`, `components/checkout/GiftCheckoutForm.tsx`.
+   - [ ] Recipient address and its privacy boundary: owner set destination with owner only policies, the projection function the buyer reads instead, the frozen order snapshot, and real delivery windows. Covers AC-22, AC-23, AC-25, AC-28
+   - [ ] Confirmation and lifecycle: payment confirmation email sent once, the sweep releasing expired claims and cleaning up intents, and claim release when an order is cancelled or refunded. Covers AC-14, AC-16, AC-18, AC-35, AC-36
+   - [ ] Migration and hardening: backfill of existing intent flags into claims, claim and intent rate limits, owner side mid flight changes, the neutral contact audit, and a policy diff proving order authorization is unchanged. Covers AC-15, AC-21, AC-29, AC-30, AC-32, AC-37
+3. [ ] Verify it: `/check verify guest gifting and delivery promises`
+4. [ ] Test it: `/test guest gifting and delivery promises`
+5. [ ] Review it (fresh model): `/check review guest gifting and delivery promises`
+6. [ ] Document it: `/document guest gifting and delivery promises`
+
+Spec: [Guest gifting and delivery](../specs/0002-guest-gifting-and-delivery/index.md).
 
 Code: `app/checkout/page.tsx`, `app/api/checkout/route.ts`, `app/api/checkout/route.test.ts`, `app/api/flutterwave/webhook/route.ts`, `components/checkout/CheckoutForm.tsx`, `lib/checkout/validation.ts`, `lib/orders/`.
 

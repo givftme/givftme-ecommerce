@@ -439,3 +439,24 @@ Last updated: 2026-09-17
 
 **Pattern notes:**
 One navigation component becomes the mobile Account hub and the desktop sidebar within a shared white panel. Nested mobile screens return through Back to Account; order details also link to All orders. Keep identity text wrappable, icons decorative, and active sections marked with `aria-current`. Account pages inherit the authenticated layout and must not add another PageWrapper. Sign out stays at the bottom of navigation with pending and retryable error states. Profile photo actions wrap on narrow screens and remain above a divided form section.
+
+### Gift checkout and purchase resume
+
+File: components/checkout/GiftCheckoutForm.tsx, app/w/[id]/gift/[itemId]/checkout/page.tsx, app/gift/resume/page.tsx
+Last updated: 2026-09-18
+
+| Property | Class |
+| --- | --- |
+| Background | page `bg-surface`, panels `bg-white` |
+| Border | panels `border border-stone-100` on the resume screens, none on gift checkout panels |
+| Border radius | panels `rounded-2xl`, product thumbnail `rounded-xl` |
+| Primary text | `text-ink`, page heading `text-2xl font-bold lg:text-3xl`, section headings `text-base font-semibold` |
+| Secondary text | `text-sm leading-6 text-muted` |
+| Spacing | panels `p-5`, resume panel `p-8` on desktop, form sections `space-y-6` |
+| Shadow | panels `shadow-sm` |
+| Accent | price `text-brand`, privacy and resume icons `text-brand`, warning banner `border-amber-200 bg-amber-50 text-amber-700` |
+
+**Pattern notes:**
+Gift checkout is one gift at quantity one, so it has no cart, no quantity control and no address fields. The buyer enters their own contact details only; where the gift is going is summarised in at most a first name, a city and a state beside a `ShieldCheck`, because the recipient's full address never reaches the browser. When the owner has set no destination, that panel says so plainly and payment still proceeds.
+
+`/gift/resume` is a set of single message screens sharing one centred layout: an icon, a heading, one short paragraph and up to two stacked full width actions. There is one screen per way a resume can end (expired, taken, bought, account mismatch, missing reference), and every one of them offers a way back to the gift or the wishlist. Keep the copy free of blame and always state that nothing was charged.

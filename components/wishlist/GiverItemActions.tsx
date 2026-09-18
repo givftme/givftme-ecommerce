@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HelpCircle, Info, Loader2, RotateCcw } from "lucide-react";
 import gsap from "gsap";
-import { useCart } from "@/components/cart/CartContext";
 import { VariantSelector } from "@/components/product/VariantSelector";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
-import { setPendingWishlistItem } from "@/lib/checkout/pendingWishlistItem";
 import { getSourceDomain } from "@/lib/wishlist/display";
 import type { WishlistItem } from "@/lib/wishlist/types";
 import type { ProductFullData, ProductVariant } from "@/lib/sanity/types";
@@ -65,9 +64,12 @@ export function GiverItemActions({
   catalogProduct: ProductFullData | null;
 }) {
   const { toast } = useToast();
-  const { addItem } = useCart();
+  const router = useRouter();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [authRedirectPath, setAuthRedirectPath] = useState(
+    `/w/${shareId}/item/${item.id}`
+  );
   const [redirected, setRedirected] = useState(false);
   const [flagOwner, setFlagOwner] = useState<FlagOwner>(
     item.intent_flagged_by
@@ -82,15 +84,18 @@ export function GiverItemActions({
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(
     {}
   );
-  const [addedToCart, setAddedToCart] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
+  const [reservedByMe, setReservedByMe] = useState(false);
+  const [busy, setBusy] = useState(false);
   const detailPath = `/w/${shareId}/item/${item.id}`;
   const confirmPath = `/w/${shareId}/confirm/${item.id}`;
   const domain = getSourceDomain(item.product_url);
 
   const flaggedByMe = flagOwner === "me";
   const flaggedByOther = flagOwner === "other";
-  const ctaHidden = flaggedByOther && !buyAnyway;
+  // Someone holds a reservation on this one. Who, we are never told, and
+  // the owner of the wishlist is never told at all (spec 0002, AC-20).
+  const reservedByOther = Boolean(item.is_reserved) && !reservedByMe;
+  const ctaHidden = (flaggedByOther || reservedByOther) && !buyAnyway;
 
   useEffect(() => {
     if (flaggedByOther) {
@@ -141,41 +146,68 @@ export function GiverItemActions({
     setRedirected(true);
   };
 
-  const flagIntent = async () => {
-    if (!requireAuth()) {
-      return;
+  /**
+   * The signed out entry point. Records what they were about to do on the
+   * server, then opens the sign up sheet pointed at a resume link that
+   * carries nothing but an opaque reference (spec 0002, AC-2, AC-5).
+   */
+  const startSignedOutGift = async (action: "reserve" | "buy") => {
+    const response = await fetch("/api/gift/intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wishlist_item_id: item.id,
+        combination_key: selectedVariant?.combinationKey ?? null,
+        selected_options: Object.keys(selectedOptions).length
+          ? selectedOptions
+          : null,
+        intended_action: action,
+      }),
+    });
+
+    const payload = (await response.json()) as {
+      error?: string;
+      resume_path?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(payload.error || "Couldn't start this gift.");
     }
 
+    trackEvent("gift.intent_created", { item_id: item.id, action });
+    setAuthRedirectPath(payload.resume_path || detailPath);
+    setAuthOpen(true);
+  };
+
+  const reserveGift = async () => {
     setFlagging(true);
 
     try {
-      const response = await fetch(
-        `/api/wishlists/items/${item.id}/flag-intent`,
-        { method: "POST" }
-      );
-      const payload = (await response.json()) as {
-        error?: string;
-        warning?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(payload.error || "Intent flag failed.");
-      }
-
-      if (payload.warning === "already_flagged") {
-        setFlagOwner("other");
+      if (!isAuthenticated) {
+        await startSignedOutGift("reserve");
         return;
       }
 
+      const response = await fetch(`/api/wishlists/items/${item.id}/claim`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Couldn't reserve this gift.");
+      }
+
+      setReservedByMe(true);
       setFlagOwner("me");
-      trackEvent("shared_wishlist.intent_flagged", { item_id: item.id });
-      toast({ title: "Intent noted.", variant: "success" });
+      trackEvent("gift.reserved", { item_id: item.id });
+      toast({ title: "Reserved for you.", variant: "success" });
+      router.refresh();
     } catch (error) {
       toast({
         title:
           error instanceof Error
             ? error.message
-            : "Couldn't flag this gift. Try again.",
+            : "Couldn't reserve this gift. Try again.",
         variant: "danger",
       });
     } finally {
@@ -183,25 +215,28 @@ export function GiverItemActions({
     }
   };
 
-  const clearIntent = async () => {
+  const releaseGift = async () => {
     setClearing(true);
 
     try {
-      const response = await fetch(
-        `/api/wishlists/items/${item.id}/flag-intent`,
-        { method: "DELETE" }
-      );
+      const response = await fetch(`/api/wishlists/items/${item.id}/claim`, {
+        method: "DELETE",
+      });
 
       if (!response.ok) {
-        throw new Error("Couldn't remove your flag.");
+        throw new Error("Couldn't release your reservation.");
       }
 
+      setReservedByMe(false);
       setFlagOwner(null);
-      trackEvent("shared_wishlist.intent_cleared", { item_id: item.id });
+      trackEvent("gift.released", { item_id: item.id });
+      router.refresh();
     } catch (error) {
       toast({
         title:
-          error instanceof Error ? error.message : "Couldn't remove your flag.",
+          error instanceof Error
+            ? error.message
+            : "Couldn't release your reservation.",
         variant: "danger",
       });
     } finally {
@@ -222,43 +257,64 @@ export function GiverItemActions({
   const unitPrice = catalogProduct?.hasVariants
     ? selectedVariant?.price ?? null
     : catalogProduct?.price ?? null;
-  const addToCartDisabled =
+  const buyDisabled =
     !catalogProduct ||
     typeof unitPrice !== "number" ||
     !hasAllVariantSelections ||
     invalidCombination ||
     selectedVariant?.available === false;
 
-  const addToCart = () => {
-    if (!requireAuth() || !catalogProduct || addToCartDisabled) {
+  /**
+   * Buying a catalogue gift no longer goes through the shared cart.
+   *
+   * It used to: the item went into the cart and a note of which wishlist
+   * item it was for went into localStorage, which the checkout route then
+   * trusted. That let a signed in buyer name any wishlist item they could
+   * read and have the webhook mark somebody else's gift as bought. A gift
+   * now has its own checkout route, and the wishlist association is
+   * derived on the server from the reservation this call creates (spec
+   * 0002, AC-38).
+   */
+  const buyGift = async () => {
+    if (!catalogProduct || buyDisabled) {
       return;
     }
 
-    addItem({
-      catalog_product_id: catalogProduct.catalogProductId,
-      product_title: catalogProduct.title,
-      product_image_url:
-        catalogProduct.images[0]?.url || catalogProduct.imageUrl || null,
-      combination_key: selectedVariant?.combinationKey || null,
-      selected_options: selectedOptions,
-      quantity: 1,
-      unit_price: unitPrice as number,
-      supplier_product_id:
-        selectedVariant?.supplierProductId ||
-        catalogProduct.supplierProductId ||
-        null,
-    });
-    setPendingWishlistItem({
-      wishlistItemId: item.id,
-      catalogProductId: catalogProduct.catalogProductId,
-    });
-    trackEvent("shared_wishlist.item.add_to_cart", {
-      item_id: item.id,
-      has_variant: Boolean(catalogProduct.hasVariants),
-    });
-    setAddedToCart(true);
-    setJustAdded(true);
-    window.setTimeout(() => setJustAdded(false), 900);
+    setBusy(true);
+    animateButton();
+
+    try {
+      if (!isAuthenticated) {
+        await startSignedOutGift("buy");
+        return;
+      }
+
+      const response = await fetch(`/api/wishlists/items/${item.id}/claim`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Couldn't start this purchase.");
+      }
+
+      setReservedByMe(true);
+      trackEvent("shared_wishlist.item.buy_tapped", {
+        item_id: item.id,
+        origin: item.origin,
+      });
+      router.push(`/w/${shareId}/gift/${item.id}/checkout`);
+    } catch (error) {
+      toast({
+        title:
+          error instanceof Error
+            ? error.message
+            : "Couldn't start this purchase. Try again.",
+        variant: "danger",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -275,9 +331,11 @@ export function GiverItemActions({
         </div>
       )}
 
-      {flaggedByOther && (
+      {(flaggedByOther || reservedByOther) && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium leading-6 text-amber-700">
-          Someone else is planning to buy this.
+          {reservedByOther
+            ? "Someone has already reserved this one."
+            : "Someone else is planning to buy this."}
           {!buyAnyway && (
             <>
               {" "}
@@ -319,29 +377,22 @@ export function GiverItemActions({
                   </p>
                 )}
 
-                {addedToCart ? (
-                  justAdded ? (
-                    <Button type="button" fullWidth size="lg" disabled>
-                      Added ✓
-                    </Button>
-                  ) : (
-                    <Link
-                      href="/cart"
-                      className={cn(buttonVariants({ fullWidth: true, size: "lg" }))}
-                    >
-                      View cart
-                    </Link>
-                  )
-                ) : (
-                  <Button
-                    type="button"
-                    fullWidth
-                    size="lg"
-                    disabled={addToCartDisabled}
-                    onClick={addToCart}
-                  >
-                    Add to cart
-                  </Button>
+                <Button
+                  ref={buttonRef}
+                  type="button"
+                  fullWidth
+                  size="lg"
+                  disabled={buyDisabled || busy}
+                  onClick={() => void buyGift()}
+                >
+                  {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Buy this gift
+                </Button>
+                {!isAuthenticated && (
+                  <p className="text-center text-xs text-muted">
+                    You&apos;ll sign in on the next step, and come straight
+                    back to this gift.
+                  </p>
                 )}
               </>
             ) : (
@@ -407,29 +458,29 @@ export function GiverItemActions({
 
       {!isOwner && (
         <div className="space-y-2">
-          {flagOwner === null && (
+          {!reservedByMe && !flaggedByMe && !reservedByOther && (
             <Button
               type="button"
               variant="ghost"
               fullWidth
               disabled={flagging}
-              onClick={() => void flagIntent()}
+              onClick={() => void reserveGift()}
             >
               {flagging && <Loader2 className="h-4 w-4 animate-spin" />}
               I&apos;m planning to buy this
             </Button>
           )}
 
-          {flaggedByMe && (
+          {(reservedByMe || flaggedByMe) && (
             <p className="text-center text-sm text-muted">
-              ✓ You&apos;ve marked this as planned.{" "}
+              ✓ You&apos;ve reserved this one.{" "}
               <button
                 type="button"
                 className="font-medium text-brand underline disabled:opacity-60"
                 disabled={clearing}
-                onClick={() => void clearIntent()}
+                onClick={() => void releaseGift()}
               >
-                Remove
+                Release
               </button>
             </p>
           )}
@@ -439,7 +490,7 @@ export function GiverItemActions({
       <AuthGateSheet
         open={authOpen}
         onOpenChange={setAuthOpen}
-        redirectPath={detailPath}
+        redirectPath={authRedirectPath}
         receiverName={receiverName}
       />
     </>

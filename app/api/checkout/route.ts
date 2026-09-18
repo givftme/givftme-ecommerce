@@ -5,10 +5,19 @@ import {
   releasePaymentClaim,
   type ReinitiatableOrder,
 } from "@/lib/checkout/reinitiatePayment";
-import { checkoutSchema, type CheckoutInput } from "@/lib/checkout/validation";
+import {
+  checkoutSchema,
+  giftCheckoutSchema,
+  type CheckoutInput,
+  type GiftCheckoutInput,
+} from "@/lib/checkout/validation";
 import { getActivePrice, getCheckoutVariant } from "@/lib/flutterwave/getActivePrice";
 import type { SanityCheckoutProduct } from "@/lib/flutterwave/getActivePrice";
 import { initiateFlutterwavePayment } from "@/lib/flutterwave";
+import {
+  beginGiftCheckout,
+  getActiveClaimForProduct,
+} from "@/lib/gift/server";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -106,14 +115,14 @@ interface PriceChange {
 }
 
 function prepareOrderItems(
-  body: CheckoutInput,
+  cartItems: CheckoutInput["cart_items"],
   products: CartPriceProduct[]
 ) {
   const orderItems: PreparedOrderItem[] = [];
   const priceChanges: PriceChange[] = [];
   let totalAmount = 0;
 
-  for (const item of body.cart_items) {
+  for (const item of cartItems) {
     const product = findProduct(products, item.catalog_product_id);
 
     if (!product) {
@@ -157,74 +166,65 @@ function prepareOrderItems(
   return { orderItems, totalAmount, priceChanges };
 }
 
-async function validateWishlistItem(
+interface GiftOrderBinding {
+  claim_id: string;
+  wishlist_id: string;
+  wishlist_item_id: string;
+}
+
+/**
+ * Works out which wishlist item a gift order is for, using only the
+ * session and the cart.
+ *
+ * The shape check comes first and is strict on purpose: a gift order is
+ * exactly one line at quantity one, matching the item that was claimed.
+ * Anything else is refused before an order exists (spec AC-27).
+ */
+async function bindGiftOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  wishlistItemId: string | undefined,
   cartItems: CheckoutInput["cart_items"]
-) {
-  if (!wishlistItemId) {
-    return { ok: true as const };
-  }
-
-  const { data, error } = await supabase
-    .from("wishlist_items_with_status")
-    .select("id, origin, status, catalog_product_id")
-    .eq("id", wishlistItemId)
-    .maybeSingle();
-
-  if (error) {
+): Promise<
+  | { ok: true; binding: GiftOrderBinding }
+  | { ok: false; status: number; error: string }
+> {
+  if (cartItems.length !== 1 || cartItems[0].quantity !== 1) {
     return {
-      ok: false as const,
-      status: 500,
-      error: "Couldn't verify this wishlist item.",
-    };
-  }
-
-  const item = data as {
-    id: string;
-    origin: string;
-    status: string;
-    catalog_product_id: string | null;
-  } | null;
-
-  if (!item) {
-    return {
-      ok: false as const,
-      status: 404,
-      error: "Wishlist item not found.",
-    };
-  }
-
-  if (item.origin !== "catalog") {
-    return {
-      ok: false as const,
+      ok: false,
       status: 400,
-      error: "External gifts do not use checkout.",
+      error: "A gift is bought one at a time.",
     };
   }
 
-  if (item.status !== "available") {
+  const claim = await getActiveClaimForProduct(
+    supabase,
+    cartItems[0].catalog_product_id
+  );
+
+  if (!claim) {
     return {
-      ok: false as const,
+      ok: false,
       status: 409,
-      error: "This wishlist item is no longer available.",
+      error: "Reserve this gift before buying it.",
     };
   }
 
-  if (
-    item.catalog_product_id &&
-    !cartItems.some(
-      (cartItem) => cartItem.catalog_product_id === item.catalog_product_id
-    )
-  ) {
-    return {
-      ok: false as const,
-      status: 400,
-      error: "Wishlist item does not match the checkout cart.",
-    };
+  // Take the checkout hold. Idempotent: reopening checkout hands back the
+  // existing deadline rather than granting another hour, and the 72 hour
+  // reservation deadline underneath is never extended.
+  const held = await beginGiftCheckout(supabase, claim.wishlist_item_id);
+
+  if (!held.ok) {
+    return { ok: false, status: held.status, error: held.error };
   }
 
-  return { ok: true as const };
+  return {
+    ok: true,
+    binding: {
+      claim_id: claim.claim_id,
+      wishlist_id: claim.wishlist_id,
+      wishlist_item_id: claim.wishlist_item_id,
+    },
+  };
 }
 
 export async function POST(request: Request) {
@@ -242,11 +242,29 @@ export async function POST(request: Request) {
   }
 
   const body = await readJson(request);
-  const parsed = checkoutSchema.safeParse(body);
+  // A gift and a self purchase are different shapes, not one shape with
+  // optional fields: a gift carries the buyer's contact and no address,
+  // because the destination belongs to somebody else and is resolved on
+  // the server.
+  const isGiftOrder =
+    typeof body === "object" &&
+    body !== null &&
+    (body as { order_source?: unknown }).order_source === "wishlist";
+
+  const parsed = isGiftOrder
+    ? giftCheckoutSchema.safeParse(body)
+    : checkoutSchema.safeParse(body);
 
   if (!parsed.success) {
     return jsonError("Check your checkout details and try again.", 400);
   }
+
+  const contact = isGiftOrder
+    ? (parsed.data as GiftCheckoutInput).contact
+    : (parsed.data as CheckoutInput).shipping;
+  const giftMessage = isGiftOrder
+    ? ((parsed.data as GiftCheckoutInput).gift_message ?? null)
+    : null;
 
   const { data: existingOrder, error: existingOrderError } = await supabase
     .from("orders")
@@ -267,14 +285,16 @@ export async function POST(request: Request) {
     );
   }
 
-  const wishlistValidation = await validateWishlistItem(
-    supabase,
-    parsed.data.wishlist_item_id,
-    parsed.data.cart_items
-  );
+  let giftBinding: GiftOrderBinding | null = null;
 
-  if (!wishlistValidation.ok) {
-    return jsonError(wishlistValidation.error, wishlistValidation.status);
+  if (isGiftOrder) {
+    const bound = await bindGiftOrder(supabase, parsed.data.cart_items);
+
+    if (!bound.ok) {
+      return jsonError(bound.error, bound.status);
+    }
+
+    giftBinding = bound.binding;
   }
 
   const productIds = parsed.data.cart_items.map(
@@ -300,7 +320,7 @@ export async function POST(request: Request) {
   let prepared: ReturnType<typeof prepareOrderItems>;
 
   try {
-    prepared = prepareOrderItems(parsed.data, products);
+    prepared = prepareOrderItems(parsed.data.cart_items, products);
   } catch {
     return jsonError("Some items no longer have a valid price.", 400);
   }
@@ -309,13 +329,17 @@ export async function POST(request: Request) {
     return jsonError("Cart total must be greater than zero.", 400);
   }
 
-  const shippingName = `${parsed.data.shipping.first_name} ${parsed.data.shipping.last_name}`;
-  const shippingAddress = [
-    parsed.data.shipping.street_address,
-    parsed.data.shipping.apartment,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const shippingName = `${contact.first_name} ${contact.last_name}`;
+  // A gift order stores no address at all until the recipient's
+  // destination exists. Inventing one is explicitly refused by AC-25.
+  const shippingAddress = isGiftOrder
+    ? null
+    : [
+        (parsed.data as CheckoutInput).shipping.street_address,
+        (parsed.data as CheckoutInput).shipping.apartment,
+      ]
+        .filter(Boolean)
+        .join(", ");
 
   // orders + order_items are created together in one Postgres transaction
   // (see gifvtme_create_checkout_order, migration 018) — no other request
@@ -329,13 +353,26 @@ export async function POST(request: Request) {
       p_total_amount: prepared.totalAmount,
       p_currency: "NGN",
       p_shipping_name: shippingName,
-      p_shipping_email: parsed.data.shipping.email,
-      p_shipping_phone: parsed.data.shipping.phone,
+      p_shipping_email: contact.email,
+      p_shipping_phone: contact.phone,
       p_shipping_address: shippingAddress,
-      p_shipping_city: parsed.data.shipping.city,
-      p_shipping_state: parsed.data.shipping.state,
-      p_wishlist_item_id: parsed.data.wishlist_item_id ?? null,
+      p_shipping_city: isGiftOrder ? null : (parsed.data as CheckoutInput).shipping.city,
+      p_shipping_state: isGiftOrder ? null : (parsed.data as CheckoutInput).shipping.state,
+      p_wishlist_item_id: giftBinding?.wishlist_item_id ?? null,
       p_order_items: prepared.orderItems,
+      p_order_source: parsed.data.order_source,
+      p_gift_claim_id: giftBinding?.claim_id ?? null,
+      p_recipient_wishlist_id: giftBinding?.wishlist_id ?? null,
+      p_gift_message: giftMessage,
+      p_surprise_preference: null,
+      p_delivery_window_start: null,
+      p_delivery_window_end: null,
+      // Slice 1 of spec 0002 runs the AC-25 path: the owner has no stored
+      // destination yet, so payment completes and the order is held for
+      // fulfilment rather than failing or inventing an address. Slice 2
+      // replaces this with the real destination snapshot.
+      p_fulfilment_blocked_reason: isGiftOrder ? "needs_recipient_address" : null,
+      p_recipient_destination_snapshot: null,
     }
   );
 
@@ -373,9 +410,9 @@ export async function POST(request: Request) {
       orderId,
       amount: prepared.totalAmount,
       customer: {
-        email: parsed.data.shipping.email,
+        email: contact.email,
         name: shippingName,
-        phone: parsed.data.shipping.phone,
+        phone: contact.phone,
       },
       preferredPayment: parsed.data.preferred_payment,
     });
