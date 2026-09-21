@@ -20,7 +20,7 @@ export function getSupabasePublicEnv() {
 }
 
 export function getAppUrl() {
-  return requireEnv(process.env.NEXT_PUBLIC_APP_URL, "NEXT_PUBLIC_APP_URL").replace(
+  return requireEnv(process.env.NEXT_APP_URL, "NEXT_APP_URL").replace(
     /\/$/,
     ""
   );

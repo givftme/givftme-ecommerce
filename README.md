@@ -23,7 +23,7 @@ Fill in the required local variables:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_SANITY_PROJECT_ID`
 - `NEXT_PUBLIC_SANITY_DATASET`
-- `NEXT_PUBLIC_APP_URL`
+- `NEXT_APP_URL`
 
 Optional local integrations include Microlink, Resend, cron, and affiliate IDs. You can find configuration names in [.env.local.example](.env.local.example) and inspect each integration's environment checks for its requirements.
 

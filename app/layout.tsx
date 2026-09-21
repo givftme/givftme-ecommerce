@@ -13,9 +13,25 @@ const belleza = Belleza({
   subsets: ["latin"],
 });
 
+const description =
+  "Discover Givftme, the gifting platform that helps you remember important moments, create wishlist, and find thoughtful gifts, and celebrate the people who matter.";
+
 export const metadata: Metadata = {
-  title: "Gifvtme",
-  description: "Wishlists, gift museum, and checkout for life's occasions.",
+  // Social crawlers need absolute URLs for the generated opengraph-image.
+  metadataBase: new URL(process.env.NEXT_APP_URL ?? "http://localhost:3000"),
+  title: "Givftme",
+  description,
+  openGraph: {
+    title: "Givftme",
+    description,
+    siteName: "Givftme",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Givftme",
+    description,
+  },
 };
 
 export default function RootLayout({

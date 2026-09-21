@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { buildReminderEmail, type DueReminderRow } from "./buildReminderEmail";
 
 beforeAll(() => {
-  process.env.NEXT_PUBLIC_APP_URL ||= "https://gifvtme.test";
+  process.env.NEXT_APP_URL ||= "https://gifvtme.test";
 });
 
 function futureDateOnly(daysFromNow: number) {
