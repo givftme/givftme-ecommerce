@@ -67,6 +67,7 @@ export default function Reminders() {
   const [channel, setChannel] = useState("WhatsApp");
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const tabListRef = useRef<HTMLDivElement>(null);
   const { toast } = useFeedback();
 
   const isDesktop = useMediaQuery("(min-width:1025px)");
@@ -104,6 +105,16 @@ export default function Reminders() {
     }, CYCLE_MS);
     return () => clearInterval(id);
   }, [cycling]);
+
+  // Mobile: keep the active pill in view as the demo cycles. Scrolls only the
+  // pill row — scrollIntoView would also yank the page vertically.
+  useEffect(() => {
+    const list = tabListRef.current;
+    const tab = tabRefs.current[stage];
+    if (isDesktop || !list || !tab) return;
+    const centred = tab.offsetLeft - (list.clientWidth - tab.offsetWidth) / 2;
+    list.scrollTo({ left: centred, behavior: reduce ? "auto" : "smooth" });
+  }, [stage, isDesktop, reduce]);
 
   const pickStage = (i: number) => {
     setAutoOn(false);
@@ -172,7 +183,10 @@ export default function Reminders() {
             <div
               role="tablist"
               aria-label="Reminder timeline"
-              className="no-scrollbar hidden gap-2 overflow-x-auto pb-1 max-lg:flex"
+              ref={tabListRef}
+              // Bleeds to the screen edges so pills slide under a soft fade
+              // instead of being clipped at the page gutter.
+              className="no-scrollbar relative -mx-5.5 hidden snap-x snap-proximity scroll-px-5.5 gap-2 overflow-x-auto overscroll-x-contain scroll-smooth px-5.5 py-0.5 [mask-image:linear-gradient(90deg,transparent,#000_20px,#000_calc(100%-20px),transparent)] motion-reduce:scroll-auto max-lg:flex max-sm:-mx-4.5 max-sm:scroll-px-4.5 max-sm:px-4.5"
             >
               {STEPS.map((step, i) => (
                 <button
@@ -189,7 +203,7 @@ export default function Reminders() {
                   onClick={() => pickStage(i)}
                   onKeyDown={onTabKeyDown}
                   className={cx(
-                    "relative h-10 shrink-0 cursor-pointer overflow-hidden rounded-full border-[1.5px] px-4 text-[13px] font-medium transition-colors",
+                    "relative h-10 shrink-0 snap-center cursor-pointer overflow-hidden rounded-full border-[1.5px] px-4 text-[13px] font-medium transition-colors",
                     stage === i
                       ? "border-red bg-red text-white"
                       : "border-line bg-white text-ink hover:border-ink/40",

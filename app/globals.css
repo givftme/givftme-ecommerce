@@ -52,3 +52,14 @@
 body {
   @apply bg-white text-ink font-sans;
 }
+
+/* Scrollable rows (e.g. the mobile reminder pills) that keep touch/trackpad
+   scrolling but hide the scrollbar itself. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
