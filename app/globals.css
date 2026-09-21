@@ -7,8 +7,46 @@
   --color-ink: #000000;
   --color-muted: #4a4a4a;
   --color-surface: #f7f7f7;
+  --color-line: #e5e5e5;
+  --color-soft: #f5f3f0;
+  --color-peach: #fff4ec;
+
+  /* Bare accent names used by the home sections (bg-red, text-green, …).
+     Tailwind's numbered shades (red-50 etc.) are unaffected. */
+  --color-red: #e11d2e;
+  --color-orange: #ff7a1a;
+  --color-green: #15803d;
+  --color-blue: #1d4ed8;
+
+  --radius-card-xl: 32px;
+
+  --shadow-soft: 0 8px 24px -12px rgba(16, 16, 20, 0.18);
+  --shadow-float: 0 40px 80px -30px rgba(16, 16, 20, 0.45);
 
   --font-sans: var(--font-inter);
+  --font-display: var(--font-belleza-src);
+
+  --animate-scroll-x: scroll-x 40s linear infinite;
+  --animate-scroll-x-rev: scroll-x 40s linear infinite reverse;
+  --animate-fill-x: fill-x linear forwards;
+
+  @keyframes fill-x {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @keyframes scroll-x {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 body {

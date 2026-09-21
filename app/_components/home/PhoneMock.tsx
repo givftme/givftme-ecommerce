@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import Image from "next/image";
+import type { ComponentType } from "react";
 import { Icon, Pill, SmartImage, cx } from "@/components/ui/primitives";
 
 const BOX_SWEET_HOME =
@@ -19,6 +20,8 @@ const BOX_NEW_CHAPTER =
   "https://cdn.sanity.io/images/spvd4gp2/production/cf643a20c63cf1e05320c8af8412d563403e4249-1254x1254.png";
 const PHOTO_KITCHEN =
   "https://givftme.vercel.app/_next/image?url=%2Fimages%2Fhero-carousel-image-02.png";
+
+type ScreenProps = { channel: string };
 
 const TINY = "text-[11px] text-muted";
 const BUBBLE =
@@ -129,8 +132,8 @@ function ScreenCountdown() {
   );
 }
 
-/** 7 days out: the WhatsApp nudge with three real picks. */
-function ScreenIdeas() {
+/** 7 days out: the nudge with three real picks, on whichever channel was chosen. */
+function ScreenIdeas({ channel }: ScreenProps) {
   return (
     <>
       <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 pt-12 pb-3">
@@ -141,7 +144,7 @@ function ScreenIdeas() {
           <b className="block text-[13.5px] leading-tight font-semibold">
             Givtme
           </b>
-          <span className={TINY}>WhatsApp · now</span>
+          <span className={TINY}>{channel} · now</span>
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-2.5 bg-[#f4f1ec] px-3 py-3.5">
@@ -258,14 +261,21 @@ function ScreenDelivered() {
   );
 }
 
-const SCREENS = [ScreenCountdown, ScreenIdeas, ScreenOneTap, ScreenDelivered];
+const SCREENS: ComponentType<ScreenProps>[] = [
+  ScreenCountdown,
+  ScreenIdeas,
+  ScreenOneTap,
+  ScreenDelivered,
+];
 
 /** The handset frame. `stage` picks which of the four screens is showing. */
 export default function PhoneMock({
   stage = 0,
+  channel = "WhatsApp",
   className,
 }: {
   stage?: number;
+  channel?: string;
   className?: string;
 }) {
   return (
@@ -282,13 +292,13 @@ export default function PhoneMock({
             key={i}
             aria-hidden={stage !== i}
             className={cx(
-              "absolute inset-0 flex flex-col transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+              "absolute inset-0 flex flex-col transition-[opacity,transform] duration-500 motion-reduce:transition-opacity ease-[cubic-bezier(0.2,0.8,0.2,1)]",
               stage === i
                 ? "translate-y-0 scale-100 opacity-100"
                 : "pointer-events-none translate-y-4 scale-[0.98] opacity-0",
             )}
           >
-            <Screen />
+            <Screen channel={channel} />
           </div>
         ))}
       </div>

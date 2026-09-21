@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-label": "^2.1.11",
+    "@react-three/fiber": "^9.7.0",
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^5.31.1",
     "@supabase/ssr": "^0.12.0",
@@ -30,6 +31,7 @@
     "sanity": "^5.31.1",
     "styled-components": "^6.4.3",
     "tailwind-merge": "^3.6.0",
+    "three": "^0.186.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -37,6 +39,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",

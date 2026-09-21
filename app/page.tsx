@@ -19,6 +19,10 @@ import {
   OCCASIONS_QUERY,
 } from "@/lib/sanity/queries";
 import type { MuseumOccasion, ProductCardData } from "@/lib/sanity/types";
+import Marquees from "@/app/_components/home/Marquees";
+import Pillars from "./_components/home/Pillars";
+import Reminders from "./_components/home/Reminders";
+import { FeedbackProvider } from "@/hooks/useFeedback";
 
 export const revalidate = 60;
 
@@ -60,15 +64,12 @@ export default async function Page() {
         maxDiscountPercent={getMaxFlashSaleDiscountPercent(saleProducts)}
       />
       <Hero />
+      <Marquees />
       <OccasionCategories occasions={occasions} />
-      <ProductSection
-        title="Featured gifts"
-        tabs={productTabs}
-        products={featuredProducts}
-        productsByTab={productsByTab}
-        showBadges
-        showMoreHref="/shop"
-      />
+      <Pillars />
+      <FeedbackProvider>
+        <Reminders />
+      </FeedbackProvider>
       <TrustBadges />
       <NewsletterSignup />
     </PageWrapper>

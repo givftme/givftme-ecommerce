@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   BellRing,
   Calendar,
@@ -58,11 +58,15 @@ const CHANNELS = [
   { label: "Email", icon: Mail },
 ];
 
+/** How long each stage shows on mobile before the demo advances. */
+const CYCLE_MS = 3600;
+
 export default function Reminders() {
   const [stage, setStage] = useState(0);
   const [autoOn, setAutoOn] = useState(true);
   const [channel, setChannel] = useState("WhatsApp");
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { toast } = useFeedback();
 
   const isDesktop = useMediaQuery("(min-width:1025px)");
@@ -72,6 +76,7 @@ export default function Reminders() {
     rootMargin: "0px",
     once: false,
   });
+  const cycling = !isDesktop && autoOn && stickyVisible && !reduce;
 
   // Desktop: the phone follows whichever step is in the middle of the viewport.
   useEffect(() => {
@@ -93,23 +98,59 @@ export default function Reminders() {
   // Mobile: there is no step column to scroll through, so cycle on a timer
   // until the visitor picks a stage themselves.
   useEffect(() => {
-    if (isDesktop || !autoOn || !stickyVisible || reduce) return;
+    if (!cycling) return;
     const id = setInterval(() => {
       if (!document.hidden) setStage((s) => (s + 1) % STEPS.length);
-    }, 3600);
+    }, CYCLE_MS);
     return () => clearInterval(id);
-  }, [isDesktop, autoOn, stickyVisible, reduce]);
+  }, [cycling]);
+
+  const pickStage = (i: number) => {
+    setAutoOn(false);
+    setStage(i);
+  };
+
+  // Roving focus across the mobile tabs, per the WAI-ARIA tabs pattern.
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const n = STEPS.length;
+    const next = {
+      ArrowRight: (stage + 1) % n,
+      ArrowLeft: (stage - 1 + n) % n,
+      Home: 0,
+      End: n - 1,
+    }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    pickStage(next);
+    tabRefs.current[next]?.focus();
+  };
+
+  const scrollToStep = (i: number) =>
+    stepRefs.current[i]?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "center",
+    });
 
   return (
-    <section id="remember" className="pt-6 pb-24 max-sm:pb-16 rouded-full">
+    <section id="remember" className="pt-6 pb-24 max-sm:pb-16">
       <Wrap className="grid grid-cols-2 gap-16 max-lg:grid-cols-1 max-lg:gap-6">
         <div
           ref={stickyRef}
+          id="reminders-demo"
+          role={isDesktop ? undefined : "tabpanel"}
+          aria-labelledby={isDesktop ? undefined : `reminders-tab-${stage}`}
           className="sticky top-24 flex h-[calc(100vh-120px)] max-h-[720px] min-h-[560px] items-center justify-center max-lg:relative max-lg:top-0 max-lg:h-[560px] max-lg:min-h-0 max-sm:h-[520px]"
         >
           <div className="absolute inset-x-0 inset-y-[4%] overflow-hidden rounded-card-xl bg-peach before:absolute before:-top-20 before:-right-20 before:size-80 before:rounded-full before:bg-[rgba(255,122,26,0.16)] before:content-[''] after:absolute after:-bottom-[60px] after:-left-[70px] after:size-[260px] after:rounded-full after:bg-[rgba(225,29,46,0.1)] after:content-['']" />
+
+          <span className="absolute top-[calc(4%+18px)] left-5 z-2 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-red backdrop-blur max-lg:hidden">
+            <Icon as={STEPS[stage].whenIcon} size={14} />
+            {STEPS[stage].when}
+          </span>
+
           <PhoneMock
             stage={stage}
+            channel={channel}
             className="z-2 w-[min(280px,70%)] max-sm:w-[min(240px,74%)]"
           />
         </div>
@@ -136,21 +177,34 @@ export default function Reminders() {
               {STEPS.map((step, i) => (
                 <button
                   key={step.pill}
+                  ref={(el) => {
+                    tabRefs.current[i] = el;
+                  }}
+                  id={`reminders-tab-${i}`}
                   type="button"
                   role="tab"
                   aria-selected={stage === i}
-                  onClick={() => {
-                    setAutoOn(false);
-                    setStage(i);
-                  }}
+                  aria-controls="reminders-demo"
+                  tabIndex={stage === i ? 0 : -1}
+                  onClick={() => pickStage(i)}
+                  onKeyDown={onTabKeyDown}
                   className={cx(
-                    "h-10 shrink-0 cursor-pointer rounded-full border-[1.5px] px-4 text-[13px] font-medium",
+                    "relative h-10 shrink-0 cursor-pointer overflow-hidden rounded-full border-[1.5px] px-4 text-[13px] font-medium transition-colors",
                     stage === i
                       ? "border-red bg-red text-white"
-                      : "border-line bg-white text-ink",
+                      : "border-line bg-white text-ink hover:border-ink/40",
                   )}
                 >
-                  {step.pill}
+                  {stage === i && cycling && (
+                    // Restarts each stage (keyed) so visitors can see the demo is advancing.
+                    <span
+                      key={stage}
+                      aria-hidden="true"
+                      className="absolute inset-0 origin-left animate-fill-x bg-white/20"
+                      style={{ animationDuration: `${CYCLE_MS}ms` }}
+                    />
+                  )}
+                  <span className="relative">{step.pill}</span>
                 </button>
               ))}
             </div>
@@ -159,7 +213,11 @@ export default function Reminders() {
               {STEPS[stage].short}
             </p>
 
-            <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
+            <div
+              role="group"
+              aria-label="Reminder channel"
+              className="flex flex-wrap items-center gap-2 text-[13px] text-muted"
+            >
               <span>Remind me on</span>
               {CHANNELS.map(({ label, icon }) => (
                 <button
@@ -167,14 +225,15 @@ export default function Reminders() {
                   type="button"
                   aria-pressed={channel === label}
                   onClick={() => {
+                    if (channel === label) return;
                     setChannel(label);
                     toast("Reminders will come by " + label);
                   }}
                   className={cx(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px]",
+                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px] transition-colors",
                     channel === label
                       ? "border-ink bg-ink text-white"
-                      : "border-line bg-white text-ink",
+                      : "border-line bg-white text-ink hover:border-ink/40",
                   )}
                 >
                   <Icon as={icon} size={16} />
@@ -184,26 +243,60 @@ export default function Reminders() {
             </div>
           </div>
 
-          {STEPS.map((step, i) => (
-            <div
-              key={step.title}
-              data-step={i}
-              ref={(el) => {
-                stepRefs.current[i] = el;
-              }}
-              className={cx(
-                "flex min-h-[62vh] flex-col justify-center gap-3 transition-opacity duration-400 max-lg:hidden",
-                stage === i ? "opacity-100" : "opacity-28",
-              )}
+          <ol className="relative max-lg:hidden">
+            {/* The rail, with a red fill that tracks progress through the steps. */}
+            <span
+              aria-hidden="true"
+              className="absolute top-[31vh] bottom-[31vh] left-[7px] w-0.5 rounded-full bg-line"
             >
-              <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-red">
-                <Icon as={step.whenIcon} size={16} />
-                {step.when}
-              </span>
-              <h3 className="text-[clamp(28px,3vw,40px)]">{step.title}</h3>
-              <p className="max-w-[26em] text-muted">{step.body}</p>
-            </div>
-          ))}
+              <span
+                className="absolute inset-x-0 top-0 origin-top rounded-full bg-red transition-transform duration-500 motion-reduce:transition-none"
+                style={{
+                  height: "100%",
+                  transform: `scaleY(${stage / (STEPS.length - 1)})`,
+                }}
+              />
+            </span>
+
+            {STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                aria-current={stage === i ? "step" : undefined}
+              >
+                <div
+                  data-step={i}
+                  ref={(el) => {
+                    stepRefs.current[i] = el;
+                  }}
+                  className={cx(
+                    "relative flex min-h-[62vh] flex-col justify-center gap-3 pl-10 transition-opacity duration-400 motion-reduce:transition-none",
+                    stage === i ? "opacity-100" : "opacity-28",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cx(
+                      "absolute top-1/2 left-0 size-4 -translate-y-1/2 rounded-full border-2 transition-colors duration-300",
+                      i <= stage
+                        ? "border-red bg-red"
+                        : "border-line bg-white",
+                      stage === i && "ring-4 ring-red/15",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => scrollToStep(i)}
+                    className="inline-flex w-fit cursor-pointer items-center gap-2 text-[13px] font-semibold text-red"
+                  >
+                    <Icon as={step.whenIcon} size={16} />
+                    {step.when}
+                  </button>
+                  <h3 className="text-[clamp(28px,3vw,40px)]">{step.title}</h3>
+                  <p className="max-w-[26em] text-muted">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </Wrap>
     </section>
