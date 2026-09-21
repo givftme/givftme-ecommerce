@@ -18,6 +18,7 @@ vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("notFound");
   },
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 vi.mock("@/lib/wishlist/shared", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/wishlist/shared")>()),
@@ -118,7 +119,7 @@ describe("Shared wishlist item page", () => {
     const markup = await renderItemPage("item-catalog");
 
     expect(markup).toContain("Copper pour over kettle");
-    expect(markup).toContain("Add to cart");
+    expect(markup).toContain("Buy this gift");
   });
 
   it("renders the same catalog gift for a signed in giver", async () => {
@@ -131,7 +132,7 @@ describe("Shared wishlist item page", () => {
     const markup = await renderItemPage("item-catalog");
 
     expect(markup).toContain("Copper pour over kettle");
-    expect(markup).toContain("Add to cart");
+    expect(markup).toContain("Buy this gift");
   });
 
   it("renders an external gift with its redirect action intact", async () => {
@@ -146,20 +147,23 @@ describe("Shared wishlist item page", () => {
     const markup = await renderItemPage("item-purchased");
 
     expect(markup).toContain("already been claimed");
-    expect(markup).not.toContain("Add to cart");
     expect(markup).not.toContain("Buy this gift");
   });
 });
 
-describe("Shared wishlist cart provider", () => {
-  it("fails without the provider the /w layout mounts", async () => {
+describe("Shared wishlist gift path", () => {
+  it("renders without the cart provider, because a gift never enters the cart", async () => {
     const page = await SharedWishlistItemPage({
       params: Promise.resolve({ id: SHARE_ID, itemId: "item-catalog" }),
     });
 
-    // The pre-fix layout: ToastProvider alone, no CartProvider.
+    // Buying a gift used to go through the shared cart, with the wishlist
+    // association kept in localStorage. It now has its own checkout route
+    // and the association is derived from the buyer's claim on the server,
+    // so this page no longer depends on CartProvider at all (spec 0002,
+    // AC-38).
     expect(() =>
       renderToStaticMarkup(createElement(ToastProvider, null, page))
-    ).toThrow(/useCart must be used within CartProvider/);
+    ).not.toThrow();
   });
 });
