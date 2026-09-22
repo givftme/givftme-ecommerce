@@ -480,3 +480,23 @@ Last updated: 2026-09-18
 Gift checkout is one gift at quantity one, so it has no cart, no quantity control and no address fields. The buyer enters their own contact details only; where the gift is going is summarised in at most a first name, a city and a state beside a `ShieldCheck`, because the recipient's full address never reaches the browser. When the owner has set no destination, that panel says so plainly and payment still proceeds.
 
 `/gift/resume` is a set of single message screens sharing one centred layout: an icon, a heading, one short paragraph and up to two stacked full width actions. There is one screen per way a resume can end (expired, taken, bought, account mismatch, missing reference), and every one of them offers a way back to the gift or the wishlist. Keep the copy free of blame and always state that nothing was charged.
+
+### Homepage Museum, Wishlist and Pool
+
+File: app/_components/home/Museum.tsx, app/_components/home/Wishlist.tsx, app/_components/home/Pool.tsx
+Last updated: 2026-09-22
+
+| Property | Class |
+| --- | --- |
+| Background | Museum `bg-white`, Wishlist `bg-soft`, Pool `bg-ink` with white panels |
+| Border | `border border-line` |
+| Radius | cards `rounded-3xl` or `rounded-card-xl`, controls `rounded-full` |
+| Primary text | headings `font-display text-4xl leading-tight`, panel headings `font-display text-3xl` or `text-2xl` |
+| Secondary text | `text-sm text-muted`, dark section `text-white/80` |
+| Spacing | sections `py-16`, panels `p-5` or `p-6`, content `gap-5` |
+| Focus | `focus-visible:outline-2 focus-visible:outline-brand`, input group `focus-within:ring-2 focus-within:ring-brand` |
+| Shadow | white preview panels `shadow-float` |
+
+Homepage red accents use `brand`, `brand-light`, and `brand-dark` from `app/globals.css`. Shared `Btn`, `Pill`, and `Eyebrow` expose an explicit `brand` tone.
+
+Museum uses the shared catalog grid for product actions. Wishlist and Pool previews carry explicit demo labels. Keep demo sharing distinct from saved wishlist sharing, keep actions visible on touch screens, and announce changing progress and validation errors.

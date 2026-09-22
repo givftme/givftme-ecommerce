@@ -13,10 +13,11 @@ import { cx, type PolymorphicProps } from "@/components/ui/primitives";
 const BTN_BASE =
   "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-transparent font-medium transition-[transform,background-color,box-shadow,border-color] duration-200 active:scale-[0.97]";
 
-export type BtnTone = "red" | "line" | "ink";
+export type BtnTone = "brand" | "red" | "line" | "ink";
 export type BtnSize = "md" | "sm";
 
 const BTN_TONES: Record<BtnTone, string> = {
+  brand: "bg-brand text-white shadow-soft hover:bg-brand-dark",
   red: "bg-red text-white shadow-[0_10px_24px_rgba(225,29,46,0.28)] hover:bg-red-600",
   line: "border-line bg-white text-ink hover:border-ink",
   ink: "bg-ink text-white",

@@ -65,9 +65,10 @@ export function Icon({
   );
 }
 
-export type PillTone = "red" | "orange" | "green" | "blue";
+export type PillTone = "brand" | "red" | "orange" | "green" | "blue";
 
 const PILL_TONES: Record<PillTone, string> = {
+  brand: "bg-brand text-white",
   red: "bg-red text-white",
   orange: "bg-[#fff1e4] text-[#c4520a]",
   green: "bg-green-50 text-green",
@@ -99,11 +100,12 @@ interface SlotProps {
   children?: ReactNode;
 }
 
-export function Eyebrow({ className, children }: SlotProps) {
+export function Eyebrow({ className, children, tone = "red" }: SlotProps & { tone?: "red" | "brand" }) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-2 text-[13.5px] font-medium text-red",
+        "inline-flex items-center gap-2 text-[13.5px] font-medium",
+        tone === "brand" ? "text-brand" : "text-red",
         className,
       )}
     >

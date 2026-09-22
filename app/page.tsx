@@ -2,7 +2,6 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { FlashSaleBanner } from "@/components/flash-sale/FlashSaleBanner";
 import { Hero } from "@/app/_components/home/Hero";
 import { OccasionCategories, type OccasionCategory } from "@/app/_components/home/OccasionCategories";
-import { ProductSection } from "@/app/_components/home/ProductSection";
 import { TrustBadges } from "@/app/_components/home/TrustBadges";
 import { NewsletterSignup } from "@/components/shared/NewsletterSignup";
 import { TrackView } from "@/components/shared/TrackView";
@@ -23,6 +22,9 @@ import Marquees from "@/app/_components/home/Marquees";
 import Pillars from "./_components/home/Pillars";
 import Reminders from "./_components/home/Reminders";
 import { FeedbackProvider } from "@/hooks/useFeedback";
+import Wishlist from "./_components/home/Wishlist";
+import Museum from "./_components/home/Museum";
+import Pool from "./_components/home/Pool";
 
 export const revalidate = 60;
 
@@ -48,13 +50,6 @@ export default async function Page() {
   const featuredProducts = normalizeProductCards(rawFeatured);
   const saleProducts = normalizeProductCards(rawSale);
   const newProducts = normalizeProductCards(rawNew);
-  const productTabs = ["Best Seller", "On sale", "New Arrivals", "Top Rated"];
-  const productsByTab = {
-    "Best Seller": featuredProducts,
-    "On sale": saleProducts,
-    "New Arrivals": newProducts,
-    "Top Rated": featuredProducts,
-  };
 
   return (
     <PageWrapper>
@@ -63,15 +58,18 @@ export default async function Page() {
         saleEndTime={saleProducts[0]?.saleEndTime}
         maxDiscountPercent={getMaxFlashSaleDiscountPercent(saleProducts)}
       />
-      <Hero />
-      <Marquees />
-      <OccasionCategories occasions={occasions} />
-      <Pillars />
       <FeedbackProvider>
+        <Hero />
+        <Marquees />
+        <OccasionCategories occasions={occasions} />
+        <Pillars />
         <Reminders />
+        <Wishlist />
+        <Museum products={(featuredProducts.length ? featuredProducts : newProducts).slice(0, 4)} />
+        <Pool />
+        <TrustBadges />
+        <NewsletterSignup />
       </FeedbackProvider>
-      <TrustBadges />
-      <NewsletterSignup />
     </PageWrapper>
   );
 }

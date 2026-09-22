@@ -116,7 +116,7 @@ export function ProductCard({
           </button>
         )}
 
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 bg-gradient-to-t from-black/50 px-3 pb-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 bg-gradient-to-t from-black/50 px-3 pb-3 pt-10 opacity-100 transition-opacity duration-200 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
           {onAddToCart ? (
             <Button
               type="button"

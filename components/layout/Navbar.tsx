@@ -133,7 +133,7 @@ export function Navbar({
       )}
     >
       <div className="mx-auto flex h-18 max-w-7xl items-center gap-6 px-4 max-sm:h-16 lg:px-8">
-        <Link href="/" aria-label="Gifvtme home" className="shrink-0">
+        <Link href="/" aria-label="Givftme home" className="shrink-0">
           <Image
             src="/logo.png"
             alt="Gifvtme"
