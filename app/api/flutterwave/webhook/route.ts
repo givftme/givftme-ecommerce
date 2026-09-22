@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     return ok();
   }
 
-  if (succeeded) {
+  if (payload.data?.status === "successful") {
     if (!paymentMatchesOrder(payload.data, order)) {
       console.error("Rejected Flutterwave confirmation with mismatched amount or currency.", {
         orderId: order.id,
