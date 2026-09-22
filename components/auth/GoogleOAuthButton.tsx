@@ -12,11 +12,13 @@ export function GoogleOAuthButton({
   flow,
   redirectTo,
   onError,
+  appearance = "brand",
 }: {
   label: string;
   flow: "signup" | "login";
   redirectTo?: string | null;
   onError?: (message: string) => void;
+  appearance?: "brand" | "neutral";
 }) {
   const [isPending, startTransition] = useTransition();
   const [isConnecting, setIsConnecting] = useState(false);
@@ -60,7 +62,7 @@ export function GoogleOAuthButton({
       fullWidth
       disabled={loading}
       onClick={handleClick}
-      className="h-12"
+      className={appearance === "neutral" ? "h-12 border-line text-ink hover:bg-surface" : "h-12"}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />

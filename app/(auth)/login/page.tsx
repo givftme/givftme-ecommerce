@@ -1,4 +1,6 @@
-import { LoginForm } from "@/app/(auth)/login/LoginForm";
+import { AuthForm } from "@/components/auth/AuthForm";
+
+export const metadata = { title: "Log in | Givftme" };
 
 const authErrors: Record<string, string> = {
   oauth: "Couldn't connect to Google. Please try again.",
@@ -21,7 +23,8 @@ export default async function LoginPage({
   const error = getParam(params.error);
 
   return (
-    <LoginForm
+    <AuthForm
+      mode="login"
       redirectTo={getParam(params.redirect)}
       initialError={error ? authErrors[error] : undefined}
     />
