@@ -49,6 +49,14 @@ function redirectWithSessionCookies(
 }
 
 export async function proxy(request: NextRequest) {
+
+  console.log({
+    requestUrl: request.url,
+    nextUrl: request.nextUrl.toString(),
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+  });
   const { pathname, search } = request.nextUrl;
 
   const { response, user } = await updateSession(request);
