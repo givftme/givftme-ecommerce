@@ -137,10 +137,10 @@ export function Navbar({
           <Image
             src="/logo.png"
             alt="Gifvtme"
-            width={132}
+            width={142}
             height={44}
             preload
-            className="h-8.5 w-auto max-sm:h-7.5"
+            
           />
         </Link>
 

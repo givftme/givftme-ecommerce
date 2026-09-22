@@ -51,6 +51,7 @@ The earlier audit found a pricing conflict: the removed business rules prohibite
 
 ## Keeping context current
 
+<<<<<<< Updated upstream
 The current product source of truth lives in `docs/product/`. Product
 requirements should remain there rather than being duplicated throughout
 nested AGENTS.md files.
@@ -78,3 +79,23 @@ Vitest discovers colocated `*.test.ts` files and excludes `.agents/`. The `@/` a
 - [components/AGENTS.md](components/AGENTS.md) (Shared UI and cart context.)
 - [lib/AGENTS.md](lib/AGENTS.md) (Domain helpers, service boundaries, and tests.)
 - [sanity/AGENTS.md](sanity/AGENTS.md) (Studio schemas and storefront integration.)
+=======
+If you complete a feature, update `context/ROADMAP.md`'s status section in the same change. If you make a new architectural or product decision during a task, add it to `context/PRD.md` or `context/BUSINESS_RULES.md` as appropriate rather than letting it live only in chat history or a commit message. If you add an API route, component, or env variable, update the corresponding doc (`API_ROUTES.md`, `COMPONENT_LIBRARY.md`, `ENV_VARIABLES.md`) in the same change — these files are meant to stay accurate, not become stale documentation.
+
+## Stack
+
+This is one npm application using TypeScript with strict checking, Next.js 16 App Router, React 19, and Tailwind CSS v4. Supabase owns transactional data, Sanity owns catalog content, and Vitest runs the automated tests. See `package.json` for dependency versions.
+
+## Commands
+
+You can use `npm ci` to install locked dependencies, `npm run dev` for development, `npm run build` for a production build, `npm run lint` for ESLint, and `npm test` for Vitest. For a focused test, use `npm test -- path/to/file.test.ts`. Tests live alongside source; `vitest.config.ts` excludes `.agents/` from the application suite.
+
+## Specs
+
+Existing feature specifications live in `context/feature-specs/`. You can use these with `context/ROADMAP.md` to locate the relevant behavior and implementation status.
+
+## Context files
+
+- [app/AGENTS.md](app/AGENTS.md) (Route groups, layouts, and provider placement.)
+- [app/api/AGENTS.md](app/api/AGENTS.md) (API validation, response helpers, and route tests.)
+>>>>>>> Stashed changes
