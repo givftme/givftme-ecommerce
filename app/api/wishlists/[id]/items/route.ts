@@ -3,6 +3,7 @@ import { buildAffiliateUrl } from "@/lib/affiliate/transform";
 import { readJson, jsonError } from "@/lib/api/response";
 import { getActivePrice, isFlashSaleWindowActive } from "@/lib/flutterwave/getActivePrice";
 import type { SanityCheckoutProduct } from "@/lib/flutterwave/getActivePrice";
+import { upsertGiftMuseumCandidateForWishlistItem } from "@/lib/gift-museum/candidates";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -304,6 +305,25 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
 
   if (insert.error || !insert.data) {
     return jsonError("Couldn't save item. Try again.", 500);
+  }
+
+  if (data.product_url) {
+    try {
+      await upsertGiftMuseumCandidateForWishlistItem({
+        userId: user.id,
+        wishlistItemId: insert.data.id,
+        originalUrl: data.product_url,
+        title: data.title,
+        imageUrl,
+        description: data.description,
+        sourcePrice: data.price,
+        sourceCurrency: data.scraped_currency || "NGN",
+        scrapeStatus: data.title ? "fetched" : "manual",
+        scrapeConfidence: data.title ? "medium" : "low",
+      });
+    } catch (error) {
+      console.error("Wishlist saved but gift candidate merge failed.", error);
+    }
   }
 
   if (owner.wishlist.type === "evergreen") {

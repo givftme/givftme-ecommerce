@@ -93,7 +93,7 @@ export function WishlistPickerSheet({
   const redirectPath = `${pathname}${search ? `?${search}` : ""}`;
 
   const addToWishlist = async (wishlist: WishlistSummary) => {
-    if (!product || typeof product.price !== "number") {
+    if (!product) {
       toast({
         title: "Couldn't add to wishlist. Try again.",
         variant: "danger",
@@ -110,14 +110,26 @@ export function WishlistPickerSheet({
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          origin: "catalog",
-          catalog_product_id: product.catalogProductId,
-          title: product.title,
-          image_url: product.imageUrl || null,
-          price: product.price,
-          is_exclusive: false,
-        }),
+        body: JSON.stringify(
+          product.fulfilmentMode === "external_redirect"
+            ? {
+                origin: "external",
+                title: product.title,
+                image_url: product.imageUrl || null,
+                product_url: product.externalUrl || "",
+                price: product.price,
+                scraped_currency: product.sourceCurrency || "NGN",
+                is_exclusive: false,
+              }
+            : {
+                origin: "catalog",
+                catalog_product_id: product.catalogProductId,
+                title: product.title,
+                image_url: product.imageUrl || null,
+                price: product.price,
+                is_exclusive: false,
+              }
+        ),
       });
 
       if (!response.ok) {
@@ -131,10 +143,15 @@ export function WishlistPickerSheet({
 
       trackEvent("museum.product.add_to_wishlist", {
         product_id: product.catalogProductId,
+        fulfilment_mode: product.fulfilmentMode || "catalog_checkout",
         wishlist_type: wishlist.type,
       });
       toast({ title: "Added to your wishlist ✓", variant: "success" });
-      onAdded?.(product.catalogProductId);
+      onAdded?.(
+        product.fulfilmentMode === "external_redirect"
+          ? product.id
+          : product.catalogProductId
+      );
       onOpenChange(false);
       // The wishlist pages were rendered before this add; invalidate them so
       // their item counts reflect the row we just committed.

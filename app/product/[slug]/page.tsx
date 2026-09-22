@@ -1,11 +1,16 @@
 import { notFound } from "next/navigation";
 import { PageWrapper } from "@/components/layout/PageWrapper";
+import { ExternalGiftDetail } from "@/components/product/ExternalGiftDetail";
 import { ProductDetail } from "@/components/product/ProductDetail";
 import { RelatedProducts } from "@/components/product/RelatedProducts";
+import {
+  candidateToProductCard,
+  getPublishedExternalCandidateBySlug,
+} from "@/lib/gift-museum/candidates";
 import { normalizeProductCards, normalizeProductFull } from "@/lib/sanity/catalog";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { PRODUCT_PAGE_QUERY, RELATED_PRODUCTS_QUERY } from "@/lib/sanity/queries";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getProductReviewsSummary } from "@/lib/reviews/server";
 import type { ProductCardData, ProductFullData } from "@/lib/sanity/types";
 
@@ -27,7 +32,20 @@ export default async function ProductPage({
   );
 
   if (!rawProduct) {
-    notFound();
+    const candidate = await getPublishedExternalCandidateBySlug(
+      createServiceClient(),
+      slug
+    );
+
+    if (!candidate) {
+      notFound();
+    }
+
+    return (
+      <PageWrapper>
+        <ExternalGiftDetail product={candidateToProductCard(candidate)} />
+      </PageWrapper>
+    );
   }
 
   const product = normalizeProductFull(rawProduct);

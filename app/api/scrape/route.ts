@@ -20,19 +20,14 @@ export async function POST(request: Request) {
     return jsonError("Enter a valid URL.", 400);
   }
 
-  const host = new URL(parsed.data.url).hostname.toLowerCase();
-
-  // Amazon actively blocks many metadata scrapers, so the UI should fall back
-  // to manual entry immediately instead of making the user wait.
-  if (host.includes("amazon.")) {
-    return jsonError("Amazon items need to be added manually.", 422);
-  }
-
   try {
     const product = await scrapeProductUrl(parsed.data.url);
 
     return NextResponse.json({ product });
   } catch {
-    return jsonError("We couldn't read that page automatically.", 422);
+    return jsonError(
+      "We could not fetch the details automatically. You can still add it manually.",
+      422
+    );
   }
 }

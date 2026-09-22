@@ -6,6 +6,7 @@ import { Grid2X2, List, Loader2, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CatalogProductGrid } from "@/components/product/CatalogProductGrid";
 import { ProductGrid } from "@/components/product/ProductGrid";
+import { WishlistPickerSheet } from "@/components/shared/WishlistPickerSheet";
 import { useCart } from "@/components/cart/CartContext";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -76,6 +77,10 @@ export function ProductExplorer({
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [pageSize, setPageSize] = useState(16);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [wishlistProduct, setWishlistProduct] = useState<ProductCardData | null>(
+    null
+  );
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const { addItem } = useCart();
   const { toast } = useToast();
@@ -168,6 +173,12 @@ export function ProductExplorer({
   };
 
   const addSimpleProductToCart = (product: ProductCardData) => {
+    if (product.fulfilmentMode === "external_redirect") {
+      setWishlistProduct(product);
+      setIsWishlistOpen(true);
+      return;
+    }
+
     if (typeof product.price !== "number" || product.hasVariants) {
       return;
     }
@@ -186,6 +197,7 @@ export function ProductExplorer({
   };
 
   return (
+    <>
     <div className="lg:flex lg:items-start lg:gap-8">
       <FilterSidebar
         filters={filters}
@@ -294,10 +306,17 @@ export function ProductExplorer({
                   <Button
                     type="button"
                     size="sm"
-                    disabled={product.hasVariants || typeof product.price !== "number"}
+                    disabled={
+                      product.fulfilmentMode !== "external_redirect" &&
+                      (product.hasVariants || typeof product.price !== "number")
+                    }
                     onClick={() => addSimpleProductToCart(product)}
                   >
-                    {product.hasVariants ? "Choose options" : "Add to cart"}
+                    {product.fulfilmentMode === "external_redirect"
+                      ? "Add to wishlist"
+                      : product.hasVariants
+                        ? "Choose options"
+                        : "Add to cart"}
                   </Button>
                 </div>
               </article>
@@ -338,5 +357,11 @@ export function ProductExplorer({
         onClear={clearFilters}
       />
     </div>
+    <WishlistPickerSheet
+      product={wishlistProduct}
+      open={isWishlistOpen}
+      onOpenChange={setIsWishlistOpen}
+    />
+    </>
   );
 }

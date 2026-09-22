@@ -53,17 +53,28 @@ describe("POST /api/scrape", () => {
     expect(mockedScrapeProductUrl).not.toHaveBeenCalled();
   });
 
-  it("returns 422 for an Amazon URL without calling the scraper", async () => {
+  it("attempts Amazon URLs through the scraper cascade", async () => {
     mockedGetAuthenticatedApiUser.mockResolvedValue({ id: "user-1" } as User);
+    mockedScrapeProductUrl.mockResolvedValue({
+      title: "Amazon",
+      image_url: null,
+      price: null,
+      currency: "NGN",
+      product_url: "https://www.amazon.com/dp/B000000000",
+      scrape_status: "manual",
+      scrape_confidence: "low",
+    });
 
     const response = await POST(
       postRequest({ url: "https://www.amazon.com/dp/B000000000" }),
     );
     const json = await response.json();
 
-    expect(response.status).toBe(422);
-    expect(json.error).toBe("Amazon items need to be added manually.");
-    expect(mockedScrapeProductUrl).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(json.product.scrape_status).toBe("manual");
+    expect(mockedScrapeProductUrl).toHaveBeenCalledWith(
+      "https://www.amazon.com/dp/B000000000",
+    );
   });
 
   it("returns the scraped product on success", async () => {
@@ -104,6 +115,8 @@ describe("POST /api/scrape", () => {
     const json = await response.json();
 
     expect(response.status).toBe(422);
-    expect(json.error).toBe("We couldn't read that page automatically.");
+    expect(json.error).toBe(
+      "We could not fetch the details automatically. You can still add it manually."
+    );
   });
 });

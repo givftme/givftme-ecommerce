@@ -42,6 +42,12 @@ export function ProductCard({
         )
       : null;
   const productHref = `/product/${product.slug}`;
+  const isExternalGift = product.fulfilmentMode === "external_redirect";
+  const primaryCtaLabel = isExternalGift
+    ? "Add to wishlist"
+    : product.hasVariants
+      ? "Choose options"
+      : "Add to cart";
   const wishlistHandler = onAddToWishlist
     ? () => onAddToWishlist(product)
     : onToggleWishlist
@@ -51,11 +57,7 @@ export function ProductCard({
   return (
     <div className={cn("group", className)}>
       <div className="relative aspect-square overflow-hidden rounded-2xl bg-surface">
-        <Link
-          href={productHref}
-          className="absolute inset-0"
-          onClick={() => onClick?.(product)}
-        >
+        <Link href={productHref} className="absolute inset-0" onClick={() => onClick?.(product)}>
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
@@ -123,7 +125,7 @@ export function ProductCard({
               onClick={() => onAddToCart(product)}
               className="bg-ink hover:bg-black"
             >
-              {product.hasVariants ? "Choose options" : "Add to cart"}
+              {primaryCtaLabel}
             </Button>
           ) : (
             <Link

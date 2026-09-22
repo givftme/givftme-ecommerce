@@ -27,6 +27,12 @@ Fill in the required local variables:
 
 Optional local integrations include Microlink, Resend, cron, and affiliate IDs. You can find configuration names in [.env.local.example](.env.local.example) and inspect each integration's environment checks for its requirements.
 
+Gift Fetch and the admin candidate queue also use `ADMIN_EMAILS`,
+`EXCHANGERATE_API_KEY`, `SANITY_WRITE_TOKEN`, `FETCH_MARKUP_PERCENT`,
+`FETCH_DELIVERY_BUFFER_NGN`, and `FETCH_ROUNDING_NGN`. `SANITY_WRITE_TOKEN`
+is server-only and is required only when publishing a fetched candidate as a
+catalog draft.
+
 Sanity is configured through `sanity/env.ts`, `sanity.config.ts`, and `sanity/lib/client.ts`. Set `NEXT_PUBLIC_SANITY_DATASET` explicitly, usually `production` for a launch-like dataset. The embedded Studio is available at `/studio` when the app is running.
 
 Run the development server:
