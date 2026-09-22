@@ -18,13 +18,27 @@ describe("externalWishlistItemSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("requires a product_url", () => {
+  it("accepts an omitted product_url", () => {
     const rest: Record<string, unknown> = { ...base };
     delete rest.product_url;
     const result = externalWishlistItemSchema.safeParse(rest);
 
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.product_url).toBe("");
   });
+
+  it.each([{}, { title: "", product_url: "" }, { title: "  ", product_url: "  " }])(
+    "accepts empty inputs and supplies a display name: %j",
+    (fields) => {
+      const result = externalWishlistItemSchema.parse({ origin: "external", ...fields });
+
+      expect(result.title).toBe("Untitled gift");
+      expect(result.product_url).toBe("");
+      expect(result.image_url).toBeNull();
+      expect(result.price).toBeNull();
+      expect(result.description).toBeNull();
+    }
+  );
 
   it("rejects an invalid product_url", () => {
     const result = externalWishlistItemSchema.safeParse({

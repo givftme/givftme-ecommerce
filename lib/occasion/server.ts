@@ -46,7 +46,7 @@ interface TransactionalExclusiveItem {
   title: string;
   image_url: string | null;
   product_url: string;
-  affiliate_url: string;
+  affiliate_url: string | null;
   price: number | null;
   description: string | null;
 }
@@ -428,7 +428,9 @@ export async function createOccasionWithWishlist({
     title: item.title,
     image_url: item.image_url,
     product_url: item.product_url,
-    affiliate_url: buildAffiliateUrl(item.product_url).affiliateUrl,
+    affiliate_url: item.product_url
+      ? buildAffiliateUrl(item.product_url).affiliateUrl
+      : null,
     price: item.price,
     description: item.description,
   }));

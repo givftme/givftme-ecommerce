@@ -255,7 +255,9 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     return jsonError("You cannot use that image.", 400);
   }
 
-  const { affiliateUrl } = buildAffiliateUrl(data.product_url);
+  const affiliateUrl = data.product_url
+    ? buildAffiliateUrl(data.product_url).affiliateUrl
+    : null;
   const isExclusive = owner.wishlist.type === "occasion" && data.is_exclusive;
   const insertPayload = {
     wishlist_id: id,

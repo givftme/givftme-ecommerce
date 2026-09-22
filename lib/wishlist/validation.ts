@@ -104,9 +104,19 @@ const wishlistItemDetailsSchema = z.object({
 
 export const externalWishlistItemSchema = wishlistItemDetailsSchema.extend({
   origin: z.literal("external"),
-  // Manual external items still require a source URL because the DB constraint
-  // requires product_url whenever origin = external.
-  product_url: z.string().url("Enter a valid product URL"),
+  title: z
+    .string()
+    .trim()
+    .max(200, "Title is too long")
+    .optional()
+    .transform((value) => value || "Untitled gift"),
+  // Keep an empty string for linkless items to satisfy the legacy non-null constraint.
+  product_url: z
+    .string()
+    .trim()
+    .pipe(z.union([z.literal(""), z.string().url("Enter a valid product URL")]))
+    .optional()
+    .default(""),
   scraped_currency: z.string().trim().max(10).optional().nullable(),
   is_exclusive: z.boolean().optional().default(false),
 });
