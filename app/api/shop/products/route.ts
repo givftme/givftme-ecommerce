@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { normalizeProductCards } from "@/lib/sanity/catalog";
-import { sanityFetch } from "@/lib/sanity/fetch";
-import { SHOP_PRODUCTS_COUNT_QUERY, SHOP_PRODUCTS_QUERY } from "@/lib/sanity/queries";
-import type { ProductCardData } from "@/lib/sanity/types";
+import { loadMuseumProducts } from "@/lib/gift-museum/shop";
 
 function parsePositiveInt(value: string | null, fallback: number) {
   const parsed = Number(value);
@@ -20,13 +17,10 @@ export async function GET(request: NextRequest) {
     48,
     parsePositiveInt(request.nextUrl.searchParams.get("limit"), 16)
   );
-  const [products, totalProducts] = await Promise.all([
-    sanityFetch<ProductCardData[]>(SHOP_PRODUCTS_QUERY, { offset, limit }),
-    sanityFetch<number>(SHOP_PRODUCTS_COUNT_QUERY),
-  ]);
+  const { products, totalProducts } = await loadMuseumProducts(offset, limit);
 
   return NextResponse.json({
-    products: normalizeProductCards(products),
+    products,
     totalProducts,
   });
 }

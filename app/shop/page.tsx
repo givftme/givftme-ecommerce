@@ -3,25 +3,19 @@ import { Zap } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { ProductExplorer } from "@/components/collection/ProductExplorer";
 import { TrackView } from "@/components/shared/TrackView";
-import { normalizeProductCards } from "@/lib/sanity/catalog";
+import { loadMuseumProducts } from "@/lib/gift-museum/shop";
 import { sanityFetch } from "@/lib/sanity/fetch";
-import {
-  FLASH_SALE_PRODUCTS_QUERY,
-  SHOP_PRODUCTS_COUNT_QUERY,
-  SHOP_PRODUCTS_QUERY,
-} from "@/lib/sanity/queries";
+import { FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
 import type { ProductCardData } from "@/lib/sanity/types";
 
 export const revalidate = 60;
 
 export default async function ShopPage() {
   const now = new Date().toISOString();
-  const [rawProducts, totalProducts, flashSaleProducts] = await Promise.all([
-    sanityFetch<ProductCardData[]>(SHOP_PRODUCTS_QUERY, { offset: 0, limit: 16 }),
-    sanityFetch<number>(SHOP_PRODUCTS_COUNT_QUERY),
+  const [{ products, totalProducts }, flashSaleProducts] = await Promise.all([
+    loadMuseumProducts(0, 16),
     sanityFetch<ProductCardData[]>(FLASH_SALE_PRODUCTS_QUERY, { now, offset: 0, limit: 1 }),
   ]);
-  const products = normalizeProductCards(rawProducts);
   const hasFlashSale = flashSaleProducts.length > 0;
 
   return (
@@ -43,7 +37,7 @@ export default async function ShopPage() {
         <header className="mb-8 max-w-2xl">
           <h1 className="text-3xl font-bold text-ink lg:text-4xl">Shop</h1>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Browse every active catalog gift across the Gifvtme museum.
+            Browse catalog gifts and fetched gift ideas approved for the Gifvtme museum.
           </p>
         </header>
 

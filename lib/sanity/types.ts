@@ -85,6 +85,10 @@ export interface ProductCardData {
   isNew?: boolean;
   isOnFlashSale?: boolean;
   saleEndTime?: string | null;
+  fulfilmentMode?: "catalog_checkout" | "external_redirect";
+  externalUrl?: string | null;
+  sourceCurrency?: string | null;
+  sourcePrice?: number | null;
 }
 
 export interface ProductFullData extends ProductCardData {

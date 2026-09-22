@@ -88,6 +88,11 @@ export function CatalogProductGrid({
   );
 
   const handleAddToCart = (product: ProductCardData) => {
+    if (product.fulfilmentMode === "external_redirect") {
+      handleAddToWishlist(product);
+      return;
+    }
+
     if (product.hasVariants) {
       router.push(`/product/${product.slug}`);
       return;
@@ -128,11 +133,11 @@ export function CatalogProductGrid({
   return (
     <>
       <div ref={gridRef}>
-        <ProductGrid
-          products={products}
-          showBadges={showBadges}
-          emptyMessage={emptyMessage}
-          onAddToCart={handleAddToCart}
+    <ProductGrid
+      products={products}
+      showBadges={showBadges}
+      emptyMessage={emptyMessage}
+      onAddToCart={handleAddToCart}
           onAddToWishlist={handleAddToWishlist}
           onProductClick={onProductClick}
           wishlistedIds={wishlistedIds}
