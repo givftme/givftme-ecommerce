@@ -106,13 +106,26 @@ export async function POST(request: Request) {
 
   const order = data as WebhookOrderRow | null;
 
-  if (!order || order.status !== "pending_payment") {
+  if (!order) {
     return ok();
   }
 
   const txId = payload.data?.id != null ? String(payload.data.id) : null;
+  const succeeded = payload.data?.status === "successful";
 
-  if (payload.data?.status === "successful") {
+  // A buyer can try another card on the same Flutterwave page after a
+  // decline, so a success can arrive after a failure already moved the
+  // order to payment_failed. That success is captured money and must
+  // still confirm. A failure only ever moves a pending order.
+  const actionableStatuses = succeeded
+    ? ["pending_payment", "payment_failed"]
+    : ["pending_payment"];
+
+  if (!actionableStatuses.includes(order.status)) {
+    return ok();
+  }
+
+  if (succeeded) {
     if (!paymentMatchesOrder(payload.data, order)) {
       console.error("Rejected Flutterwave confirmation with mismatched amount or currency.", {
         orderId: order.id,

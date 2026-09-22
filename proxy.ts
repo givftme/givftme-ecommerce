@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { getSafeRedirect } from "@/lib/auth/redirect";
 
 const protectedRoutes = [
   "/wishlists",
@@ -52,7 +53,19 @@ export async function proxy(request: NextRequest) {
   }
 
   if (matchesRoute(pathname, authOnlyRoutes) && user) {
-    return redirectWithSessionCookies(request, response, "/wishlists");
+    const destination = getSafeRedirect(request.nextUrl.searchParams.get("redirect"));
+    // An auth page cannot be the destination for an already signed in user.
+    let destinationPath: string;
+    try {
+      destinationPath = decodeURIComponent(new URL(destination, request.url).pathname);
+    } catch {
+      destinationPath = "/login";
+    }
+    return redirectWithSessionCookies(
+      request,
+      response,
+      matchesRoute(destinationPath, authOnlyRoutes) ? "/wishlists" : destination,
+    );
   }
 
   return response;
