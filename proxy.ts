@@ -11,7 +11,6 @@ const protectedRoutes = [
   "/account",
   "/reviews",
 ];
-
 const authOnlyRoutes = ["/login", "/signup", "/welcome", "/onboarding"];
 
 function matchesRoute(pathname: string, routes: string[]) {
@@ -20,28 +19,17 @@ function matchesRoute(pathname: string, routes: string[]) {
   );
 }
 
-function getRequestOrigin(request: NextRequest) {
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-
-  const protocol = request.headers.get("x-forwarded-proto") ?? "https";
-
-  return `${protocol}://${host}`;
-  
-}
-
 function redirectWithSessionCookies(
   request: NextRequest,
   response: NextResponse,
   destination: string,
 ) {
-  const origin = getRequestOrigin(request);
-
-  const redirectResponse = NextResponse.redirect(new URL(destination, origin));
+  const redirectResponse = NextResponse.redirect(
+    new URL(destination, request.url),
+  );
 
   response.cookies.getAll().forEach((cookie) => {
     const { name, value, ...options } = cookie;
-
     redirectResponse.cookies.set(name, value, options);
   });
 
@@ -49,27 +37,17 @@ function redirectWithSessionCookies(
 }
 
 export async function proxy(request: NextRequest) {
-
-  console.log({
-    requestUrl: request.url,
-    nextUrl: request.nextUrl.toString(),
-    host: request.headers.get("host"),
-    forwardedHost: request.headers.get("x-forwarded-host"),
-    forwardedProto: request.headers.get("x-forwarded-proto"),
-  });
   const { pathname, search } = request.nextUrl;
-
   const { response, user } = await updateSession(request);
 
   if (matchesRoute(pathname, protectedRoutes) && !user) {
-    const params = new URLSearchParams();
-
-    params.set("redirect", `${pathname}${search}`);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", `${pathname}${search}`);
 
     return redirectWithSessionCookies(
       request,
       response,
-      `/login?${params.toString()}`,
+      loginUrl.pathname + loginUrl.search,
     );
   }
 
@@ -85,4 +63,3 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-
