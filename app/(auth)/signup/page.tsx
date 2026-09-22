@@ -1,4 +1,6 @@
-import { SignupForm } from "@/app/(auth)/signup/SignupForm";
+import { AuthForm } from "@/components/auth/AuthForm";
+
+export const metadata = { title: "Create an account | Givftme" };
 
 function getParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -11,5 +13,5 @@ export default async function SignupPage({
 }) {
   const params = await searchParams;
 
-  return <SignupForm redirectTo={getParam(params.redirect)} />;
+  return <AuthForm mode="signup" redirectTo={getParam(params.redirect)} />;
 }

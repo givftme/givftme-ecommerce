@@ -18,7 +18,27 @@ Last updated: 2026-07-09
 | Accent usage     | `text-brand` back arrow                         |
 
 **Pattern notes:**
-Auth screens are full-screen mobile-first surfaces with a `max-w-[430px]` content column, white background, brand-red back action, and subtle GSAP entrance (`opacity` + `y: 20`).
+Recovery, welcome and verification screens use a `max-w-[430px]` content column, white background, brand red back action, and subtle GSAP entrance (`opacity` + `y: 20`). Login and signup use the shared account entry pattern below.
+
+### Account Entry
+
+File: components/auth/AuthForm.tsx, components/auth/AuthVisual.tsx
+Last updated: 2026-09-22
+
+| Property | Class |
+| --- | --- |
+| Background | visual `bg-peach`, form `bg-white`, inputs `bg-surface` |
+| Border | inputs inherit `border-stone-200`, Google button `border-line` |
+| Border radius | mobile form `rounded-t-3xl`, bubble `rounded-2xl`, buttons `rounded-full` |
+| Primary text | heading `font-display text-3xl`, body `text-ink` |
+| Secondary text | `text-sm leading-5 text-muted` |
+| Spacing | form `space-y-4`, bubble `p-3`, mobile panel `px-6 py-6` |
+| Hover state | links `hover:underline`, Google button `hover:bg-surface` |
+| Shadow | visual bubble and mobile panel `shadow-soft` |
+| Accent | `text-brand` links and icons, shared filled submit button |
+
+**Pattern notes:**
+One AuthForm handles login and signup, including existing validation and server actions. The shared AuthVisual uses the existing logo and waving mascot, with a compact mobile header and a desktop illustration panel. Use signup’s existing first name and last name fields. Input text remains at least 16px on mobile to avoid focus zoom. Session persistence controls and legal links need working backing behavior or destinations before inclusion.
 
 ### Auth Form Controls
 
