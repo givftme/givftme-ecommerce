@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   CalendarHeart,
   ChevronDown,
@@ -27,6 +27,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { FlashSaleNavbarStrip } from "@/components/flash-sale/FlashSaleNavbarStrip";
 import { cn } from "@/lib/utils";
+import { withRedirect } from "@/lib/auth/redirect";
 
 gsap.registerPlugin(useGSAP);
 
@@ -66,6 +67,9 @@ export function Navbar({
   flashSaleMaxDiscountPercent,
 }: NavbarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const loginHref = withRedirect("/login", `${pathname}${search ? `?${search}` : ""}`);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
@@ -73,7 +77,7 @@ export function Navbar({
   const desktopCartRef = useRef<HTMLAnchorElement>(null);
   const mobileCartRef = useRef<HTMLAnchorElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-  const accountHref = isAuthenticated ? "/account" : "/login";
+  const accountHref = isAuthenticated ? "/account" : loginHref;
   const accountSecondaryLabel = isAuthenticated ? "My Account" : "Sign In / Log In";
 
   const isActive = (href: string) =>
@@ -224,7 +228,7 @@ export function Navbar({
             </>
           ) : (
             <Link
-              href="/login"
+              href={loginHref}
               className="inline-flex h-11 items-center rounded-full bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
             >
               Get started

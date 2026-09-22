@@ -1,5 +1,6 @@
 import { initiateFlutterwavePayment } from "@/lib/flutterwave";
 import { isAllowedFlutterwavePaymentLink } from "@/lib/flutterwave/paymentLink";
+import { beginGiftCheckout } from "@/lib/gift/server";
 import type { PaymentPreference } from "@/lib/checkout/validation";
 import type { createClient } from "@/lib/supabase/server";
 
@@ -12,6 +13,8 @@ export interface ReinitiatableOrder {
   shipping_email: string | null;
   shipping_name: string | null;
   shipping_phone: string | null;
+  order_source?: string | null;
+  wishlist_item_id?: string | null;
 }
 
 export type ReinitiatePaymentResult =
@@ -108,6 +111,19 @@ export async function reinitiateOrderPayment(
       status: 400,
       error: "This order is missing payment details.",
     };
+  }
+
+  // A failed payment returns the gift claim to reserved (spec AC-18). The
+  // confirm RPC only marks the gift purchased while the claim is
+  // checking_out, so a retry has to take the hold again first, or the paid
+  // order lands as claim_conflict. It also stops a buyer paying for a gift
+  // whose reservation has already run out.
+  if (order.order_source === "wishlist" && order.wishlist_item_id) {
+    const held = await beginGiftCheckout(supabase, order.wishlist_item_id);
+
+    if (!held.ok) {
+      return { ok: false, status: held.status, error: held.error };
+    }
   }
 
   const claimed = await claimOrderForPayment(supabase, order.id, order.buyer_id);

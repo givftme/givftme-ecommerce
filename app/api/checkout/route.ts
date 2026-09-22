@@ -28,7 +28,7 @@ interface CheckoutOrder extends ReinitiatableOrder {
 }
 
 const CHECKOUT_ORDER_SELECT =
-  "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, price_changes";
+  "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, order_source, wishlist_item_id, price_changes";
 
 async function respondForExistingOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,

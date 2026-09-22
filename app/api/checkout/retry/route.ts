@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("orders")
     .select(
-      "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone"
+      "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, order_source, wishlist_item_id"
     )
     .eq("id", parsedOrderId.data)
     .eq("buyer_id", user.id)

@@ -158,6 +158,39 @@ describe("POST /api/flutterwave/webhook", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("confirms a successful charge that arrives after an earlier attempt failed", async () => {
+    // Flutterwave's hosted page lets a buyer try another card after a
+    // decline, and each attempt sends its own charge.completed. The failed
+    // one lands first and moves the order to payment_failed; the later
+    // success is real money and must still confirm the order.
+    const { rpc } = mockOrderClient({ ...baseOrder, status: "payment_failed" });
+
+    const response = await POST(webhookRequest(successfulChargePayload, SECRET_HASH));
+
+    expect(response.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith(
+      "gifvtme_confirm_gift_order",
+      expect.objectContaining({ p_order_id: baseOrder.id })
+    );
+  });
+
+  it("does not re-fail an order that is already payment_failed", async () => {
+    const { rpc } = mockOrderClient({ ...baseOrder, status: "payment_failed" });
+
+    const response = await POST(
+      webhookRequest(
+        {
+          ...successfulChargePayload,
+          data: { ...successfulChargePayload.data, status: "failed" },
+        },
+        SECRET_HASH
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("marks the order payment_failed for a non-successful charge status", async () => {
     const { rpc } = mockOrderClient(baseOrder);
 
