@@ -4,7 +4,6 @@
 
 import { useRef, useState } from "react";
 import {
-  ArrowDown,
   ArrowUp,
   Gift,
   Link2,
@@ -80,30 +79,28 @@ function ItemSource({ item }: { item: WishlistItem }) {
 
 export function WishlistItemCard({
   item,
-  reorderMode,
   index,
-  total,
   onEdit,
   onDelete,
   onMoveUp,
-  onMoveDown,
+  isMoving = false,
   isRemoving,
   readOnly = false,
 }: {
   item: WishlistItem;
-  reorderMode: boolean;
   index: number;
-  total: number;
   onEdit: (item: WishlistItem) => void;
   onDelete: (item: WishlistItem) => void;
-  onMoveUp: (itemId: string) => void;
-  onMoveDown: (itemId: string) => void;
+  /** Shows a move-up control when provided. */
+  onMoveUp?: (itemId: string) => void;
+  isMoving?: boolean;
   isRemoving?: boolean;
   readOnly?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isPurchased = item.status === "purchased";
   const hasPrice = item.price != null && item.price > 0;
+  const showActions = !readOnly && !isPurchased;
 
   useGSAP(
     () => {
@@ -126,84 +123,70 @@ export function WishlistItemCard({
       ref={ref}
       data-item-id={item.id}
       className={cn(
-        "rounded-[20px] bg-white p-3 transition-[opacity,box-shadow] hover:shadow-soft sm:rounded-[22px]",
+        "flex flex-wrap items-center gap-3 rounded-[20px] bg-white p-3 transition-[opacity,box-shadow] hover:shadow-soft sm:flex-nowrap sm:gap-3.5 sm:rounded-[22px]",
         isPurchased && "opacity-60",
         isRemoving && "opacity-40"
       )}
     >
-      <div className="flex items-center gap-3 sm:gap-3.5">
-        {reorderMode && !readOnly && (
-          <div className="flex shrink-0 flex-col gap-1.5">
+      <WishlistItemImage item={item} />
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <h3 className="line-clamp-2 wrap-break-word text-sm font-semibold leading-snug text-ink sm:text-[15px]">
+          {item.title}
+        </h3>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+          <ItemSource item={item} />
+          <span
+            className={cn(
+              "break-all",
+              hasPrice ? "font-semibold text-brand" : "text-muted"
+            )}
+          >
+            {formatWishlistPrice(item.price)}
+          </span>
+        </div>
+        {isPurchased && (
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
+            <Badge variant="success" className="gap-1">
+              <Gift className="h-3 w-3" aria-hidden="true" />
+              Gifted
+            </Badge>
+            <span>by {item.buyer_name || "a giver"}</span>
+          </div>
+        )}
+      </div>
+
+      {showActions && (
+        <div className="flex w-full shrink-0 items-center justify-end gap-1.5 sm:w-auto">
+          {onMoveUp && (
             <button
               type="button"
-              aria-label="Move item up"
-              disabled={index === 0}
+              aria-label={`Move ${item.title} up`}
+              disabled={index === 0 || isMoving}
               onClick={() => onMoveUp(item.id)}
               className={iconButtonClass}
             >
               <ArrowUp className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              aria-label="Move item down"
-              disabled={index === total - 1}
-              onClick={() => onMoveDown(item.id)}
-              className={iconButtonClass}
-            >
-              <ArrowDown className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        <WishlistItemImage item={item} />
-
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <h3 className="line-clamp-2 wrap-break-word text-sm font-semibold leading-snug text-ink sm:text-[15px]">
-            {item.title}
-          </h3>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-            <ItemSource item={item} />
-            <span
-              className={cn(
-                "break-all",
-                hasPrice ? "font-semibold text-brand" : "text-muted"
-              )}
-            >
-              {formatWishlistPrice(item.price)}
-            </span>
-          </div>
-          {isPurchased && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-              <Badge variant="success" className="gap-1">
-                <Gift className="h-3 w-3" aria-hidden="true" />
-                Gifted
-              </Badge>
-              <span>by {item.buyer_name || "a giver"}</span>
-            </div>
           )}
+          <button
+            type="button"
+            aria-label={`Edit ${item.title}`}
+            onClick={() => onEdit(item)}
+            className={iconButtonClass}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            aria-label={`Delete ${item.title}`}
+            onClick={() => onDelete(item)}
+            className={cn(iconButtonClass, "hover:border-brand hover:text-brand")}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         </div>
-
-        {!readOnly && !isPurchased && !reorderMode && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <button
-              type="button"
-              aria-label={`Edit ${item.title}`}
-              onClick={() => onEdit(item)}
-              className={iconButtonClass}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              aria-label={`Delete ${item.title}`}
-              onClick={() => onDelete(item)}
-              className={cn(iconButtonClass, "hover:border-brand hover:text-brand")}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </article>
   );
 }

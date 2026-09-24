@@ -4,6 +4,7 @@ import { getAppUrl } from "@/lib/env";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { isWishlistCoverKey } from "@/lib/wishlist/covers";
 import { signWishlistImages } from "@/lib/wishlist/server";
 import type {
   SharedWishlist,
@@ -194,6 +195,8 @@ function normalizeSharedWishlist(
     title: asString(wishlist.title) || "Wishlist",
     visibility: asVisibility(wishlist.visibility),
     prices_visible: pricesVisible,
+    // Absent until migration 029 updates the resolver; falls back to default.
+    cover_color: isWishlistCoverKey(wishlist.cover_color) ? wishlist.cover_color : null,
     owner,
     occasion: normalizeOccasion(wishlist.occasion),
     items: itemValues

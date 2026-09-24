@@ -164,6 +164,7 @@ export function SharedWishlistClient({
         <SharedWishlistHeader
           owner={wishlist.owner}
           occasion={wishlist.occasion}
+          cover={wishlist.cover_color}
         />
       </div>
 
@@ -190,6 +191,7 @@ export function SharedWishlistClient({
               <SharedWishlistHeader
                 owner={wishlist.owner}
                 occasion={wishlist.occasion}
+                cover={wishlist.cover_color}
               />
               {canRemind && (
                 <Button

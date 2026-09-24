@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
+import { isWishlistCoverKey } from "@/lib/wishlist/covers";
 import { countVisibleWishlistItems } from "@/lib/wishlist/display";
 import {
   getWishlistStoragePathFromImageRef,
@@ -13,16 +14,19 @@ import type {
   WishlistSummary,
 } from "@/lib/wishlist/types";
 
-type EvergreenWishlist = Omit<WishlistSummary, "item_count">;
+type EvergreenWishlist = Omit<WishlistSummary, "item_count" | "cover_color">;
 
 interface WishlistDetailSelectOptions {
   includeDescription: boolean;
   includeSortOrder: boolean;
   includeMasterItemId: boolean;
   includeIntentFields: boolean;
+  includeCoverColor: boolean;
 }
 
 const EVERGREEN_WISHLIST_SELECT = "id, title, type, visibility, prices_visible";
+const COVER_COLOR_MIGRATION_HINT =
+  "wishlists.cover_color is missing. Run gifvtme_migration_029_wishlist_cover_color.sql before using wishlist covers.";
 const WISHLIST_ITEMS_RELATION = "wishlist_items_with_status";
 const WISHLIST_IMAGE_SIGNED_URL_TTL = 60 * 60;
 
@@ -131,20 +135,30 @@ export async function getWishlistSummaries(
   supabase: SupabaseClient,
   userId: string,
 ) {
-  const { data, error } = await supabase
-    .from("wishlists")
-    .select(
-      "id, title, type, visibility, prices_visible, wishlist_items(id, status)",
-    )
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true });
+  const fetchSummaries = (includeCoverColor: boolean) =>
+    supabase
+      .from("wishlists")
+      .select(
+        `id, title, type, visibility, prices_visible${includeCoverColor ? ", cover_color" : ""}, wishlist_items(id, status)`,
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
+
+  let { data, error } = await fetchSummaries(true);
+
+  if (error && isMissingColumn(error, "cover_color")) {
+    console.error(COVER_COLOR_MIGRATION_HINT);
+    ({ data, error } = await fetchSummaries(false));
+  }
 
   if (error) {
     throw new Error(error.message);
   }
 
   return (data || []).map((wishlist) => {
-    const row = wishlist as Omit<WishlistSummary, "item_count"> & {
+    // The select string is built at runtime, so Supabase cannot infer the row.
+    const row = wishlist as unknown as Omit<WishlistSummary, "item_count" | "cover_color"> & {
+      cover_color?: string | null;
       wishlist_items?: Array<{ id: string; status?: string | null }>;
     };
 
@@ -154,6 +168,7 @@ export async function getWishlistSummaries(
       type: row.type,
       visibility: row.visibility,
       prices_visible: row.prices_visible,
+      cover_color: isWishlistCoverKey(row.cover_color) ? row.cover_color : null,
       item_count: countVisibleWishlistItems(row.wishlist_items),
     };
   });
@@ -215,6 +230,7 @@ function getWishlistDetailSelect({
   includeSortOrder,
   includeMasterItemId,
   includeIntentFields,
+  includeCoverColor,
 }: WishlistDetailSelectOptions) {
   const itemColumns = [
     "id",
@@ -242,7 +258,7 @@ function getWishlistDetailSelect({
     title,
     type,
     visibility,
-    prices_visible,
+    prices_visible,${includeCoverColor ? "\n    cover_color," : ""}
     wishlist_items_with_status (
 ${itemColumns.map((column) => `      ${column}`).join(",\n")}
     )
@@ -259,6 +275,7 @@ export async function getOwnedWishlistDetail(
     includeSortOrder: true,
     includeMasterItemId: true,
     includeIntentFields: true,
+    includeCoverColor: true,
   };
   const fetchWishlist = () => {
     let query = supabase
@@ -331,6 +348,15 @@ export async function getOwnedWishlistDetail(
       shouldRetry = true;
     }
 
+    if (
+      selectOptions.includeCoverColor &&
+      isMissingColumn(response.error, "cover_color")
+    ) {
+      console.error(COVER_COLOR_MIGRATION_HINT);
+      selectOptions.includeCoverColor = false;
+      shouldRetry = true;
+    }
+
     if (!shouldRetry) {
       break;
     }
@@ -346,7 +372,8 @@ export async function getOwnedWishlistDetail(
     return null;
   }
 
-  const row = response.data as unknown as Omit<WishlistDetail, "items"> & {
+  const row = response.data as unknown as Omit<WishlistDetail, "items" | "cover_color"> & {
+    cover_color?: string | null;
     wishlist_items_with_status?: Array<Partial<WishlistItem>>;
   };
 
@@ -382,6 +409,7 @@ export async function getOwnedWishlistDetail(
     type: row.type,
     visibility: row.visibility,
     prices_visible: row.prices_visible,
+    cover_color: isWishlistCoverKey(row.cover_color) ? row.cover_color : null,
     items: await signWishlistImages(supabase, userId, items),
   };
 }

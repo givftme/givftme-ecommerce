@@ -47,6 +47,9 @@ export async function PATCH(request: Request, context: WishlistRouteContext) {
     ...(parsed.data.prices_visible !== undefined
       ? { prices_visible: parsed.data.prices_visible }
       : {}),
+    ...(parsed.data.cover_color !== undefined
+      ? { cover_color: parsed.data.cover_color }
+      : {}),
   };
 
   const { data, error } = await supabase

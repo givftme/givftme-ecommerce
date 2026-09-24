@@ -1,3 +1,5 @@
+import type { WishlistCoverKey } from "@/lib/wishlist/covers";
+
 export type WishlistType = "evergreen" | "occasion";
 export type WishlistVisibility = "private" | "friends_family" | "public";
 export type WishlistItemOrigin = "external" | "catalog";
@@ -9,6 +11,8 @@ export interface WishlistSummary {
   type: WishlistType;
   visibility: WishlistVisibility;
   prices_visible: boolean;
+  /** Null until the owner picks a cover, or before migration 029 runs. */
+  cover_color: WishlistCoverKey | null;
   item_count: number;
 }
 
@@ -49,6 +53,7 @@ export interface WishlistDetail {
   type: WishlistType;
   visibility: WishlistVisibility;
   prices_visible: boolean;
+  cover_color: WishlistCoverKey | null;
   items: WishlistItem[];
 }
 
@@ -84,6 +89,7 @@ export interface SharedWishlist {
   title: string;
   visibility: WishlistVisibility;
   prices_visible: boolean;
+  cover_color: WishlistCoverKey | null;
   owner: SharedWishlistOwner;
   occasion: SharedWishlistOccasion | null;
   items: WishlistItem[];

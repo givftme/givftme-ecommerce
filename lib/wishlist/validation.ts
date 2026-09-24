@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WISHLIST_COVER_KEYS } from "@/lib/wishlist/covers";
 import { isWishlistStoragePath } from "@/lib/wishlist/images";
 
 const optionalInviteEmail = z.preprocess(
@@ -155,12 +156,14 @@ export const wishlistUpdateSchema = z
     title: z.string().trim().min(1, "Title cannot be empty").max(100).optional(),
     visibility: z.enum(["private", "friends_family", "public"]).optional(),
     prices_visible: z.boolean().optional(),
+    cover_color: z.enum(WISHLIST_COVER_KEYS).nullable().optional(),
   })
   .refine(
     (value) =>
       value.title !== undefined ||
       value.visibility !== undefined ||
-      value.prices_visible !== undefined,
+      value.prices_visible !== undefined ||
+      value.cover_color !== undefined,
     { message: "Provide something to update" }
   );
 

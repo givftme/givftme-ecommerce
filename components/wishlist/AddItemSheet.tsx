@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
@@ -94,6 +94,7 @@ export function AddItemSheet({
   draftMode = false,
   mode,
   onModeChange,
+  initialUrl,
 }: {
   wishlistId?: string;
   open: boolean;
@@ -104,6 +105,8 @@ export function AddItemSheet({
   draftMode?: boolean;
   mode?: AddItemMode;
   onModeChange?: (mode: AddItemMode) => void;
+  /** A product link pasted outside the sheet; fetched as soon as it opens. */
+  initialUrl?: string | null;
 }) {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
@@ -388,6 +391,25 @@ export function AddItemSheet({
       toast({ title: "Couldn't save item. Try again.", variant: "danger" });
     }
   };
+
+  const autoFetchedUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      autoFetchedUrlRef.current = null;
+      return;
+    }
+
+    if (!initialUrl || autoFetchedUrlRef.current === initialUrl) {
+      return;
+    }
+
+    autoFetchedUrlRef.current = initialUrl;
+    form.setValue("product_url", initialUrl, { shouldDirty: true });
+    void handleFetch();
+    // handleFetch is recreated every render; this only reacts to a new link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialUrl]);
 
   const imagePreview = uploadPreview || watchedImage;
 

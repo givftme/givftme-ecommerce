@@ -12,6 +12,7 @@ import {
   getDisplayName,
   getInitials,
 } from "@/lib/wishlist/display";
+import { getWishlistCoverClass, type WishlistCoverKey } from "@/lib/wishlist/covers";
 import type { SharedWishlistOccasion, SharedWishlistOwner } from "@/lib/wishlist/types";
 import { cn } from "@/lib/utils";
 
@@ -72,9 +73,12 @@ export function ReceiverAvatar({
 export function SharedWishlistHeader({
   owner,
   occasion,
+  cover = null,
 }: {
   owner: SharedWishlistOwner;
   occasion: SharedWishlistOccasion | null;
+  /** The owner's chosen cover; the default brand gradient when unset. */
+  cover?: WishlistCoverKey | null;
 }) {
   const ref = useRef<HTMLElement>(null);
   const countdown = getDaysToGoCopy(occasion?.occasion_date);
@@ -100,7 +104,13 @@ export function SharedWishlistHeader({
   );
 
   return (
-    <header ref={ref} className="bg-brand px-4 pb-6 pt-8 text-white md:rounded-2xl md:p-6">
+    <header
+      ref={ref}
+      className={cn(
+        "px-4 pb-6 pt-8 text-white md:rounded-2xl md:p-6",
+        getWishlistCoverClass(cover)
+      )}
+    >
       <div className="flex items-center gap-3">
         <ReceiverAvatar owner={owner} />
         <div className="min-w-0">

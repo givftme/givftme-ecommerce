@@ -106,3 +106,42 @@ describe("getWishlistSummaries", () => {
     await expect(getWishlistSummaries(client, "user-1")).rejects.toThrow("boom");
   });
 });
+
+describe("getWishlistSummaries cover colour", () => {
+  it("returns the stored cover and ignores unknown values", async () => {
+    const { client } = mockSupabase([
+      { ...wishlistRow([]), id: "a", cover_color: "forest" },
+      { ...wishlistRow([]), id: "b", cover_color: "neon" },
+    ]);
+
+    const [first, second] = await getWishlistSummaries(client, "user-1");
+
+    expect(first.cover_color).toBe("forest");
+    expect(second.cover_color).toBeNull();
+  });
+
+  it("falls back to a query without cover_color before migration 029 runs", async () => {
+    const order = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'column wishlists.cover_color does not exist' },
+      })
+      .mockResolvedValueOnce({ data: [wishlistRow([])], error: null });
+    const select = vi
+      .fn()
+      .mockReturnValue({ eq: vi.fn().mockReturnValue({ order }) });
+    const client = {
+      from: vi.fn().mockReturnValue({ select }),
+    } as unknown as SupabaseClient;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const [summary] = await getWishlistSummaries(client, "user-1");
+
+    expect(summary.cover_color).toBeNull();
+    expect(select).toHaveBeenLastCalledWith(
+      expect.not.stringContaining("cover_color"),
+    );
+    consoleError.mockRestore();
+  });
+});

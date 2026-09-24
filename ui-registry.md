@@ -100,45 +100,25 @@ Last updated: 2026-07-09
 **Pattern notes:**
 Protected-action prompts should use a bottom sheet on mobile and preserve the current path in `redirect` for both auth CTAs.
 
-### Dashboard Wishlist Card
+### Wishlists Screen
 
-File: components/wishlist/WishlistCard.tsx
+File: components/wishlist/WishlistItemList.tsx, components/wishlist/WishlistSidebar.tsx, components/wishlist/WishlistCoverPicker.tsx, components/wishlist/DeleteWishlistButton.tsx
 Last updated: 2026-09-24
 
-| Property         | Class                                                                                   |
-| ---------------- | --------------------------------------------------------------------------------------- |
-| Background       | card `bg-white`, cover `bg-linear-to-br from-brand via-red to-orange`, prompt `bg-surface` |
-| Border           | none                                                                                    |
-| Border radius    | card `rounded-3xl`, prompt `rounded-2xl`                                               |
-| Text — primary   | cover title `font-display text-3xl sm:text-4xl text-white`                             |
-| Text — secondary | cover count `text-sm text-white/85`, prompt `text-sm text-muted`                       |
-| Spacing          | cover `p-5 pt-14`, body `p-4 sm:p-5`, actions `grid grid-cols-2 gap-3`                 |
-| Hover state      | filled/ghost button variants                                                            |
-| Shadow           | primary CTA `shadow-soft`                                                               |
-| Accent usage     | white Evergreen pill with `text-brand`, `bg-black/30` visibility pill on the cover     |
+| Property         | Class                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| Background       | page `bg-surface`, panels and sidebar cards `bg-white`, stats and visibility switch `bg-surface`, cover from `lib/wishlist/covers.ts` |
+| Border           | current sidebar card `border-[1.5px] border-brand`, New wishlist `border-dashed border-brand/30`, outline controls `border-line` |
+| Border radius    | cover `rounded-3xl sm:rounded-[30px]`, panels `rounded-[20px] sm:rounded-3xl`, sidebar cards `rounded-[18px]`, swatches `rounded-xl` |
+| Text — primary   | sidebar heading and cover title `font-display`, stat values `font-display text-2xl`                    |
+| Text — secondary | `text-sm text-muted`, sidebar subtitles and stat labels `text-xs text-muted`                           |
+| Spacing          | grid `lg:grid-cols-[280px_minmax(0,1fr)]`, detail `gap-4`, panels `p-4 sm:p-5`, item list `gap-2.5`      |
+| Hover state      | outline controls `hover:border-ink`, sidebar cards `lg:hover:translate-x-0.5`                          |
+| Shadow           | Share and selected visibility `shadow-soft`, cover picker popover `shadow-float`                       |
+| Accent usage     | brand Share button, ink selected add tab and Fetch button, cover gradients                             |
 
 **Pattern notes:**
-Wishlists open with a brand gradient cover (no user cover images exist yet) carrying type and visibility pills, the inline title editor in the display face, and the item count. Actions sit on a white body under the cover.
-
-### Wishlist Detail
-
-File: components/wishlist/WishlistItemList.tsx
-Last updated: 2026-09-24
-
-| Property         | Class                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------- |
-| Background       | page `bg-surface`, panels `bg-white`, stats `bg-surface`, cover brand gradient               |
-| Border           | add options `border-[1.5px] border-line`, primary option `border-ink bg-ink`                    |
-| Border radius    | cover `rounded-3xl sm:rounded-[30px]`, panels `rounded-[20px] sm:rounded-3xl`, stats `rounded-2xl` |
-| Text — primary   | headings `font-display`, stat values `font-display text-2xl`                                 |
-| Text — secondary | `text-sm text-muted`, stat labels `text-xs text-muted`                                         |
-| Spacing          | grid `gap-4 lg:gap-6`, panels `p-4 sm:p-5`, item list `gap-2.5`                               |
-| Hover state      | outline controls `hover:border-ink`                                                            |
-| Shadow           | Share CTA `shadow-soft`                                                                         |
-| Accent usage     | brand gradient cover, filled brand Share button                                                |
-
-**Pattern notes:**
-Mobile stacks cover, overview (stats, visibility, Share), add options, then items. From `lg` the overview and add panels move into a sticky 340px right column. Add options open the existing AddItemSheet in the chosen mode, catalogue first.
+/wishlists redirects to the evergreen list; every list lives at /wishlists/[id] with the "My wishlists" sidebar (horizontal scroll below `lg`, sticky column from `lg`). The cover shows visibility, the Change cover palette, occasion or Evergreen pills and the title (occasion titles are renamed in occasion settings). The overview panel holds the inline visibility switch, Preview (/w/[id], owners can always open it), Share list, stats and, for occasion lists, settings and delete. Delete archives the occasion; the evergreen list has no delete. Add tabs keep the catalogue first; Paste a link opens AddItemSheet with the link already fetching. Covers are fixed palette keys stored in `wishlists.cover_color` (migration 029), never free colours.
 
 ### Wishlist Item Card
 
@@ -152,13 +132,13 @@ Last updated: 2026-09-24
 | Border radius    | card `rounded-[20px] sm:rounded-[22px]`, thumbnail `rounded-2xl`, icon buttons `rounded-xl` |
 | Text — primary   | title `text-sm sm:text-[15px] font-semibold text-ink`, price `font-semibold text-brand`  |
 | Text — secondary | source line `text-xs text-muted`                                                         |
-| Spacing          | card `p-3`, row `gap-3 sm:gap-3.5`, thumbnail `h-16 w-16 sm:h-19.5 sm:w-19.5`          |
+| Spacing          | card `p-3`, row `gap-3 sm:gap-3.5`, thumbnail `h-16 w-16 sm:h-19.5 sm:w-19.5`, actions wrap to a full row below `sm` |
 | Hover state      | card `hover:shadow-soft`, icon buttons `hover:border-ink`, delete `hover:text-brand`     |
 | Shadow           | hover only                                                                               |
 | Accent usage     | source icon (store, link or manual), `Badge` success for gifted                           |
 
 **Pattern notes:**
-Rows stay compact for scanning and repeated edits. The source line shows the Gifvtme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets. The occasion detail page shares this card.
+Rows stay compact for scanning and repeated edits. The source line shows the Gifvtme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets: move up (only when `onMoveUp` is passed; saves immediately), edit and delete. The occasion detail page shares this card without move up.
 
 ### Wishlist Sheets
 
@@ -243,11 +223,11 @@ Giver-facing item cards mirror dashboard wishlist cards but remove edit controls
 ### Shared Wishlist Header
 
 File: components/wishlist/SharedWishlistHeader.tsx
-Last updated: 2026-07-19
+Last updated: 2026-09-24
 
 | Property         | Class                                                               |
 | ---------------- | ------------------------------------------------------------------- |
-| Background       | `bg-brand`, avatar fallback `bg-brand-light`/`bg-surface` variants |
+| Background       | owner cover via `getWishlistCoverClass` (default brand gradient), avatar fallback `bg-brand-light`/`bg-surface` variants |
 | Border           | none                                                                |
 | Border radius    | desktop header `rounded-2xl`, avatar `rounded-full`                 |
 | Text — primary   | `text-white`, name `text-xl font-bold`                              |

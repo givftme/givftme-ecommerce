@@ -3,6 +3,7 @@ import {
   catalogWishlistItemSchema,
   editWishlistItemSchema,
   externalWishlistItemSchema,
+  wishlistUpdateSchema,
 } from "./validation";
 
 describe("externalWishlistItemSchema", () => {
@@ -105,6 +106,26 @@ describe("editWishlistItemSchema", () => {
     const result = editWishlistItemSchema.safeParse({
       title: "a".repeat(201),
     });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("wishlistUpdateSchema cover_color", () => {
+  it("accepts a palette key on its own", () => {
+    const result = wishlistUpdateSchema.safeParse({ cover_color: "ocean" });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null to reset the cover to the default", () => {
+    const result = wishlistUpdateSchema.safeParse({ cover_color: null });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a colour outside the palette, such as a raw hex value", () => {
+    const result = wishlistUpdateSchema.safeParse({ cover_color: "#ff0000" });
 
     expect(result.success).toBe(false);
   });

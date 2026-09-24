@@ -348,18 +348,14 @@ export function OccasionDetailClient({
     router.refresh();
   };
 
-  const renderItem = (item: WishlistItem, index: number, total: number) => (
+  const renderItem = (item: WishlistItem, index: number) => (
     <WishlistItemCard
       key={item.id}
       item={item}
       index={index}
-      total={total}
-      reorderMode={false}
       readOnly={archived}
       onEdit={setEditingItem}
       onDelete={setDeleteTarget}
-      onMoveUp={() => undefined}
-      onMoveDown={() => undefined}
     />
   );
 
@@ -463,7 +459,7 @@ export function OccasionDetailClient({
           ) : (
             <div className="space-y-3">
               {fromWishlistItems.map((item, index) =>
-                renderItem(item, index, fromWishlistItems.length)
+                renderItem(item, index)
               )}
             </div>
           )}
@@ -490,7 +486,7 @@ export function OccasionDetailClient({
           ) : (
             <div className="space-y-3">
               {exclusiveItems.map((item, index) =>
-                renderItem(item, index, exclusiveItems.length)
+                renderItem(item, index)
               )}
             </div>
           )}
