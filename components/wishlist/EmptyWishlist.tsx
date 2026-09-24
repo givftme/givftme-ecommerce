@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Gift, Link2, PencilLine, Store } from "lucide-react";
+import { Link2, PencilLine, Store } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Button, buttonVariants } from "@/components/ui/Button";
@@ -41,17 +42,22 @@ export function EmptyWishlist({
   return (
     <div
       ref={ref}
-      className="flex min-h-[360px] flex-col items-center justify-center px-6 py-10 text-center"
+      className="flex flex-col items-center gap-2.5 rounded-3xl bg-white px-5 py-9 text-center"
     >
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-surface">
-        <Gift className="h-10 w-10 text-stone-300" strokeWidth={1.5} />
-      </div>
-      <h2 className="mt-6 text-xl font-semibold text-ink">
+      <Image
+        src="/images/givftme-wave.png"
+        alt=""
+        width={820}
+        height={687}
+        sizes="128px"
+        className="h-auto w-28 sm:w-32"
+      />
+      <h2 className="mt-2 font-display text-2xl leading-tight text-ink sm:text-[28px]">
         {allGifted
           ? "Everything on your list has been gifted"
           : "Nothing on your list yet"}
       </h2>
-      <p className="mt-2 max-w-xs text-sm leading-6 text-muted">
+      <p className="max-w-xs text-sm leading-6 text-muted">
         {allGifted
           ? "Add a new wish whenever something catches your eye."
           : "Start with the Gifvtme store, or save something you found elsewhere."}
@@ -61,13 +67,16 @@ export function EmptyWishlist({
           the external link and manual paths kept available underneath it. */}
       <Link
         href={`/shop?wishlist=${wishlistId}`}
-        className={cn(buttonVariants({ variant: "filled", size: "md" }), "mt-6")}
+        className={cn(
+          buttonVariants({ variant: "filled", size: "md" }),
+          "mt-3 max-w-full whitespace-normal text-center shadow-soft"
+        )}
       >
-        <Store className="h-4 w-4" />
+        <Store className="h-4 w-4 shrink-0" />
         {allGifted ? "Browse Gifvtme" : "Browse Gifvtme - add your first gift"}
       </Link>
 
-      <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
+      <div className="mt-1 flex flex-col items-center gap-1 sm:flex-row sm:gap-3">
         <Button type="button" variant="text" onClick={() => onAdd("url")}>
           <Link2 className="h-4 w-4" />
           Paste product link

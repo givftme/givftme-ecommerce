@@ -13,12 +13,17 @@ export function WishlistTitleEditor({
   initialTitle,
   className,
   textClassName,
+  inputClassName,
+  iconClassName,
   center = false,
 }: {
   wishlistId: string;
   initialTitle: string;
   className?: string;
   textClassName?: string;
+  /** Overrides `textClassName` on the edit input, e.g. over a dark cover. */
+  inputClassName?: string;
+  iconClassName?: string;
   center?: boolean;
 }) {
   const router = useRouter();
@@ -91,7 +96,7 @@ export function WishlistTitleEditor({
           onChange={(event) => setDraft(event.target.value)}
           onBlur={() => void saveTitle()}
           onKeyDown={handleKeyDown}
-          className={cn(center && "text-center", textClassName)}
+          className={cn(center && "text-center", inputClassName ?? textClassName)}
         />
       </form>
     );
@@ -108,7 +113,12 @@ export function WishlistTitleEditor({
       )}
     >
       <span className={cn("truncate", textClassName)}>{title}</span>
-      <Pencil className="h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-brand" />
+      <Pencil
+        className={cn(
+          "h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-brand",
+          iconClassName
+        )}
+      />
     </button>
   );
 }

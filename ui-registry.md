@@ -103,42 +103,62 @@ Protected-action prompts should use a bottom sheet on mobile and preserve the cu
 ### Dashboard Wishlist Card
 
 File: components/wishlist/WishlistCard.tsx
-Last updated: 2026-07-10
+Last updated: 2026-09-24
 
-| Property         | Class                                                                 |
-| ---------------- | --------------------------------------------------------------------- |
-| Background       | `bg-white`, prompt `bg-surface`, icon tile `bg-brand-light`           |
-| Border           | `border border-stone-100`                                             |
-| Border radius    | `rounded-2xl`, prompt `rounded-xl`                                    |
-| Text — primary   | `text-ink`, title `text-2xl font-bold`                                |
-| Text — secondary | `text-sm text-muted`                                                  |
-| Spacing          | `p-5`, `gap-4`, actions `grid grid-cols-2 gap-3`, prompt `px-4 py-3`  |
-| Hover state      | filled/ghost button variants, icon/text actions `hover:text-brand`    |
-| Shadow           | `shadow-sm`                                                           |
-| Accent usage     | `Badge` evergreen chip, `bg-brand-light text-brand` gift icon tile    |
+| Property         | Class                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| Background       | card `bg-white`, cover `bg-linear-to-br from-brand via-red to-orange`, prompt `bg-surface` |
+| Border           | none                                                                                    |
+| Border radius    | card `rounded-3xl`, prompt `rounded-2xl`                                               |
+| Text — primary   | cover title `font-display text-3xl sm:text-4xl text-white`                             |
+| Text — secondary | cover count `text-sm text-white/85`, prompt `text-sm text-muted`                       |
+| Spacing          | cover `p-5 pt-14`, body `p-4 sm:p-5`, actions `grid grid-cols-2 gap-3`                 |
+| Hover state      | filled/ghost button variants                                                            |
+| Shadow           | primary CTA `shadow-soft`                                                               |
+| Accent usage     | white Evergreen pill with `text-brand`, `bg-black/30` visibility pill on the cover     |
 
 **Pattern notes:**
-Dashboard cards use white surfaces over the dashboard `bg-surface`, soft stone borders, 16px card radius, and compact action rows. Future dashboard cards should match this density rather than adopting marketing-style hero spacing.
+Wishlists open with a brand gradient cover (no user cover images exist yet) carrying type and visibility pills, the inline title editor in the display face, and the item count. Actions sit on a white body under the cover.
+
+### Wishlist Detail
+
+File: components/wishlist/WishlistItemList.tsx
+Last updated: 2026-09-24
+
+| Property         | Class                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| Background       | page `bg-surface`, panels `bg-white`, stats `bg-surface`, cover brand gradient               |
+| Border           | add options `border-[1.5px] border-line`, primary option `border-ink bg-ink`                    |
+| Border radius    | cover `rounded-3xl sm:rounded-[30px]`, panels `rounded-[20px] sm:rounded-3xl`, stats `rounded-2xl` |
+| Text — primary   | headings `font-display`, stat values `font-display text-2xl`                                 |
+| Text — secondary | `text-sm text-muted`, stat labels `text-xs text-muted`                                         |
+| Spacing          | grid `gap-4 lg:gap-6`, panels `p-4 sm:p-5`, item list `gap-2.5`                               |
+| Hover state      | outline controls `hover:border-ink`                                                            |
+| Shadow           | Share CTA `shadow-soft`                                                                         |
+| Accent usage     | brand gradient cover, filled brand Share button                                                |
+
+**Pattern notes:**
+Mobile stacks cover, overview (stats, visibility, Share), add options, then items. From `lg` the overview and add panels move into a sticky 340px right column. Add options open the existing AddItemSheet in the chosen mode, catalogue first.
 
 ### Wishlist Item Card
 
 File: components/wishlist/WishlistItemCard.tsx
-Last updated: 2026-07-10
+Last updated: 2026-09-24
 
-| Property         | Class                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------------- |
-| Background       | `bg-white`, thumbnail fallback `bg-surface`                                            |
-| Border           | `border border-stone-100`                                                              |
-| Border radius    | card `rounded-2xl`, thumbnail `rounded-xl`, icon buttons `rounded-full`                |
-| Text — primary   | title `text-sm font-medium leading-5 text-ink`, price `text-sm font-semibold text-ink` |
-| Text — secondary | metadata `text-xs text-muted`                                                          |
-| Spacing          | card `p-4`, row `gap-3`, metadata `mt-2 gap-2`                                         |
-| Hover state      | edit/reorder `hover:bg-brand-light hover:text-brand`, delete `hover:bg-red-50`         |
-| Shadow           | `shadow-sm`                                                                            |
-| Accent usage     | store/status `Badge`, muted purchased state `opacity-50`                               |
+| Property         | Class                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------- |
+| Background       | `bg-white`, thumbnail fallback `bg-surface text-brand`                                   |
+| Border           | none on the card, icon buttons `border border-line`                                      |
+| Border radius    | card `rounded-[20px] sm:rounded-[22px]`, thumbnail `rounded-2xl`, icon buttons `rounded-xl` |
+| Text — primary   | title `text-sm sm:text-[15px] font-semibold text-ink`, price `font-semibold text-brand`  |
+| Text — secondary | source line `text-xs text-muted`                                                         |
+| Spacing          | card `p-3`, row `gap-3 sm:gap-3.5`, thumbnail `h-16 w-16 sm:h-19.5 sm:w-19.5`          |
+| Hover state      | card `hover:shadow-soft`, icon buttons `hover:border-ink`, delete `hover:text-brand`     |
+| Shadow           | hover only                                                                               |
+| Accent usage     | source icon (store, link or manual), `Badge` success for gifted                           |
 
 **Pattern notes:**
-Wishlist rows are compact operational cards, optimized for scanning and repeated edits. Keep thumbnails square and small, use muted metadata, and reserve stronger color for actions/status only.
+Rows stay compact for scanning and repeated edits. The source line shows the Gifvtme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets. The occasion detail page shares this card.
 
 ### Wishlist Sheets
 

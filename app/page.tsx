@@ -25,6 +25,7 @@ import { FeedbackProvider } from "@/hooks/useFeedback";
 import Wishlist from "./_components/home/Wishlist";
 import Museum from "./_components/home/Museum";
 import Pool from "./_components/home/Pool";
+import Moment from "./_components/home/Moments";
 
 export const revalidate = 60;
 
@@ -67,6 +68,8 @@ export default async function Page() {
         <Wishlist />
         <Museum products={(featuredProducts.length ? featuredProducts : newProducts).slice(0, 4)} />
         <Pool />
+        <Moment />
+        
         <TrustBadges />
         <NewsletterSignup />
       </FeedbackProvider>

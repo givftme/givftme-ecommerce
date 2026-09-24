@@ -5,6 +5,9 @@
   --color-brand-dark: #a80303;
   --color-brand-light: #fef2f2;
   --color-ink: #000000;
+  /* Warm near-black behind full-bleed photography, so the frame reads as a
+     tinted plate rather than a hole while the image decodes. */
+  --color-ink-deep: #2a1a1a;
   --color-muted: #4a4a4a;
   --color-surface: #f7f7f7;
   --color-line: #e5e5e5;
@@ -15,9 +18,12 @@
      Tailwind's numbered shades (red-50 etc.) are unaffected. */
   --color-red: #e11d2e;
   --color-orange: #ff7a1a;
+  --color-amber: #ffb020;
   --color-green: #15803d;
   --color-blue: #1d4ed8;
 
+  /* Cards nested inside a card-xl panel step down one rung. */
+  --radius-card-lg: 24px;
   --radius-card-xl: 32px;
 
   --shadow-soft: 0 8px 24px -12px rgba(16, 16, 20, 0.18);
@@ -29,6 +35,7 @@
   --animate-scroll-x: scroll-x 40s linear infinite;
   --animate-scroll-x-rev: scroll-x 40s linear infinite reverse;
   --animate-fill-x: fill-x linear forwards;
+  --animate-slide-in: slide-in 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 
   @keyframes fill-x {
     from {
@@ -47,6 +54,18 @@
       transform: translateX(-50%);
     }
   }
+
+  /* Swaps a panel in once it replaces the form it was submitted from. */
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 body {
@@ -62,4 +81,13 @@ body {
   &::-webkit-scrollbar {
     display: none;
   }
+}
+
+/* A native <select> stripped to `appearance: none` loses its arrow. This draws
+   it back on in --color-muted. Pair it with right padding so text clears it. */
+@utility select-caret {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234a4a4a' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.875rem center;
+  background-size: 20px 20px;
 }

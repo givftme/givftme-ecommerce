@@ -42,11 +42,13 @@ export default async function DashboardWishlistsPage() {
   }
 
   return (
-    <main className="min-h-dvh bg-surface px-4 py-6">
-      <div className="mx-auto max-w-4xl space-y-6">
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-ink">My Wishlists</h1>
+    <main className="min-h-dvh bg-surface px-4 py-6 sm:px-5 md:py-8">
+      <div className="mx-auto max-w-4xl space-y-5">
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="font-display text-[32px] leading-tight text-ink sm:text-4xl">
+              My wishlists
+            </h1>
             <p className="mt-1 text-sm text-muted">
               Manage what you would love to receive.
             </p>
@@ -69,9 +71,9 @@ export default async function DashboardWishlistsPage() {
 
         {evergreenSummary && <WishlistCard wishlist={evergreenSummary} />}
 
-        <section className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-ink">Occasions</h2>
+        <section className="rounded-3xl bg-white p-4 sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-display text-2xl text-ink">Occasions</h2>
             <Link
               href="/my-occasions/new"
               className={cn(
@@ -85,7 +87,7 @@ export default async function DashboardWishlistsPage() {
           </div>
 
           {occasions.length === 0 ? (
-            <div className="mt-5 rounded-2xl bg-surface px-4 py-8 text-center">
+            <div className="mt-4 rounded-2xl bg-surface px-4 py-8 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white">
                 <CalendarHeart
                   className="h-8 w-8 text-brand"
@@ -99,7 +101,7 @@ export default async function DashboardWishlistsPage() {
                 href="/my-occasions/new"
                 className={cn(
                   buttonVariants({ variant: "filled", size: "md" }),
-                  "mt-5",
+                  "mt-5 shadow-soft",
                 )}
               >
                 <Plus className="h-4 w-4" />

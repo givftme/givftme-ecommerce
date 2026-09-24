@@ -1,5 +1,16 @@
 import { formatPrice } from "@/lib/utils";
 import { daysFromToday, formatOccasionDate } from "@/lib/occasion/date";
+import type { WishlistVisibility } from "@/lib/wishlist/types";
+
+const VISIBILITY_LABELS: Record<WishlistVisibility, string> = {
+  private: "Private",
+  friends_family: "Friends & Family",
+  public: "Public",
+};
+
+export function getVisibilityLabel(visibility: WishlistVisibility) {
+  return VISIBILITY_LABELS[visibility];
+}
 
 export function getSourceDomain(url: string | null) {
   if (!url) {
