@@ -1,3 +1,13 @@
+## Gift pricing
+
+`components/admin/PricingControls.tsx` supplies `/admin/pricing` with four policy
+forms, a reviewed sample before publication, explicit unset and error states,
+and paginated publication history. It reuses `Input`, `Button`, and
+`PriceDisplay`, existing brand tokens, and the admin candidate navigation.
+`components/wishlist/GiftPriceEstimate.tsx` displays the safe linked estimate
+or unavailable state on shared item pages, subject to wishlist price visibility.
+Unknown delivery never appears as a zero charge or a complete payable total.
+
 ## Auth Flow Patterns
 
 ### Auth Screens

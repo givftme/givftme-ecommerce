@@ -24,6 +24,8 @@ Wishlist owner checks intentionally return 404 for both missing and nonowned IDs
 
 Existing dynamic handlers await `context.params`. Route tests sit beside handlers as `route.test.ts` and call exported methods with Request objects. You can mock external services as the checkout tests do without contacting live systems.
 
+Admin handlers under `admin/` authorize with `getAdminApiUser()` from `lib/admin/auth.ts`, which returns null unless the session email is listed in `ADMIN_EMAILS`.
+
 ## Gotchas
 
 Scheduled jobs and payment webhooks use their own authentication contracts. Their access checks are distinct from a customer session. A scheduled endpoint existing in this directory does not mean it is configured in `vercel.json`.
