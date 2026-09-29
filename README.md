@@ -43,6 +43,26 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Configurable gift pricing
+
+`/admin/pricing` uses `ADMIN_EMAILS` authorization. Apply
+`gifvtme_migration_030_configurable_gift_pricing.sql` to development and verify
+its privileges before rollout. Supply a server only `PRICING_PREVIEW_SECRET`
+containing at least 32 random bytes. Preview and publish each policy explicitly;
+no launch rates are seeded, and publishing zero is valid.
+
+Set `GIFT_PRICING_V1_ENABLED=true` to show linked gift estimates on shared item
+pages and expose their authorized pricing reads. Missing rates or source data
+show pricing unavailable. Delivery remains unconfirmed. This first slice does
+not enable sourced checkout, quote confirmation, collection, or payouts.
+
+Versioned estimates use original NGN source costs (or a recorded conversion),
+whole Naira half up rounding, and the active database rate. Legacy Museum list
+and candidate editing paths still use the `FETCH_*` settings until their later
+migration; those fields never supply the new estimate. Disable the rollout
+switch to stop versioned estimate reads. Retain pricing history and never
+recalculate existing orders during rollback.
+
 ## Project Context
 
 - [Project instructions and scope](AGENTS.md)

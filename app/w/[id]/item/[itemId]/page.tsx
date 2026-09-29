@@ -4,6 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Gift, ShoppingCart } from "lucide-react";
 import { ClaimedBadge } from "@/components/wishlist/ClaimedBadge";
+import { GiftPriceEstimate } from "@/components/wishlist/GiftPriceEstimate";
+import { getLinkedGiftEstimate } from "@/lib/pricing/estimate";
+import { pricingEnabled } from "@/lib/pricing/server";
 import { GiverItemActions } from "@/components/wishlist/GiverItemActions";
 import { ReceiverAvatar } from "@/components/wishlist/SharedWishlistHeader";
 import { trackEvent } from "@/lib/analytics";
@@ -47,6 +50,9 @@ export default async function SharedWishlistItemPage({
   const domain = getSourceDomain(item.product_url);
   const externalUrl = buildExternalGiftUrl(item);
   const claimed = item.status === "purchased";
+  const estimate = pricingEnabled() && wishlist.prices_visible && item.origin === "external" && item.product_url
+    ? await getLinkedGiftEstimate(item.id)
+    : null;
 
   let catalogProduct: ProductFullData | null = null;
 
@@ -117,7 +123,8 @@ export default async function SharedWishlistItemPage({
         </section>
 
         <section className="mt-6 space-y-4">
-          {wishlist.prices_visible && item.price != null && item.price > 0 && (
+          {estimate && <GiftPriceEstimate estimate={estimate} />}
+          {!estimate && wishlist.prices_visible && item.price != null && item.price > 0 && (
             <p className="text-2xl font-bold text-brand">
               {formatPrice(item.price)}
             </p>

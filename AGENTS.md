@@ -34,6 +34,17 @@ documents are not current product specifications.
 
 `wishlist_items.origin` (`external` | `catalog`) determines which of two completely separate transaction flows an item follows. Before writing any code touching purchases, checkout, or pricing, confirm which flow you're in. External gifts use affiliate redirects and purchase marking in `app/api/purchases/route.ts`. Catalog gifts use checkout and Flutterwave payment verification in `app/api/checkout/route.ts` and `app/api/flutterwave/webhook/route.ts`. External items never belong in catalog checkout.
 
+## Stack
+
+- **Language / Runtime**: TypeScript (strict), React 19.2
+- **Framework**: Next.js 16.2 App Router, with Sanity Studio 5 embedded at `/studio`
+- **Key dependencies**: Supabase (`@supabase/ssr`), Sanity (`next-sanity`), Zod 4 with React Hook Form, Tailwind CSS 4, Flutterwave payments
+- **Package manager**: npm; tests run on Vitest 4
+
+## Build approach
+
+Tracer Bullet: finish one real path through the existing application at a time.
+
 ## Working conventions
 
 - You can check nearby files and the nested AGENTS.md before choosing a location for new code.
@@ -42,6 +53,7 @@ documents are not current product specifications.
 - TypeScript uses strict mode and the `@/` root alias. Pages default to server components; interactive components declare `"use client"`. Domain types and Zod validation live under `lib/`.
 - All prices are Naira, formatted via `formatPrice()` in `lib/utils.ts` — never hardcode a currency symbol or accept a currency parameter.
 - All GROQ queries live in `lib/sanity/queries.ts` — never write GROQ inline.
+- Database changes ship as numbered SQL files at the repository root, `gifvtme_migration_NNN_<name>.sql`. You can give a new migration the next number.
 
 ## When you're unsure
 

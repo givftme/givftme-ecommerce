@@ -2,7 +2,8 @@
 
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getLinkedGiftEstimate, unavailableEstimate } from "@/lib/pricing/estimate";
 import type { User } from "@supabase/supabase-js";
 import SharedWishlistLayout from "@/app/w/layout";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -12,6 +13,10 @@ import { getSharedWishlist } from "@/lib/wishlist/shared";
 import type { SharedWishlist, WishlistItem } from "@/lib/wishlist/types";
 import SharedWishlistItemPage from "./page";
 
+vi.mock("@/lib/pricing/estimate", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/pricing/estimate")>()),
+  getLinkedGiftEstimate: vi.fn(),
+}));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/sanity/fetch", () => ({ sanityFetch: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -68,6 +73,7 @@ function wishlist(items: WishlistItem[]): SharedWishlist {
     id: "wishlist-1",
     title: "Birthday wishes",
     visibility: "public",
+    cover_color: null,
     prices_visible: true,
     owner: { id: "owner-1", full_name: "Ada Obi", avatar_url: null },
     occasion: null,
@@ -104,8 +110,11 @@ async function renderItemPage(itemId: string) {
   return renderToStaticMarkup(createElement(SharedWishlistLayout, null, page));
 }
 
+afterEach(() => vi.unstubAllEnvs());
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("GIFT_PRICING_V1_ENABLED", "false");
   mockedSanityFetch.mockResolvedValue(catalogProduct);
   mockedGetSharedWishlist.mockResolvedValue({
     user: null,
@@ -148,6 +157,32 @@ describe("Shared wishlist item page", () => {
 
     expect(markup).toContain("already been claimed");
     expect(markup).not.toContain("Buy this gift");
+  });
+});
+
+describe("Linked gift pricing rollout", () => {
+  it("renders a clearly nonpayable estimate without changing external buying", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    vi.mocked(getLinkedGiftEstimate).mockResolvedValue({ ...unavailableEstimate(), state: "estimate", gift_price_ngn: "111" });
+    const markup = await renderItemPage("item-external");
+    expect(markup).toContain("Gift estimate");
+    expect(markup).toContain("Delivery awaits confirmation");
+    expect(markup).toContain("Buy this gift");
+    expect(markup).not.toContain("48,000");
+  });
+  it("never reads or renders an estimate when the owner hides prices", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    mockedGetSharedWishlist.mockResolvedValue({ user: null, wishlist: { ...wishlist([externalItem]), prices_visible: false }, status: "ok" });
+    const markup = await renderItemPage("item-external");
+    expect(getLinkedGiftEstimate).not.toHaveBeenCalled();
+    expect(markup).not.toContain("Gift estimate");
+    expect(markup).not.toContain("48,000");
+  });
+  it("leaves catalog gifts on their existing path", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    const markup = await renderItemPage("item-catalog");
+    expect(getLinkedGiftEstimate).not.toHaveBeenCalled();
+    expect(markup).toContain("48,000");
   });
 });
 

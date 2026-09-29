@@ -241,8 +241,16 @@ export function CreateOccasionForm({
       router.push(
         `/my-occasions/${payload.occasion_id}?created=1&type=${parsed.data.occasion_type}`
       );
-    } catch {
-      toast({ title: "Couldn't create occasion. Try again.", variant: "danger" });
+    } catch (error) {
+      // Surface the handler's message (validation, missing migration) rather
+      // than one generic line for every failure.
+      toast({
+        title:
+          error instanceof Error && error.message
+            ? error.message
+            : "Couldn't create occasion. Try again.",
+        variant: "danger",
+      });
     } finally {
       setCreating(false);
     }

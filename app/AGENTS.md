@@ -23,6 +23,8 @@ You can reuse `PageWrapper` for public catalog pages. The root layout does not p
 
 Pages default to server components. Existing dynamic pages and API handlers await their promise based route parameters. You can consult the installed Next.js guides named by root AGENTS.md before changing these conventions.
 
+`_components/` is a private folder (no route) holding the home page sections and their helpers. Admin pages live in `admin/` and call `requireAdminPageUser()` from `lib/admin/auth.ts`, which checks the viewer against `ADMIN_EMAILS`.
+
 ## Gotchas
 
 The dashboard layout authenticates the viewer and ensures an evergreen wishlist exists. The shared wishlist layout only provides toast context. A layout or proxy redirect does not replace authorization inside a route handler.

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { CheckCircle2, ExternalLink, Loader2, PencilLine, Send, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -126,6 +127,7 @@ export function GiftCandidateQueue({ initialCandidates }: GiftCandidateQueueProp
               Gift candidates
             </h1>
           </div>
+          <Link href="/admin/pricing" className="text-sm font-semibold text-brand hover:underline">Gift pricing</Link>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {STATUS_FILTERS.map((status) => (
               <button
