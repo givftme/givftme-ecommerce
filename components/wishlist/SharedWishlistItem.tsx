@@ -10,6 +10,8 @@ import { useGSAP } from "@gsap/react";
 import { Button } from "@/components/ui/Button";
 import { ClaimedBadge } from "@/components/wishlist/ClaimedBadge";
 import { IntentFlagBadge } from "@/components/wishlist/IntentFlagBadge";
+import { GiftPriceEstimate } from "@/components/wishlist/GiftPriceEstimate";
+import type { GiftEstimate } from "@/lib/pricing/types";
 import { getSourceDomain } from "@/lib/wishlist/display";
 import type { WishlistItem } from "@/lib/wishlist/types";
 import { cn, formatPrice } from "@/lib/utils";
@@ -41,12 +43,14 @@ export function SharedWishlistItem({
   item,
   shareId,
   pricesVisible,
+  estimate,
   index,
   onAuthRequired,
 }: {
   item: WishlistItem;
   shareId: string;
   pricesVisible: boolean;
+  estimate: GiftEstimate | null;
   index: number;
   onAuthRequired: (redirectPath: string) => void;
 }) {
@@ -101,7 +105,10 @@ export function SharedWishlistItem({
             </Link>
           )}
 
-          {pricesVisible && item.price != null && item.price > 0 && (
+          {pricesVisible && estimate && (
+            <GiftPriceEstimate estimate={estimate} compact />
+          )}
+          {pricesVisible && !estimate && item.price != null && item.price > 0 && (
             <p className="mt-1 text-sm font-semibold text-ink">
               {formatPrice(item.price)}
             </p>

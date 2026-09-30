@@ -4,6 +4,7 @@ import { SharedWishlistClient } from "@/components/wishlist/SharedWishlistClient
 import { SharedWishlistNotice } from "@/components/wishlist/SharedWishlistNotice";
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import { getSharedWishlist } from "@/lib/wishlist/shared";
+import { getSharedGiftEstimate } from "@/lib/pricing/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +81,20 @@ export default async function SharedWishlistPage({
     );
   }
 
+  const estimates = Object.fromEntries(
+    await Promise.all(
+      wishlist.items.map(async (item) => [
+        item.id,
+        await getSharedGiftEstimate(item, wishlist.prices_visible),
+      ] as const),
+    ),
+  );
+
   return (
-    <SharedWishlistClient wishlist={wishlist} isAuthenticated={Boolean(user)} />
+    <SharedWishlistClient
+      wishlist={wishlist}
+      estimates={estimates}
+      isAuthenticated={Boolean(user)}
+    />
   );
 }

@@ -12,6 +12,8 @@ import type { ProductFullData } from "@/lib/sanity/types";
 import { getSharedWishlist } from "@/lib/wishlist/shared";
 import type { SharedWishlist, WishlistItem } from "@/lib/wishlist/types";
 import SharedWishlistItemPage from "./page";
+import SharedWishlistPage from "@/app/w/[id]/page";
+import { formatPrice } from "@/lib/utils";
 
 vi.mock("@/lib/pricing/estimate", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/pricing/estimate")>()),
@@ -157,6 +159,107 @@ describe("Shared wishlist item page", () => {
 
     expect(markup).toContain("already been claimed");
     expect(markup).not.toContain("Buy this gift");
+  });
+});
+
+async function renderWishlistPage() {
+  const page = await SharedWishlistPage({
+    params: Promise.resolve({ id: SHARE_ID }),
+  });
+  return renderToStaticMarkup(createElement(SharedWishlistLayout, null, page));
+}
+
+describe("Shared list and detail pricing", () => {
+  it.each([
+    ["estimate", "52800"],
+    ["estimate", "0"],
+    ["pricing_unavailable", null],
+  ] as const)("agrees on %s with amount %s", async (state, amount) => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: wishlist([externalItem]),
+      status: "ok",
+    });
+    vi.mocked(getLinkedGiftEstimate).mockResolvedValue({
+      ...unavailableEstimate(),
+      state,
+      gift_price_ngn: amount,
+    });
+
+    const detail = await renderItemPage(externalItem.id);
+    const list = await renderWishlistPage();
+
+    for (const markup of [detail, list]) {
+      expect(markup).not.toContain(formatPrice(externalItem.price!));
+      if (amount === null) {
+        expect(markup).toContain("Gift pricing is unavailable");
+        expect(markup).not.toContain("Gift estimate");
+      } else {
+        expect(markup).toContain("Gift estimate");
+        expect(markup).toContain(formatPrice(Number(amount)));
+        expect(markup).toContain("Delivery awaits confirmation");
+      }
+    }
+  });
+});
+
+describe("Shared pricing visibility and item boundaries", () => {
+  it.each([
+    { name: "rollout disabled", enabled: false, visible: true, gift: externalItem },
+    { name: "catalog gift", enabled: true, visible: true, gift: item() },
+    { name: "external gift without a link", enabled: true, visible: true, gift: { ...externalItem, product_url: null } },
+    { name: "hidden prices", enabled: true, visible: false, gift: externalItem },
+  ])("preserves $name on both views", async ({ enabled, visible, gift }) => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", String(enabled));
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: { ...wishlist([gift]), prices_visible: visible },
+      status: "ok",
+    });
+    const views = [await renderWishlistPage(), await renderItemPage(gift.id)];
+    expect(getLinkedGiftEstimate).not.toHaveBeenCalled();
+    for (const markup of views) {
+      expect(markup).not.toContain("Gift estimate");
+      expect(markup).not.toContain("Gift pricing is unavailable");
+      if (visible) expect(markup).toContain(formatPrice(gift.price!));
+      else expect(markup).not.toContain(formatPrice(gift.price!));
+    }
+  });
+
+  it("keeps each estimate with its own card and detail page", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    const second = { ...externalItem, id: "second-item", title: "Another throw", price: 24000 };
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: wishlist([externalItem, second]),
+      status: "ok",
+    });
+    vi.mocked(getLinkedGiftEstimate).mockImplementation(async (itemId) => ({
+      ...unavailableEstimate(),
+      state: "estimate",
+      gift_price_ngn: itemId === externalItem.id ? "52800" : "26400",
+    }));
+    const list = document.createElement("div");
+    list.innerHTML = await renderWishlistPage();
+    const cards = list.querySelectorAll("article");
+    expect(cards).toHaveLength(2);
+    for (const [index, gift, amount] of [[0, externalItem, 52800], [1, second, 26400]] as const) {
+      expect(cards[index].textContent).toContain(formatPrice(amount));
+      expect(cards[index].textContent).not.toContain(formatPrice(gift.price!));
+      expect(await renderItemPage(gift.id)).toContain(formatPrice(amount));
+    }
+  });
+
+  it("does not read estimates for a restricted wishlist", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: null,
+      status: "restricted",
+    });
+    expect(await renderWishlistPage()).toContain("This wishlist is private");
+    expect(getLinkedGiftEstimate).not.toHaveBeenCalled();
   });
 });
 

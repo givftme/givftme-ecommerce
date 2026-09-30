@@ -10,6 +10,7 @@ import { SharedWishlistItem } from "@/components/wishlist/SharedWishlistItem";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
+import type { GiftEstimate } from "@/lib/pricing/types";
 import { daysFromToday } from "@/lib/occasion/date";
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import type { SharedWishlist, WishlistItemStatus } from "@/lib/wishlist/types";
@@ -65,9 +66,11 @@ function getFilterEmptyCopy({
 
 export function SharedWishlistClient({
   wishlist,
+  estimates,
   isAuthenticated,
 }: {
   wishlist: SharedWishlist;
+  estimates: Record<string, GiftEstimate | null>;
   isAuthenticated: boolean;
 }) {
   const router = useRouter();
@@ -268,6 +271,7 @@ export function SharedWishlistClient({
                     item={item}
                     shareId={wishlist.share_id}
                     pricesVisible={wishlist.prices_visible}
+                    estimate={estimates[item.id]}
                     index={index}
                     onAuthRequired={handleBuy}
                   />
