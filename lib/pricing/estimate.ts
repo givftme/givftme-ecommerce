@@ -61,7 +61,15 @@ export async function getLinkedGiftEstimate(itemId: string, db?: SupabaseClient)
     const { data: links, error: linkError } = await client.from("gift_museum_candidate_wishlist_items")
       .select("candidate_id,source_price,source_currency,converted_price_ngn,fx_rate,fx_rate_source,fx_as_of")
       .eq("wishlist_item_id", itemId).limit(2);
-    if (linkError || links?.length !== 1) return unavailableEstimate(item.pricing_revision);
+    if (linkError) {
+      console.warn("pricing.estimate_unavailable", {
+        item_id: itemId,
+        reason: "link_query_failed",
+        code: linkError.code,
+      });
+      return unavailableEstimate(item.pricing_revision);
+    }
+    if (links?.length !== 1) return unavailableEstimate(item.pricing_revision);
     const source = itemPriceSource(links[0] as CandidatePriceSource, item.price);
     if (!source) return unavailableEstimate(item.pricing_revision);
     const { data: policy, error: policyError } = await client.from("gift_pricing_policies")

@@ -5,8 +5,11 @@ import { SharedWishlistNotice } from "@/components/wishlist/SharedWishlistNotice
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import { getSharedWishlist } from "@/lib/wishlist/shared";
 import { getSharedGiftEstimate } from "@/lib/pricing/shared";
+import type { GiftEstimate } from "@/lib/pricing/types";
 
 export const dynamic = "force-dynamic";
+
+const ESTIMATE_BATCH_SIZE = 4;
 
 type SharedWishlistPageProps = {
   params: Promise<{ id: string }>;
@@ -81,14 +84,17 @@ export default async function SharedWishlistPage({
     );
   }
 
-  const estimates = Object.fromEntries(
-    await Promise.all(
-      wishlist.items.map(async (item) => [
+  const estimates: Record<string, GiftEstimate | null> = {};
+  // Each estimate makes sequential reads; cap the page's database concurrency.
+  for (let offset = 0; offset < wishlist.items.length; offset += ESTIMATE_BATCH_SIZE) {
+    const entries = await Promise.all(
+      wishlist.items.slice(offset, offset + ESTIMATE_BATCH_SIZE).map(async (item) => [
         item.id,
         await getSharedGiftEstimate(item, wishlist.prices_visible),
       ] as const),
-    ),
-  );
+    );
+    Object.assign(estimates, Object.fromEntries(entries));
+  }
 
   return (
     <SharedWishlistClient

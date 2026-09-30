@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/server", () => ({ createServiceClient: vi.fn() }));
-import { getLinkedGiftEstimate, type CandidatePriceSource } from "./estimate";
+import { getLinkedGiftEstimate, unavailableEstimate, type CandidatePriceSource } from "./estimate";
 
 type Row = Record<string, unknown>;
 const ngn = (price: string): CandidatePriceSource => ({
@@ -9,7 +9,7 @@ const ngn = (price: string): CandidatePriceSource => ({
   fx_rate: 1, fx_rate_source: "native-ngn", fx_as_of: "2026-09-29",
 });
 
-function fixture() {
+function fixture(linkError: { code: string; message: string } | null = null) {
   const tables: Record<string, Row[]> = {
     wishlist_items: [
       { id: "item-a", origin: "external", product_url: "https://shop.example/gift", price: "100.50", pricing_revision: 0, active_price_quote_id: null },
@@ -34,7 +34,7 @@ function fixture() {
     const query = {
       select: (value: string) => { fields = value; return query; },
       eq: (key: string, value: unknown) => { filters.push([key, value]); return query; },
-      limit: async (count: number) => ({ data: rows().slice(0, count), error: null }),
+      limit: async (count: number) => ({ data: linkError ? null : rows().slice(0, count), error: linkError }),
       maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
       single: async () => ({ data: rows()[0] ?? null, error: null }),
     };
@@ -91,5 +91,42 @@ describe("wishlist item source isolation", () => {
       source_currency: "USD", converted_price_ngn: null, fx_rate: null, fx_rate_source: null, fx_as_of: null,
     });
     expect(await getLinkedGiftEstimate("item-a", db)).toMatchObject({ state: "pricing_unavailable" });
+  });
+});
+
+describe("linked estimate diagnostics", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("logs link query failures without changing the public unavailable estimate", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { db, tables } = fixture({
+      code: "42703",
+      message: "column gift_museum_candidate_wishlist_items.source_currency does not exist",
+    });
+    tables.wishlist_items[0].pricing_revision = 3;
+
+    const estimate = await getLinkedGiftEstimate("item-a", db);
+
+    expect(estimate).toEqual(unavailableEstimate(3));
+    expect(warn).toHaveBeenCalledExactlyOnceWith("pricing.estimate_unavailable", {
+      item_id: "item-a",
+      reason: "link_query_failed",
+      code: "42703",
+    });
+  });
+
+  it.each(["missing", "ambiguous"])("does not log a query failure for a %s link", async (kind) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { db, tables } = fixture();
+    tables.wishlist_items[0].pricing_revision = 3;
+    const link = tables.gift_museum_candidate_wishlist_items[0];
+    tables.gift_museum_candidate_wishlist_items = kind === "missing"
+      ? []
+      : [link, { ...link, candidate_id: "another-candidate" }];
+
+    const estimate = await getLinkedGiftEstimate("item-a", db);
+
+    expect(estimate).toEqual(unavailableEstimate(3));
+    expect(warn).not.toHaveBeenCalled();
   });
 });

@@ -305,3 +305,62 @@ describe("Shared wishlist gift path", () => {
     ).not.toThrow();
   });
 });
+
+describe("Shared wishlist estimate concurrency", () => {
+  it("limits concurrent lookups while retaining every item's estimate", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    const gifts = Array.from({ length: 11 }, (_, index) => ({
+      ...externalItem,
+      id: `external-${index}`,
+      title: `Gift ${index}`,
+    }));
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: wishlist(gifts),
+      status: "ok",
+    });
+    let active = 0;
+    let peak = 0;
+    vi.mocked(getLinkedGiftEstimate).mockImplementation(async (itemId) => {
+      active += 1;
+      peak = Math.max(peak, active);
+      await Promise.resolve();
+      active -= 1;
+      const index = gifts.findIndex((gift) => gift.id === itemId);
+      // Covers AC-17: one unavailable estimate does not hide other gifts.
+      return index === 5 ? unavailableEstimate() : {
+        ...unavailableEstimate(),
+        state: "estimate",
+        gift_price_ngn: String(1000 + index),
+      };
+    });
+
+    const list = document.createElement("div");
+    list.innerHTML = await renderWishlistPage();
+
+    expect(peak).toBeLessThanOrEqual(4);
+    expect(active).toBe(0);
+    expect(getLinkedGiftEstimate).toHaveBeenCalledTimes(gifts.length);
+    const cards = list.querySelectorAll("article");
+    expect(cards).toHaveLength(gifts.length);
+    for (const [index, gift] of gifts.entries()) {
+      expect(cards[index].textContent).toContain(gift.title);
+      expect(cards[index].textContent).toContain(
+        index === 5 ? "Gift pricing is unavailable" : formatPrice(1000 + index),
+      );
+    }
+  });
+
+  it("does not start estimate lookups for an empty wishlist", async () => {
+    vi.stubEnv("GIFT_PRICING_V1_ENABLED", "true");
+    mockedGetSharedWishlist.mockResolvedValue({
+      user: null,
+      wishlist: wishlist([]),
+      status: "ok",
+    });
+
+    await renderWishlistPage();
+
+    expect(getLinkedGiftEstimate).not.toHaveBeenCalled();
+  });
+});
