@@ -51,9 +51,14 @@ its privileges before rollout. Supply a server only `PRICING_PREVIEW_SECRET`
 containing at least 32 random bytes. Preview and publish each policy explicitly;
 no launch rates are seeded, and publishing zero is valid.
 
-Set `GIFT_PRICING_V1_ENABLED=true` to show linked gift estimates on shared item
-pages and expose their authorized pricing reads. Missing rates or source data
-show pricing unavailable. Delivery remains unconfirmed. This first slice does
+Set `GIFT_PRICING_V1_ENABLED=true` to show linked gift estimates on shared wishlist
+cards and item pages and expose their authorized pricing reads. Missing rates or source data
+show pricing unavailable. Apply `gifvtme_migration_031_item_price_sources.sql`
+before deploying the item source fix. New candidate links retain each item's
+currency and conversion evidence. Existing links without that evidence remain
+unpriced until it is recaptured; never backfill them from the shared candidate.
+An edited foreign amount requires a matching recorded conversion before an
+estimate can be shown. Delivery remains unconfirmed. This first slice does
 not enable sourced checkout, quote confirmation, collection, or payouts.
 
 Versioned estimates use original NGN source costs (or a recorded conversion),

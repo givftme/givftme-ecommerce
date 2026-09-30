@@ -136,11 +136,11 @@ export function Navbar({
         <Link href="/" aria-label="Givftme home" className="shrink-0">
           <Image
             src="/logo.png"
-            alt="Gifvtme"
-            width={132}
+            alt="Givftme"
+            width={150}
             height={44}
             preload
-            className="h-8.5 w-auto max-sm:h-7.5"
+            className="h-11 w-auto max-sm:h-7.5"
           />
         </Link>
 

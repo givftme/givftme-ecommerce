@@ -203,6 +203,14 @@ export async function upsertGiftMuseumCandidateForWishlistItem(
         {
           candidate_id: candidate.id,
           wishlist_item_id: input.wishlistItemId,
+          // Preserve this intake's evidence. The shared candidate can contain
+          // another item's price, currency, or an older successful conversion.
+          source_price: sourcePrice,
+          source_currency: sourceCurrency,
+          converted_price_ngn: conversion?.convertedPriceNgn ?? null,
+          fx_rate: conversion?.rate ?? null,
+          fx_rate_source: conversion?.source ?? null,
+          fx_as_of: conversion?.asOf ?? null,
         },
         { onConflict: "candidate_id,wishlist_item_id" }
       );
