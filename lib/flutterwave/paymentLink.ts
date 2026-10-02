@@ -1,4 +1,8 @@
-const FLUTTERWAVE_PAYMENT_HOSTS = new Set(["checkout.flutterwave.com"]);
+const FLUTTERWAVE_PAYMENT_HOSTS = new Set([
+  "checkout.flutterwave.com",
+  // Flutterwave's test API returns hosted checkout links on this exact host.
+  "checkout-v2.dev-flutterwave.com",
+]);
 
 export function isAllowedFlutterwavePaymentLink(
   value: string | null | undefined

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkoutSchema } from "./validation";
+import { checkoutFormSchema, checkoutSchema } from "./validation";
 
 const validShipping = {
   first_name: "Ada",
@@ -36,6 +36,31 @@ describe("checkoutSchema", () => {
 
     expect(result.success).toBe(true);
   });
+
+  it.each(["apartment", "postal_code", "delivery_instructions"] as const)(
+    "accepts a blank %s after form normalization and JSON serialization",
+    (field) => {
+      const form = checkoutFormSchema.parse({
+        shipping: {
+          ...validShipping,
+          apartment: "Unit 1",
+          postal_code: "100001",
+          delivery_instructions: "Ring the bell",
+          [field]: "",
+        },
+        preferred_payment: "card",
+      });
+      const payload = checkoutSchema.parse({
+        ...form,
+        cart_items: [validCartItem],
+        order_source: "self",
+      });
+      const requestBody = JSON.parse(JSON.stringify(payload));
+
+      expect(requestBody.shipping).not.toHaveProperty(field);
+      expect(checkoutSchema.safeParse(requestBody).success).toBe(true);
+    }
+  );
 
   it("accepts a cart item with a variant combination_key", () => {
     const result = checkoutSchema.safeParse(

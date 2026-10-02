@@ -65,6 +65,24 @@ describe("reinitiateOrderPayment", () => {
     expect(mockedBeginGiftCheckout).not.toHaveBeenCalled();
   });
 
+  it("reuses a pending order with the hosted link returned by the Flutterwave test API", async () => {
+    const link = "https://checkout-v2.dev-flutterwave.com/v3/hosted/pay/test-link";
+    const { client, from } = mockSupabase();
+    mockedInitiate.mockResolvedValue({ ok: true, paymentLink: link });
+
+    const result = await reinitiateOrderPayment(client, {
+      ...selfOrder,
+      status: "pending_payment",
+    });
+
+    expect(result).toEqual({ ok: true, paymentLink: link });
+    expect(from).toHaveBeenCalledOnce();
+    expect(mockedInitiate).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: selfOrder.id,
+      amount: selfOrder.total_amount,
+    }));
+  });
+
   it("puts the gift claim back into checkout before a retry, so the paid order can mark the gift purchased", async () => {
     const { client } = mockSupabase();
 

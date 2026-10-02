@@ -70,7 +70,9 @@ const optionalTrimmedString = (maxLength?: number) => {
 
       const trimmed = value.trim();
       return trimmed ? trimmed : undefined;
-    });
+    })
+    // JSON omits blank fields after normalization, so absent keys must be valid.
+    .optional();
 };
 
 export const checkoutShippingSchema = z.object({

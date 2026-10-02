@@ -18,8 +18,7 @@ const BOX_SWEET_HOME =
   "https://cdn.sanity.io/images/spvd4gp2/production/fd6619ed68739f5077ca122eb99f07370ed591b4-1254x1254.png";
 const BOX_NEW_CHAPTER =
   "https://cdn.sanity.io/images/spvd4gp2/production/cf643a20c63cf1e05320c8af8412d563403e4249-1254x1254.png";
-const PHOTO_KITCHEN =
-  "https://givftme.vercel.app/_next/image?url=%2Fimages%2Fhero-carousel-image-02.png";
+const PHOTO_KITCHEN = "/images/hero-carousel-image-02.png";
 
 type ScreenProps = { channel: string };
 
@@ -236,9 +235,11 @@ function ScreenDelivered() {
   return (
     <>
       <div className="absolute inset-0 after:absolute after:inset-0 after:bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_40%,rgba(0,0,0,0.6))] after:content-['']">
-        <SmartImage
-          src={`${PHOTO_KITCHEN}&w=828&q=75`}
+        <Image
+          src={PHOTO_KITCHEN}
           alt="Family embracing after receiving a gift"
+          fill
+          sizes="300px"
           className="size-full object-cover"
         />
       </div>

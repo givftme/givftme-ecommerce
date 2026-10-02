@@ -75,7 +75,8 @@ export async function initiateFlutterwavePayment({
       },
       customizations: {
         title: "Gifvtme",
-        description: `Order #${orderId.slice(0, 8)}`,
+        // The provider rejected "Order #..." with Cloudflare 403 in testing.
+        description: `Order ${orderId.slice(0, 8)}`,
         logo: `${appUrl}/logo.png`,
       },
       payment_options: getPaymentOptions(preferredPayment),
@@ -90,6 +91,37 @@ export async function initiateFlutterwavePayment({
     payload = null;
   }
 
+  const sensitiveValues = [
+    secretKey,
+    process.env.FLUTTERWAVE_SECRET_HASH,
+    customer.email,
+    customer.name,
+    customer.phone,
+    typeof payload?.data?.link === "string" ? payload.data.link : undefined,
+  ].filter((value): value is string => Boolean(value));
+  const redactDiagnosticText = (value: unknown) =>
+    typeof value === "string"
+      ? sensitiveValues
+          .reduce((message, sensitive) => message.replaceAll(sensitive, "[redacted]"), value)
+          .slice(0, 500)
+      : null;
+  const diagnosticMessage = redactDiagnosticText(payload?.message);
+
+  // One string preserves these fields in the Next.js development log.
+  // Keep the request body, raw response, and hosted link out of diagnostics.
+  console.info(`[Flutterwave] Initialization response ${JSON.stringify({
+    orderId,
+    tx_ref: transactionRef,
+    httpStatus: response.status,
+    contentType: response.headers.get("content-type"),
+    server: response.headers.get("server"),
+    responseFormat: payload === null ? "non_json" : "json",
+    providerStatus: redactDiagnosticText(payload?.status),
+    // Success messages can echo customer details in unpredictable formats.
+    providerMessage: payload?.status === "success" ? null : diagnosticMessage,
+    hasPaymentLink: Boolean(payload?.data?.link),
+  })}`);
+
   if (!response.ok || payload?.status !== "success" || !payload?.data?.link) {
     // payload?.message alone was masking real failures behind a generic
     // fallback whenever Flutterwave's body had no `message` field or
@@ -99,8 +131,8 @@ export async function initiateFlutterwavePayment({
     return {
       ok: false,
       error:
-        payload?.message ||
-        `Flutterwave HTTP ${response.status}: ${rawBody.slice(0, 500) || "(empty body)"}`,
+        diagnosticMessage ||
+        `Flutterwave HTTP ${response.status}: ${redactDiagnosticText(rawBody) || "(empty body)"}`,
     };
   }
 
