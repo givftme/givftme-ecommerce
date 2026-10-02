@@ -187,7 +187,7 @@ export function Navbar({
               <Link
                 href={accountHref}
                 aria-label={accountSecondaryLabel}
-                className="hidden size-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface md:inline-flex"
+                className="inline-flex size-10 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface md:size-11"
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />

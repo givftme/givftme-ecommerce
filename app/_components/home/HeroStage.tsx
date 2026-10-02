@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type * as Three from "three";
+import Image from "next/image";
 import { CalendarHeart, Users } from "lucide-react";
 import { useReducedMotion } from "@/hooks/useMediaQuery";
 import { Icon, SmartImage, cx } from "@/components/ui/primitives";
@@ -527,9 +528,11 @@ export default function HeroStage() {
 
       {fallback && (
         <div className="absolute inset-x-[4%] inset-y-[6%] overflow-hidden rounded-card-xl">
-          <SmartImage
-            src="https://givftme.vercel.app/_next/image?url=%2Fimages%2Fhero-carousel-image-02.png&w=1080&q=75"
+          <Image
+            src="/images/hero-carousel-image-02.png"
             alt="A family embracing warmly in their kitchen"
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
             className="size-full object-cover"
           />
         </div>

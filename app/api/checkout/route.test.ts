@@ -5,6 +5,7 @@ import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
 import { initiateFlutterwavePayment } from "@/lib/flutterwave";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { POST } from "./route";
+import { checkoutSchema } from "@/lib/checkout/validation";
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
@@ -340,6 +341,31 @@ describe("POST /api/checkout — atomic order creation (concurrent submits)", ()
       expect(mockedInitiateFlutterwavePayment).toHaveBeenCalledTimes(status === "confirmed" ? 1 : 2);
     }
   );
+
+  it("starts payment when JSON omits normalized blank optional shipping fields", async () => {
+    const orderId = "11111111-1111-4111-8111-111111111111";
+    const { rpc } = mockCreateOrderClient({
+      initialLookup: { data: null, error: null },
+      rpcResult: { data: orderId, error: null },
+    });
+    mockedInitiateFlutterwavePayment.mockResolvedValue({
+      ok: true,
+      paymentLink: "https://checkout.flutterwave.com/v3/hosted/pay/test",
+    });
+    // Match CheckoutForm: normalize blank inputs before JSON.stringify.
+    const payload = checkoutSchema.parse(validBody);
+    const response = await POST(postRequest(payload, withIdempotencyKey()));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      order_id: orderId,
+      payment_link: "https://checkout.flutterwave.com/v3/hosted/pay/test",
+    });
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(mockedInitiateFlutterwavePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId, amount: 5000 })
+    );
+  });
 
   it("creates the order and its items atomically via one RPC call before starting payment", async () => {
     const { rpc } = mockCreateOrderClient({
