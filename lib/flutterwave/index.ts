@@ -117,7 +117,8 @@ export async function initiateFlutterwavePayment({
     server: response.headers.get("server"),
     responseFormat: payload === null ? "non_json" : "json",
     providerStatus: redactDiagnosticText(payload?.status),
-    providerMessage: diagnosticMessage,
+    // Success messages can echo customer details in unpredictable formats.
+    providerMessage: payload?.status === "success" ? null : diagnosticMessage,
     hasPaymentLink: Boolean(payload?.data?.link),
   })}`);
 

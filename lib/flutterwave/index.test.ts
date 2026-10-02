@@ -105,6 +105,35 @@ describe("Flutterwave initialization", () => {
     expect(entry).not.toContain(link);
   });
 
+  it("omits success message text containing differently capitalized customer details", async () => {
+    const link = "https://checkout.flutterwave.com/v3/hosted/pay/test-link";
+    const uppercaseEmail = customer.email.toUpperCase();
+    const uppercaseName = customer.name.toUpperCase();
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      Response.json({
+        status: "success",
+        message: `Hosted Link ${link} for ${uppercaseEmail} (${uppercaseName})`,
+        data: { link },
+      })
+    ));
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    const result = await initiateFlutterwavePayment({ orderId, amount: 25000, customer });
+
+    expect(result).toEqual({ ok: true, paymentLink: link });
+    const [entry] = info.mock.calls[0];
+    expect(entry).not.toContain(uppercaseEmail);
+    expect(entry).not.toContain(uppercaseName);
+    const diagnostic = JSON.parse(entry.slice(entry.indexOf("{")));
+    expect(diagnostic).toMatchObject({
+      orderId,
+      httpStatus: 200,
+      providerStatus: "success",
+      providerMessage: null,
+      hasPaymentLink: true,
+    });
+  });
+
   it("keeps an unexpected response status object out of the log", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       Response.json({ status: { secretKey, customer }, message: "Invalid response" })
