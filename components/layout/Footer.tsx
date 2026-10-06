@@ -85,13 +85,16 @@ export function Footer() {
           <ul className="flex flex-wrap items-center justify-center gap-6">
             {footerLinks.map((link) => (
               <li key={link.href}>
-                <Link href={link.href} className="transition-colors hover:text-ink">
+                <Link
+                  href={link.href}
+                  className="transition-colors hover:text-ink"
+                >
                   {link.label}
                 </Link>
               </li>
             ))}
           </ul>
-          <p>&copy; {new Date().getFullYear()} Gifvtme. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Givftme. All rights reserved.</p>
         </div>
       </div>
     </footer>
