@@ -33,7 +33,17 @@ export interface FlutterwavePaymentResult {
 }
 
 function getPaymentOptions(preferredPayment?: PaymentPreference) {
-  return preferredPayment ?? "card,banktransfer,ussd";
+  switch (preferredPayment) {
+    case "banktransfer":
+      return "banktransfer";
+
+    case "ussd":
+      return "ussd";
+
+    case "card":
+    default:
+      return "card";
+  }
 }
 
 export async function initiateFlutterwavePayment({
