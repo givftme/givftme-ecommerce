@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api/response";
-import { getOrdersForUser } from "@/lib/orders/server";
+import { getOrderPageForUser } from "@/lib/orders/server";
 import type { OrderStatusGroup } from "@/lib/orders/types";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
@@ -23,11 +23,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const group = parseGroup(searchParams.get("status"));
+  const requestedGroup = searchParams.get("tab") ?? searchParams.get("status");
+  const parsedGroup = parseGroup(requestedGroup);
+  if (requestedGroup && !parsedGroup) return jsonError("Choose a valid order tab.", 400);
+  const group = parsedGroup || "active";
+  const rawPage = searchParams.get("page") || "1";
+  const page = Number(rawPage);
+  if (!Number.isSafeInteger(page) || page < 1) {
+    return jsonError("Page must be a positive number.", 400);
+  }
 
   try {
-    const orders = await getOrdersForUser(supabase, user.id, group);
-    return NextResponse.json({ orders });
+    const result = await getOrderPageForUser(supabase, user.id, group, page);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Couldn't load orders.", error);
     return jsonError("Couldn't load your orders.", 500);

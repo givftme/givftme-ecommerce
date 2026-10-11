@@ -471,6 +471,20 @@ Last updated: 2026-09-17
 **Pattern notes:**
 One navigation component becomes the mobile Account hub and the desktop sidebar within a shared white panel. Nested mobile screens return through Back to Account; order details also link to All orders. Keep identity text wrappable, icons decorative, and active sections marked with `aria-current`. Account pages inherit the authenticated layout and must not add another PageWrapper. Sign out stays at the bottom of navigation with pending and retryable error states. Profile photo actions wrap on narrow screens and remain above a divided form section.
 
+### Account Management
+
+Files: `components/account/AccountShell.tsx`, `components/account/AccountAvatar.tsx`,
+`components/account/DeleteAccountDialog.tsx`, `components/address/AddressBookClient.tsx`,
+`components/address/AddressForm.tsx`, `components/order/OrderList.tsx`,
+`components/order/OrderCard.tsx`
+
+The account hub uses the shared shell for mobile navigation and the desktop
+sidebar. Address editing uses one React Hook Form field group in both the
+address sheet and checkout. Address and order cards use the existing white,
+stone-border, rounded-2xl surface; keep the three order status tabs and their
+counts visible without horizontal scrolling. GSAP entrances respect reduced
+motion preferences.
+
 ### Gift checkout and purchase resume
 
 File: components/checkout/GiftCheckoutForm.tsx, app/w/[id]/gift/[itemId]/checkout/page.tsx, app/gift/resume/page.tsx

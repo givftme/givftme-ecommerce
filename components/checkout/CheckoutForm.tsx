@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, type FieldPath } from "react-hook-form";
 import { AddressSelector, type SavedAddress } from "@/components/checkout/AddressSelector";
+import { AddressForm, type AddressFieldName } from "@/components/address/AddressForm";
 import { OrderSummaryPanel } from "@/components/checkout/OrderSummaryPanel";
 import { PaymentMethodSelector } from "@/components/checkout/PaymentMethodSelector";
 import { PriceChangeDialog, type PriceChange } from "@/components/checkout/PriceChangeDialog";
@@ -20,11 +21,9 @@ import {
   FormMessage,
 } from "@/components/ui/Form";
 import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import {
   checkoutFormSchema,
   checkoutSchema,
-  NIGERIAN_STATES,
   type CheckoutFormInput,
   type CheckoutFormValues,
   type CheckoutShippingValues,
@@ -99,26 +98,40 @@ function getDefaultValues({
   initialEmail,
   initialFirstName,
   initialLastName,
+  savedAddresses,
 }: Pick<
   CheckoutFormProps,
-  "initialEmail" | "initialFirstName" | "initialLastName"
+  "initialEmail" | "initialFirstName" | "initialLastName" | "savedAddresses"
 >): CheckoutFormInput {
+  const defaultAddress = savedAddresses.find((address) => address.is_default);
   return {
     shipping: {
-      first_name: initialFirstName,
-      last_name: initialLastName,
+      first_name: defaultAddress?.first_name || initialFirstName,
+      last_name: defaultAddress?.last_name || initialLastName,
       email: initialEmail,
-      phone: "",
-      street_address: "",
-      apartment: "",
-      city: "",
-      state: "",
-      postal_code: "",
-      delivery_instructions: "",
+      phone: defaultAddress?.phone || "",
+      street_address: defaultAddress?.street_address || "",
+      apartment: defaultAddress?.apartment || "",
+      city: defaultAddress?.city || "",
+      state: defaultAddress?.state || "",
+      postal_code: defaultAddress?.postal_code || "",
+      delivery_instructions: defaultAddress?.delivery_instructions || "",
     },
     preferred_payment: "card",
   };
 }
+
+const checkoutAddressFieldNames: Record<AddressFieldName, FieldPath<CheckoutFormInput>> = {
+  first_name: "shipping.first_name",
+  last_name: "shipping.last_name",
+  street_address: "shipping.street_address",
+  apartment: "shipping.apartment",
+  city: "shipping.city",
+  state: "shipping.state",
+  phone: "shipping.phone",
+  postal_code: "shipping.postal_code",
+  delivery_instructions: "shipping.delivery_instructions",
+};
 
 export function CheckoutForm({
   initialEmail,
@@ -149,8 +162,10 @@ export function CheckoutForm({
       initialEmail,
       initialFirstName,
       initialLastName,
+      savedAddresses,
     }),
   });
+  const defaultAddress = savedAddresses.find((address) => address.is_default);
   const preferredPayment = useWatch({
     control: form.control,
     name: "preferred_payment",
@@ -344,129 +359,13 @@ export function CheckoutForm({
               <AddressSelector
                 addresses={savedAddresses}
                 onSelect={applyAddress}
+                defaultAddressId={defaultAddress?.id}
                 disabled={submitting || !isHydrated}
               />
 
               <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="shipping.first_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <Input autoComplete="given-name" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="shipping.last_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <Input autoComplete="family-name" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="mt-4 space-y-4">
-                  <label className="block space-y-2">
-                    <span className="text-xs font-medium text-ink">
-                      Country / Region
-                    </span>
-                    <Input value="Nigeria" disabled readOnly />
-                  </label>
-
-                  <FormField
-                    control={form.control}
-                    name="shipping.street_address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Street address</FormLabel>
-                        <Input autoComplete="street-address" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shipping.apartment"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Apt, suite, unit</FormLabel>
-                        <Input
-                          placeholder="apartment, suite, unit, etc."
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="shipping.city"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>City / Town</FormLabel>
-                          <Input autoComplete="address-level2" {...field} />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="shipping.state"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>State</FormLabel>
-                          <select
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                            className="h-12 w-full rounded-xl border border-stone-200 bg-white px-4 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-70"
-                          >
-                            <option value="" disabled>
-                              Select a state
-                            </option>
-                            {NIGERIAN_STATES.map((state) => (
-                              <option key={state} value={state}>
-                                {state}
-                              </option>
-                            ))}
-                          </select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="shipping.phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone number</FormLabel>
-                        <Input
-                          type="tel"
-                          autoComplete="tel"
-                          placeholder="08012345678"
-                          {...field}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
+                <div className="space-y-4">
+                  <AddressForm control={form.control} fieldName={(field) => checkoutAddressFieldNames[field]} phoneRequired />
                   <FormField
                     control={form.control}
                     name="shipping.email"
@@ -474,38 +373,6 @@ export function CheckoutForm({
                       <FormItem>
                         <FormLabel>Email address</FormLabel>
                         <Input type="email" autoComplete="email" {...field} />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shipping.postal_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Postal code</FormLabel>
-                        <Input
-                          autoComplete="postal-code"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="shipping.delivery_instructions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Delivery instruction</FormLabel>
-                        <Textarea
-                          placeholder="e.g. ring the bell, leave at gate"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
                         <FormMessage />
                       </FormItem>
                     )}

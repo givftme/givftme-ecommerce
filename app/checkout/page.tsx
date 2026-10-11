@@ -22,7 +22,28 @@ export default async function CheckoutPage() {
   }
 
   const metadata = user.user_metadata as Record<string, unknown>;
-  const savedAddresses: SavedAddress[] = [];
+  const { data: rawAddresses, error: addressError } = await supabase.from("addresses")
+    .select("id, label, first_name, last_name, phone, street_address, apt_suite_unit, city, state, postal_code, delivery_instructions, is_default")
+    .eq("user_id", user.id)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (addressError) throw new Error("Couldn't load your saved addresses.");
+
+  const savedAddresses: SavedAddress[] = (rawAddresses ?? []).map((address) => ({
+    id: address.id,
+    label: address.label,
+    first_name: address.first_name,
+    last_name: address.last_name,
+    email: user.email || "",
+    phone: address.phone || "",
+    street_address: address.street_address,
+    apartment: address.apt_suite_unit || "",
+    city: address.city,
+    state: address.state,
+    postal_code: address.postal_code || "",
+    delivery_instructions: address.delivery_instructions || "",
+    is_default: address.is_default,
+  }));
 
   return (
     <PageWrapper isAuthenticated userName={getMetadataString(metadata, "first_name")}>

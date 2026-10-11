@@ -3,10 +3,6 @@ import { ALLOWED_AVATAR_TYPES, MAX_AVATAR_SIZE } from "@/lib/account/validation"
 
 export const AVATARS_BUCKET = "avatars";
 
-function sanitizeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-}
-
 export function getAvatarStoragePath(publicUrl: string, userId: string) {
   const marker = `/${AVATARS_BUCKET}/`;
   const index = publicUrl.indexOf(marker);
@@ -15,28 +11,33 @@ export function getAvatarStoragePath(publicUrl: string, userId: string) {
     return null;
   }
 
-  const path = decodeURIComponent(publicUrl.slice(index + marker.length));
+  const path = decodeURIComponent(publicUrl.slice(index + marker.length).split(/[?#]/, 1)[0]);
   return path.startsWith(`${userId}/`) ? path : null;
 }
 
 export async function uploadAvatar(file: File, userId: string) {
   if (!ALLOWED_AVATAR_TYPES.includes(file.type as (typeof ALLOWED_AVATAR_TYPES)[number])) {
-    throw new Error("Please upload a JPEG, PNG, or WebP image.");
+    throw new Error("Please upload a JPG, PNG, or WebP image");
   }
 
   if (file.size > MAX_AVATAR_SIZE) {
-    throw new Error("Image must be under 5MB.");
+    throw new Error("Photo must be under 5MB");
   }
 
   const supabase = createClient();
-  const path = `${userId}/${Date.now()}-${sanitizeFileName(file.name)}`;
+  const extensionByType = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  } as const;
+  const path = `${userId}/avatar.${extensionByType[file.type as keyof typeof extensionByType]}`;
 
   const { error: uploadError } = await supabase.storage
     .from(AVATARS_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, { contentType: file.type, upsert: true, cacheControl: "0" });
 
   if (uploadError) {
-    throw new Error("Upload failed. Please try again.");
+    throw new Error("Couldn't upload photo. Try again.");
   }
 
   const {
@@ -52,7 +53,7 @@ export async function uploadAvatar(file: File, userId: string) {
     throw new Error("Couldn't save your changes. Please try again.");
   }
 
-  return publicUrl;
+  return `${publicUrl}?updated=${Date.now()}`;
 }
 
 export async function removeAvatar(currentAvatarUrl: string, userId: string) {

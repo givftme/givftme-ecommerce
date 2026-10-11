@@ -11,12 +11,14 @@ export interface SavedAddress extends CheckoutShippingValues {
 interface AddressSelectorProps {
   addresses: SavedAddress[];
   onSelect: (address: SavedAddress) => void;
+  defaultAddressId?: string;
   disabled?: boolean;
 }
 
 export function AddressSelector({
   addresses,
   onSelect,
+  defaultAddressId,
   disabled,
 }: AddressSelectorProps) {
   if (addresses.length === 0) {
@@ -29,7 +31,7 @@ export function AddressSelector({
         <span className="text-xs font-medium text-ink">Use a saved address</span>
         <select
           disabled={disabled}
-          defaultValue=""
+          defaultValue={defaultAddressId || ""}
           onChange={(event) => {
             const address = addresses.find(
               (item) => item.id === event.currentTarget.value

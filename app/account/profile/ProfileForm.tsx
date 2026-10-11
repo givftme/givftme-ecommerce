@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useGSAP } from "@gsap/react";
+import { gsap } from "gsap";
 import { Loader2, X } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
@@ -13,16 +15,24 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics";
-import { createClient } from "@/lib/supabase/client";
 import {
   DEFAULT_THANK_YOU_MESSAGE_PLACEHOLDER,
   profileSchema,
   type ProfileFormValues,
 } from "@/lib/account/validation";
 import { removeAvatar, uploadAvatar } from "@/app/account/profile/avatar";
+import {
+  requestEmailChangeAction,
+  updateProfileAction,
+} from "@/app/account/profile/actions";
+import { DeleteAccountDialog } from "@/components/account/DeleteAccountDialog";
+import { SignOutButton } from "@/components/account/SignOutButton";
+import { getAccountAvatarColor } from "@/components/account/AccountAvatar";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const ADD_NAME_BANNER_DISMISSED_KEY = "profile_add_name_banner_dismissed";
-const THANK_YOU_MAX_LENGTH = 500;
+const THANK_YOU_MAX_LENGTH = 300;
 
 interface ProfileFormProps {
   userId: string;
@@ -31,6 +41,7 @@ interface ProfileFormProps {
   avatarUrl: string | null;
   phone: string | null;
   defaultThankYouMsg: string | null;
+  birthday: string | null;
 }
 
 export function ProfileForm({
@@ -40,13 +51,19 @@ export function ProfileForm({
   avatarUrl,
   phone,
   defaultThankYouMsg,
+  birthday,
 }: ProfileFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarPreviewRef = useRef<HTMLButtonElement>(null);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(avatarUrl);
   const [isAvatarBusy, setIsAvatarBusy] = useState(false);
   const [showAddNameBanner, setShowAddNameBanner] = useState(false);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailNotice, setEmailNotice] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -63,6 +80,15 @@ export function ProfileForm({
     name: "default_thank_you_msg",
   });
   const thankYouLength = (watchedThankYouMsg ?? "").length;
+
+  useGSAP(() => {
+    if (!currentAvatarUrl) return;
+    const media = gsap.matchMedia();
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.from(avatarPreviewRef.current, { scale: 0.9, autoAlpha: 0, duration: 0.3, ease: "back.out(1.5)" });
+    });
+    return () => media.revert();
+  }, { dependencies: [currentAvatarUrl], revertOnUpdate: true });
 
   useEffect(() => {
     if (fullName) {
@@ -97,7 +123,7 @@ export function ProfileForm({
     try {
       const publicUrl = await uploadAvatar(file, userId);
       setCurrentAvatarUrl(publicUrl);
-      trackEvent("profile.avatar_uploaded");
+      trackEvent("account.avatar.uploaded");
       toast({ title: "Profile photo updated.", variant: "success" });
       router.refresh();
     } catch (error) {
@@ -120,7 +146,7 @@ export function ProfileForm({
     try {
       await removeAvatar(currentAvatarUrl, userId);
       setCurrentAvatarUrl(null);
-      trackEvent("profile.avatar_removed");
+      trackEvent("account.avatar.removed");
       toast({ title: "Profile photo removed.", variant: "success" });
       router.refresh();
     } catch (error) {
@@ -136,32 +162,45 @@ export function ProfileForm({
 
   const onSubmit = async (values: ProfileFormValues) => {
     const fieldsChanged = Object.keys(form.formState.dirtyFields);
+    try {
+      const result = await updateProfileAction(values);
+      if (!result.success) {
+        toast({ title: "Couldn't save changes. Try again.", variant: "danger" });
+        return;
+      }
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("users")
-      .update({
-        full_name: values.full_name,
-        phone: values.phone || null,
-        default_thank_you_msg: values.default_thank_you_msg || null,
-      })
-      .eq("id", userId);
-
-    if (error) {
-      toast({ title: "Couldn't save your changes. Please try again.", variant: "danger" });
-      return;
+      trackEvent("account.profile.updated", { fields_changed: fieldsChanged });
+      toast({ title: "Changes saved.", variant: "success" });
+      form.reset(values);
+      setShowAddNameBanner(false);
+      router.refresh();
+    } catch {
+      toast({ title: "Couldn't save changes. Try again.", variant: "danger" });
     }
+  };
 
-    trackEvent("profile.updated", { fields_changed: fieldsChanged.join(",") });
-    toast({ title: "Changes saved.", variant: "success" });
-    form.reset(values);
-    setShowAddNameBanner(false);
-    router.refresh();
+  const onRequestEmailChange = async () => {
+    setEmailNotice("");
+    setEmailBusy(true);
+    try {
+      const result = await requestEmailChangeAction(newEmail);
+      if (!result.success) {
+        setEmailNotice(result.error);
+        return;
+      }
+      setEmailNotice(`Confirmation sent to ${newEmail.trim()} — check your inbox.`);
+      setNewEmail("");
+      setIsChangingEmail(false);
+    } catch {
+      setEmailNotice("Couldn't request an email change. Try again.");
+    } finally {
+      setEmailBusy(false);
+    }
   };
 
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-[560px] space-y-8">
       {showAddNameBanner && (
         <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-sm text-amber-900">
@@ -178,13 +217,14 @@ export function ProfileForm({
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col items-center gap-3 text-center">
         <button
+          ref={avatarPreviewRef}
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isAvatarBusy}
           aria-label="Change profile photo"
-          className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-light text-2xl font-semibold text-brand focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
+          className={cn("relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full text-2xl font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand", currentAvatarUrl ? "bg-surface" : getAccountAvatarColor(userId))}
         >
           {currentAvatarUrl ? (
             <img src={currentAvatarUrl} alt="" className="h-full w-full object-cover" />
@@ -193,7 +233,7 @@ export function ProfileForm({
           )}
           {isAvatarBusy && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <Loader2 className="h-5 w-5 animate-spin text-white" />
+              <span aria-label="Uploading photo" role="status" className="h-8 w-8 animate-spin rounded-full border-[3px] border-white/50 border-t-white" />
             </span>
           )}
         </button>
@@ -204,31 +244,9 @@ export function ProfileForm({
           onChange={handleAvatarSelect}
           className="hidden"
         />
-        <div className="min-w-0 space-y-2">
-          <p className="text-sm font-semibold text-ink">Profile photo</p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isAvatarBusy}
-            >
-              Change photo
-            </Button>
-            {currentAvatarUrl && (
-              <Button
-                type="button"
-                variant="text"
-                size="sm"
-                onClick={handleRemoveAvatar}
-                disabled={isAvatarBusy}
-                className="text-muted"
-              >
-                Remove photo
-              </Button>
-            )}
-          </div>
+        <div className="min-w-0 space-y-1">
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isAvatarBusy} className="min-h-11 text-sm font-semibold text-brand hover:underline disabled:opacity-50">Change photo</button>
+          {currentAvatarUrl && <button type="button" onClick={handleRemoveAvatar} disabled={isAvatarBusy} className="block min-h-9 w-full text-xs text-muted hover:underline disabled:opacity-50">Remove photo</button>}
           <p className="text-xs leading-5 text-muted">JPEG, PNG or WebP, up to 5MB</p>
         </div>
       </div>
@@ -249,9 +267,49 @@ export function ProfileForm({
 
           <div className="space-y-2">
             <label htmlFor="profile-email" className="text-xs font-medium text-ink">
-              Email
+              Email address
             </label>
-            <Input id="profile-email" value={email} disabled readOnly />
+            <div className="flex flex-wrap items-center gap-3">
+              <Input id="profile-email" value={email} disabled readOnly className="min-w-56 flex-1" />
+              <button
+                type="button"
+                onClick={() => { setIsChangingEmail((current) => !current); setEmailNotice(""); }}
+                className="min-h-11 text-sm font-semibold text-brand hover:underline"
+              >
+                {isChangingEmail ? "Cancel" : "Change email"}
+              </button>
+            </div>
+            {isChangingEmail && (
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="New email address"
+                  value={newEmail}
+                  onChange={(event) => setNewEmail(event.target.value)}
+                />
+                <Button type="button" onClick={onRequestEmailChange} disabled={emailBusy || !newEmail.trim()}>
+                  {emailBusy ? "Sending…" : "Send confirmation"}
+                </Button>
+              </div>
+            )}
+            {emailNotice && <p role="status" className="text-sm text-muted">{emailNotice}</p>}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-ink">Password</p>
+              <div className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-stone-200 px-4">
+                <span className="text-sm text-muted">••••••••</span>
+                <Link href="/forgot-password" className="text-sm font-semibold text-brand hover:underline">Change password</Link>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-ink">Birthday</p>
+              <div className="flex min-h-12 items-center rounded-xl border border-stone-200 px-4 text-sm text-muted">
+                {birthday || "Not provided"}
+              </div>
+            </div>
           </div>
 
           <FormField
@@ -260,7 +318,7 @@ export function ProfileForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Phone</FormLabel>
-                <Input {...field} type="tel" placeholder="+234 800 000 0000" />
+                <Input {...field} type="tel" placeholder="08012345678" />
                 <FormMessage />
               </FormItem>
             )}
@@ -280,7 +338,7 @@ export function ProfileForm({
                 />
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-xs text-muted">
-                    This is sent automatically to anyone who buys you a gift.
+                    This message is sent automatically to anyone who buys you a gift.
                   </p>
                   <span className="shrink-0 text-xs text-muted">
                     {thankYouLength}/{THANK_YOU_MAX_LENGTH}
@@ -294,7 +352,6 @@ export function ProfileForm({
           <Button
             type="submit"
             fullWidth
-            className="md:w-auto"
             disabled={!form.formState.isDirty || form.formState.isSubmitting}
           >
             {form.formState.isSubmitting ? (
@@ -308,6 +365,16 @@ export function ProfileForm({
           </Button>
         </form>
       </Form>
+      <section className="space-y-4 border-t border-stone-100 pt-8" aria-labelledby="profile-danger-zone">
+        <div>
+          <h2 id="profile-danger-zone" className="text-base font-semibold text-ink">Danger zone</h2>
+          <p className="mt-1 text-sm text-muted">Sign out on this device or permanently delete your account.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <SignOutButton />
+          <DeleteAccountDialog />
+        </div>
+      </section>
     </div>
   );
 }

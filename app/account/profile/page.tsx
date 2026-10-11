@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/app/account/profile/ProfileForm";
+import { trackEvent } from "@/lib/analytics";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -12,6 +13,8 @@ export default async function ProfilePage() {
   if (!user) {
     redirect(withRedirect("/login", "/account/profile"));
   }
+
+  trackEvent("account.profile.viewed");
 
   const { data: profile, error } = await supabase
     .from("users")
@@ -36,7 +39,7 @@ export default async function ProfilePage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-ink">Profile</h1>
+      <h1 className="text-2xl font-bold text-ink md:text-3xl">Profile Details</h1>
       <p className="mt-2 text-sm text-muted">
         Your personal details, profile photo and a little thanks for your gifters.
       </p>
@@ -49,6 +52,13 @@ export default async function ProfilePage() {
           avatarUrl={profile?.avatar_url ?? null}
           phone={phone ?? null}
           defaultThankYouMsg={profile?.default_thank_you_msg ?? null}
+          birthday={
+            typeof user.user_metadata?.birthday === "string"
+              ? user.user_metadata.birthday
+              : typeof user.user_metadata?.birthdate === "string"
+                ? user.user_metadata.birthdate
+                : null
+          }
         />
       </div>
     </div>
