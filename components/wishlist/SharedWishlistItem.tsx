@@ -4,10 +4,10 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Gift } from "lucide-react";
+import { Gift, UsersRound } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { ClaimedBadge } from "@/components/wishlist/ClaimedBadge";
 import { IntentFlagBadge } from "@/components/wishlist/IntentFlagBadge";
 import { GiftPriceEstimate } from "@/components/wishlist/GiftPriceEstimate";
@@ -46,6 +46,8 @@ export function SharedWishlistItem({
   estimate,
   index,
   onAuthRequired,
+  onCreatePool,
+  canOrganizePool = false,
 }: {
   item: WishlistItem;
   shareId: string;
@@ -53,6 +55,8 @@ export function SharedWishlistItem({
   estimate: GiftEstimate | null;
   index: number;
   onAuthRequired: (redirectPath: string) => void;
+  onCreatePool?: (item: WishlistItem) => void;
+  canOrganizePool?: boolean;
 }) {
   const ref = useRef<HTMLElement>(null);
   const claimed = item.status === "purchased";
@@ -140,6 +144,17 @@ export function SharedWishlistItem({
           <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
             No longer available
           </span>
+        ) : item.gifting_type === "group" && item.group_pool_token ? (
+          <Link
+            href={`/pool/${item.group_pool_token}`}
+            className={cn(buttonVariants({ size: "sm" }), "shrink-0 px-3")}
+          >
+            Contribute
+          </Link>
+        ) : item.gifting_type === "group" ? (
+          <span className="shrink-0 rounded-full bg-brand-light px-3 py-2 text-xs font-medium text-brand">
+            Group gift in progress
+          </span>
         ) : (
           <Button
             type="button"
@@ -151,6 +166,16 @@ export function SharedWishlistItem({
           </Button>
         )}
       </div>
+      {!claimed && !unavailable && canOrganizePool && item.gifting_type !== "group" && onCreatePool && (
+        <button
+          type="button"
+          onClick={() => onCreatePool(item)}
+          className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark"
+        >
+          <UsersRound className="h-3.5 w-3.5" aria-hidden="true" />
+          Organise a group gift for this item
+        </button>
+      )}
     </article>
   );
 }

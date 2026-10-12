@@ -11,7 +11,9 @@ import {
   Pencil,
   Store,
   Trash2,
+  UsersRound,
 } from "lucide-react";
+import Link from "next/link";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { Badge } from "@/components/ui/Badge";
@@ -86,6 +88,7 @@ export function WishlistItemCard({
   isMoving = false,
   isRemoving,
   readOnly = false,
+  onCreatePool,
 }: {
   item: WishlistItem;
   index: number;
@@ -96,11 +99,13 @@ export function WishlistItemCard({
   isMoving?: boolean;
   isRemoving?: boolean;
   readOnly?: boolean;
+  onCreatePool?: (item: WishlistItem) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isPurchased = item.status === "purchased";
   const hasPrice = item.price != null && item.price > 0;
   const showActions = !readOnly && !isPurchased;
+  const isGroupPooled = item.gifting_type === "group";
 
   useGSAP(
     () => {
@@ -169,6 +174,26 @@ export function WishlistItemCard({
               <ArrowUp className="h-4 w-4" />
             </button>
           )}
+          {isGroupPooled && item.group_pool_token ? (
+            <Link
+              href={`/pool/${item.group_pool_token}`}
+              aria-label={`View the gift pool for ${item.title}`}
+              title="View gift pool"
+              className={iconButtonClass}
+            >
+              <UsersRound className="h-4 w-4" />
+            </Link>
+          ) : onCreatePool ? (
+            <button
+              type="button"
+              aria-label={`Create gift pool for ${item.title}`}
+              title="Create gift pool"
+              onClick={() => onCreatePool(item)}
+              className={iconButtonClass}
+            >
+              <UsersRound className="h-4 w-4" />
+            </button>
+          ) : null}
           <button
             type="button"
             aria-label={`Edit ${item.title}`}
@@ -177,14 +202,16 @@ export function WishlistItemCard({
           >
             <Pencil className="h-4 w-4" />
           </button>
-          <button
-            type="button"
-            aria-label={`Delete ${item.title}`}
-            onClick={() => onDelete(item)}
-            className={cn(iconButtonClass, "hover:border-brand hover:text-brand")}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {!isGroupPooled && (
+            <button
+              type="button"
+              aria-label={`Delete ${item.title}`}
+              onClick={() => onDelete(item)}
+              className={cn(iconButtonClass, "hover:border-brand hover:text-brand")}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )}
     </article>

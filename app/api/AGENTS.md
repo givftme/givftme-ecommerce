@@ -13,6 +13,11 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `addresses/route.ts`, `addresses/[id]/route.ts` | Owner-scoped address book CRUD and default changes |
 | `account/addresses/route.ts`, `account/addresses/[id]/route.ts`, `account/addresses/[id]/set-default/route.ts` | Account-scoped address book API contract and explicit default promotion |
 | `orders/route.ts` | Authenticated order history tabs and pagination |
+| `flutterwave/webhook/route.ts` | Signature-verified payment callback for catalog orders and pool contributions |
+| `pools/route.ts`, `pools/[id]/route.ts` | Pool creation, public pool data by token, and receiver title edits |
+| `pools/[id]/contribute/route.ts`, `pools/[id]/cash-out/route.ts`, `pools/[id]/cancel/route.ts` | Authenticated pool payment and management actions |
+| `pools/notifications/route.ts` | CRON_SECRET-protected retries for queued pool cash-out emails |
+| `dashboard/pools/route.ts` | Current user's active and past pools |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |
 | `../../vercel.json` | Configured cron paths and schedules |
@@ -34,6 +39,10 @@ Admin handlers under `admin/` authorize with `getAdminApiUser()` from `lib/admin
 Scheduled jobs and payment webhooks use their own authentication contracts. Their access checks are distinct from a customer session. A scheduled endpoint existing in this directory does not mean it is configured in `vercel.json`.
 
 Checkout and external purchase marking remain separate flows. You can consult root AGENTS.md and inspect the relevant handler and tests before changing either contract.
+
+Gift pooling is a third flow. Its Flutterwave webhook branch verifies the payment
+before calling the pool confirmation RPC; keep pool payment records out of
+orders and purchases. Late captured payments are marked for manual ops review.
 
 Account APIs authenticate inside each handler. Address rows are protected by
 their own RLS policy; keep user ownership in every query. `/api/orders` accepts

@@ -14,6 +14,7 @@ import {
   Share2,
   Store,
   Users,
+  UsersRound,
   WandSparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -49,6 +50,7 @@ import { WishlistCoverPicker } from "@/components/wishlist/WishlistCoverPicker";
 import { WishlistItemCard } from "@/components/wishlist/WishlistItemCard";
 import { ShareSettingsSheet } from "@/components/wishlist/ShareSettingsSheet";
 import { WishlistTitleEditor } from "@/components/wishlist/WishlistTitleEditor";
+import { PoolCreationDialog } from "@/components/pools/PoolCreationDialog";
 
 const VISIBILITY_OPTIONS: Array<{
   value: WishlistVisibility;
@@ -122,12 +124,16 @@ function moveItem(items: WishlistItem[], itemId: string, direction: -1 | 1) {
 
 export function WishlistItemList({
   wishlist,
+  receiverId,
+  receiverName,
   occasion = null,
   initialAddMode,
   sidebar,
   banner,
 }: {
   wishlist: WishlistDetail;
+  receiverId: string;
+  receiverName: string;
   /** The occasion an occasion-type wishlist belongs to. */
   occasion?: OccasionSummary | null;
   initialAddMode?: AddItemMode;
@@ -151,6 +157,8 @@ export function WishlistItemList({
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [poolCreateOpen, setPoolCreateOpen] = useState(false);
+  const [poolCreateItem, setPoolCreateItem] = useState<WishlistItem | null>(null);
   const [visibility, setVisibility] = useState(wishlist.visibility);
   const [serverVisibility, setServerVisibility] = useState(wishlist.visibility);
   const [cover, setCover] = useState(wishlist.cover_color);
@@ -206,6 +214,11 @@ export function WishlistItemList({
   const openAddSheet = (mode: AddItemMode = "catalog") => {
     setAddMode(mode);
     setAddOpen(true);
+  };
+
+  const openPoolCreator = (item: WishlistItem | null = null) => {
+    setPoolCreateItem(item);
+    setPoolCreateOpen(true);
   };
 
   const handleAddOpenChange = (open: boolean) => {
@@ -478,6 +491,15 @@ export function WishlistItemList({
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => openPoolCreator()}
+                  className="h-10"
+                >
+                  <UsersRound className="h-4 w-4" aria-hidden="true" />
+                  Create gift fund
+                </Button>
                 <Link
                   href={`/w/${wishlist.id}`}
                   target="_blank"
@@ -649,6 +671,7 @@ export function WishlistItemList({
                   onEdit={setEditingItem}
                   onDelete={setDeleteTarget}
                   onMoveUp={(itemId) => void moveUp(itemId)}
+                  onCreatePool={openPoolCreator}
                 />
               ))
             )}
@@ -682,6 +705,16 @@ export function WishlistItemList({
         existingItems={items}
         onItemAdded={handleItemAdded}
         initialUrl={pendingUrl}
+      />
+
+      <PoolCreationDialog
+        open={poolCreateOpen}
+        onOpenChange={setPoolCreateOpen}
+        wishlistId={wishlist.id}
+        wishlistTitle={title}
+        receiverId={receiverId}
+        receiverName={receiverName}
+        initialItem={poolCreateItem}
       />
 
       <EditItemSheet

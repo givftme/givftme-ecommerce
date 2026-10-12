@@ -9,7 +9,11 @@ interface Question {
 const QUESTIONS: Question[] = [
   {
     q: "Do friends need an account to chip in?",
-    a: "No. Anyone with the link can give as a guest.",
+    a: "Yes. Anyone can view a pool link, but contributors sign in to pay and receive a receipt.",
+  },
+  {
+    q: "Can I get a refund for a pool contribution?",
+    a: "Contributions are non-refundable unless the pool is cancelled before anyone contributes. Contact support if a payment was captured after a pool closed.",
   },
   {
     q: "What if I miss a date?",

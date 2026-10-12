@@ -4,6 +4,7 @@ import { getAppUrl } from "@/lib/env";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { attachActivePoolState } from "@/lib/pools/server";
 import { isWishlistCoverKey } from "@/lib/wishlist/covers";
 import { signWishlistImages } from "@/lib/wishlist/server";
 import type {
@@ -318,7 +319,11 @@ export const getSharedWishlist = cache(async (shareId: string) => {
 
   const withImages = await signSharedImages(normalized);
   const withAvailability = await attachCatalogAvailability(withImages);
-  const wishlist = await attachReservedState(supabase, withAvailability);
+  const wishlistWithPools = {
+    ...withAvailability,
+    items: await attachActivePoolState(withAvailability.items),
+  };
+  const wishlist = await attachReservedState(supabase, wishlistWithPools);
 
   return {
     user,

@@ -4,6 +4,12 @@ import {
   getOrderIdFromFlutterwaveMeta,
   getOrderIdFromFlutterwaveReference,
 } from "@/lib/flutterwave/paymentReference";
+import { trackEvent } from "@/lib/analytics";
+import {
+  sendPoolCashedOut,
+  sendContributionReceipt as sendPoolContributionReceipt,
+  sendPoolFullyFunded,
+} from "@/lib/pools/notifications";
 import { createServiceClient } from "@/lib/supabase/server";
 
 interface FlutterwaveWebhookPayload {
@@ -27,6 +33,8 @@ interface WebhookOrderRow {
   wishlist_item_id: string | null;
   buyer_id: string;
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function ok() {
   return NextResponse.json({ received: true });
@@ -62,6 +70,140 @@ function paymentMatchesOrder(
   );
 }
 
+function getPoolContributionId(payload: FlutterwaveWebhookPayload) {
+  const meta = payload.data?.meta;
+  let candidate: unknown;
+  if (typeof meta === "object" && meta !== null) {
+    candidate = (meta as Record<string, unknown>).pool_contribution_id;
+  }
+  if (typeof candidate !== "string" || !UUID_PATTERN.test(candidate)) {
+    candidate = payload.data?.tx_ref;
+  }
+  return typeof candidate === "string" && UUID_PATTERN.test(candidate)
+    ? candidate
+    : null;
+}
+
+function paymentMatchesPoolContribution(
+  payment: FlutterwaveWebhookPayload["data"],
+  contributionAmount: number | string
+) {
+  const paymentAmount = normalizeAmount(payment?.amount);
+  const expectedAmount = normalizeAmount(contributionAmount);
+  return (
+    paymentAmount !== null &&
+    expectedAmount !== null &&
+    paymentAmount === expectedAmount &&
+    payment?.currency?.trim().toUpperCase() === "NGN"
+  );
+}
+
+async function handlePoolContributionWebhook(
+  supabase: ReturnType<typeof createServiceClient>,
+  payload: FlutterwaveWebhookPayload
+) {
+  const contributionId = getPoolContributionId(payload);
+  if (!contributionId) return false;
+
+  const { data: contribution, error } = await supabase
+    .from("pool_contributions")
+    .select("id, pool_id, amount, status")
+    .eq("id", contributionId)
+    .maybeSingle();
+  if (error) {
+    console.error("Could not load Flutterwave pool contribution.", error);
+    throw error;
+  }
+  if (!contribution) return false;
+
+  const txId = payload.data?.id != null ? String(payload.data.id) : null;
+  if (payload.data?.status !== "successful") {
+    const { error: failError } = await supabase.rpc("gifvtme_fail_group_pool_contribution", {
+      p_contribution_id: contribution.id,
+    });
+    if (failError) throw failError;
+    return true;
+  }
+
+  if (!paymentMatchesPoolContribution(payload.data, contribution.amount)) {
+    console.error("Rejected Flutterwave pool confirmation with mismatched amount or currency.", {
+      contributionId: contribution.id,
+      expectedAmount: contribution.amount,
+      receivedAmount: payload.data?.amount ?? null,
+      receivedCurrency: payload.data?.currency ?? null,
+    });
+    return true;
+  }
+  if (payload.data?.tx_ref !== contribution.id || !txId) {
+    console.error("Rejected Flutterwave pool confirmation with a mismatched reference or missing transaction id.", {
+      contributionId: contribution.id,
+      receivedReference: payload.data?.tx_ref ?? null,
+      hasTransactionId: Boolean(txId),
+    });
+    return true;
+  }
+
+  const { data: confirmValue, error: confirmError } = await supabase.rpc(
+    "gifvtme_confirm_group_pool_contribution",
+    { p_contribution_id: contribution.id, p_transaction_id: txId }
+  );
+  if (confirmError) {
+    console.error("Could not confirm Flutterwave pool contribution.", confirmError);
+    throw confirmError;
+  }
+
+  const confirmation = confirmValue as {
+    outcome?: string;
+    pool_id?: string;
+    newly_funded?: boolean;
+    refund_required?: boolean;
+    pool_status?: string;
+  } | null;
+  if (confirmation?.outcome !== "paid" && confirmation?.outcome !== "already_paid") return true;
+
+  const refundRequired = confirmation.refund_required === true;
+  const { data: pool, error: poolError } = await supabase.from("group_gift_pools")
+    .select("amount_raised, target_amount, status, created_at, fully_funded_at")
+    .eq("id", contribution.pool_id)
+    .maybeSingle();
+  if (poolError) throw poolError;
+
+  await sendPoolContributionReceipt(contribution.id, contribution.pool_id, refundRequired);
+  if (pool?.fully_funded_at) await sendPoolFullyFunded(contribution.pool_id);
+  if (pool?.status === "paid_out") await sendPoolCashedOut(contribution.pool_id);
+
+  if (confirmation.outcome === "already_paid") return true;
+
+  const raised = Number(pool?.amount_raised ?? 0);
+  const target = Number(pool?.target_amount ?? 0);
+  trackEvent("pool.contribution.completed", {
+    pool_id: contribution.pool_id,
+    amount: Number(contribution.amount),
+    pool_percentage_after: target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0,
+  });
+  if (confirmation.newly_funded) {
+    const { data: progress } = await supabase.from("group_gift_pool_progress")
+      .select("contributor_count").eq("pool_id", contribution.pool_id).maybeSingle();
+    const contributorCount = Number(progress?.contributor_count ?? 0);
+    const createdAt = pool?.created_at ? new Date(pool.created_at).getTime() : Date.now();
+    const fundedAt = pool?.fully_funded_at ? new Date(pool.fully_funded_at).getTime() : Date.now();
+    trackEvent("pool.fully_funded", {
+      pool_id: contribution.pool_id,
+      contributor_count: contributorCount,
+      days_to_fund: Math.max(0, Math.floor((fundedAt - createdAt) / 86_400_000)),
+    });
+    if (confirmation.pool_status === "paid_out") {
+      trackEvent("pool.cashed_out", {
+        pool_id: contribution.pool_id,
+        amount_raised: raised,
+        target_amount: target,
+        percentage_funded: target > 0 ? Math.min(100, Math.round(raised / target * 100)) : 0,
+      });
+    }
+  }
+  return true;
+}
+
 export async function POST(request: Request) {
   const signature = request.headers.get("verif-hash");
   const secretHash = requireEnv(
@@ -82,6 +224,16 @@ export async function POST(request: Request) {
     return ok();
   }
 
+  const supabase = createServiceClient();
+  let handledPool: boolean;
+  try {
+    handledPool = await handlePoolContributionWebhook(supabase, payload);
+  } catch (poolError) {
+    console.error("Could not finish Flutterwave pool webhook processing.", poolError);
+    return NextResponse.json({ error: "Pool webhook processing should be retried." }, { status: 500 });
+  }
+  if (handledPool) return ok();
+
   const orderId =
     getOrderIdFromFlutterwaveMeta(payload.data?.meta) ??
     getOrderIdFromFlutterwaveReference(payload.data?.tx_ref);
@@ -90,7 +242,6 @@ export async function POST(request: Request) {
     return ok();
   }
 
-  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("orders")
     .select(

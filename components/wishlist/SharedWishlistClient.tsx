@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, UsersRound } from "lucide-react";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { SharedWishlistHeader } from "@/components/wishlist/SharedWishlistHeader";
 import { SharedWishlistItem } from "@/components/wishlist/SharedWishlistItem";
@@ -15,6 +15,8 @@ import { daysFromToday } from "@/lib/occasion/date";
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import type { SharedWishlist, WishlistItemStatus } from "@/lib/wishlist/types";
 import { cn } from "@/lib/utils";
+import { PoolCreationDialog } from "@/components/pools/PoolCreationDialog";
+import type { WishlistItem } from "@/lib/wishlist/types";
 
 type Filter = "all" | "available" | "claimed";
 
@@ -79,6 +81,8 @@ export function SharedWishlistClient({
   const [authOpen, setAuthOpen] = useState(false);
   const [authRedirect, setAuthRedirect] = useState(`/w/${wishlist.share_id}`);
   const [savingReminder, setSavingReminder] = useState(false);
+  const [poolCreationOpen, setPoolCreationOpen] = useState(false);
+  const [poolCreationItem, setPoolCreationItem] = useState<WishlistItem | null>(null);
   const receiverName = getDisplayName(wishlist.owner.full_name);
   const occasionTitle = getOccasionLabel(wishlist.occasion?.title);
   const daysRemaining = wishlist.occasion?.occasion_date
@@ -160,6 +164,17 @@ export function SharedWishlistClient({
   const showAllClaimedBanner =
     wishlist.items.length > 0 && availableCount === 0;
   const showCreateOwnCta = isAuthenticated && !wishlist.viewer_is_owner;
+  const canOrganizePool = !wishlist.viewer_is_owner && wishlist.visibility !== "private";
+
+  const requestPoolCreation = (item: WishlistItem | null = null) => {
+    if (!isAuthenticated) {
+      setAuthRedirect(`/w/${wishlist.share_id}`);
+      setAuthOpen(true);
+      return;
+    }
+    setPoolCreationItem(item);
+    setPoolCreationOpen(true);
+  };
 
   return (
     <main className="min-h-dvh bg-surface pb-24 md:pb-10">
@@ -216,6 +231,19 @@ export function SharedWishlistClient({
           </aside>
 
           <section className="min-w-0 bg-white md:rounded-2xl md:border md:border-stone-100 md:p-5 md:shadow-sm">
+            {canOrganizePool && (
+              <div className="mx-4 mt-4 flex flex-col gap-3 rounded-2xl bg-brand-light p-4 sm:flex-row sm:items-center sm:justify-between md:mx-0 md:mt-0 md:mb-5">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Planning a shared gift?</p>
+                  <p className="mt-1 text-xs text-muted">Invite friends to contribute together.</p>
+                </div>
+                <Button type="button" variant="ghost" className="shrink-0" onClick={() => requestPoolCreation()}>
+                  <UsersRound className="h-4 w-4" aria-hidden="true" />
+                  Organise a group gift
+                </Button>
+              </div>
+            )}
+
             {showAllClaimedBanner && (
               <div className="mx-4 mt-4 rounded-2xl bg-brand-light px-4 py-3 text-center text-sm font-semibold text-brand md:mx-0 md:mt-0">
                 🎁 Everything on this list has been gifted!
@@ -274,6 +302,8 @@ export function SharedWishlistClient({
                     estimate={estimates[item.id]}
                     index={index}
                     onAuthRequired={handleBuy}
+                    canOrganizePool={canOrganizePool}
+                    onCreatePool={requestPoolCreation}
                   />
                 ))}
               </div>
@@ -333,6 +363,16 @@ export function SharedWishlistClient({
         onOpenChange={setAuthOpen}
         redirectPath={authRedirect}
         receiverName={receiverName}
+      />
+
+      <PoolCreationDialog
+        open={poolCreationOpen}
+        onOpenChange={setPoolCreationOpen}
+        wishlistId={wishlist.id}
+        wishlistTitle={wishlist.title}
+        receiverId={wishlist.owner.id}
+        receiverName={receiverName}
+        initialItem={poolCreationItem}
       />
     </main>
   );

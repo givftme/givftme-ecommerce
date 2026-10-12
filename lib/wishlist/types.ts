@@ -39,6 +39,9 @@ export interface WishlistItem {
   order_status?: string | null;
   buyer_name?: string | null;
   catalog_unavailable?: boolean;
+  /** Active spec-backed group pool; absent for ordinary gifts. */
+  gifting_type?: "individual" | "group";
+  group_pool_token?: string | null;
   /**
    * Somebody has reserved this gift. A boolean and nothing more: who
    * reserved it is never exposed, and this is always false for the

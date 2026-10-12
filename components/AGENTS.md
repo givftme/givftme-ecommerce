@@ -14,12 +14,19 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 | `cart/CartContext.tsx` | Cart state and persistence |
 | `layout/PublicPageShell.tsx` | Cart and toast providers for public pages |
 | `checkout/CheckoutForm.tsx` | Checkout interaction and price change confirmation |
+| `pools/PoolPageClient.tsx`, `pools/PoolProgress.tsx` | Public pool contribution and management experience |
+| `pools/PoolCreationDialog.tsx` | Responsive item/general pool creation |
 
 ## Conventions
 
 You can compose the existing primitives and merge class overrides with `cn()` from `lib/utils.ts`. Existing files use PascalCase names, so you can check the actual import path before adding a primitive.
 
 You can reuse shared domain validation with React Hook Form and Zod resolvers. Keep interactive state in the smallest practical client component. One responsive component handles both mobile and desktop layouts.
+
+Pool progress subscribes only to the sanitized `group_gift_pool_progress`
+Realtime table. Its ring and bar use `useGSAP` and respect reduced motion.
+Pool creation and payment dialogs use one responsive surface with bottom-sheet
+placement on mobile and centered dialog placement on desktop.
 
 ## Gotchas
 

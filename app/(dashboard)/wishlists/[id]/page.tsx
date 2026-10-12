@@ -18,6 +18,7 @@ import {
   getWishlistSummaries,
   requireDashboardUser,
 } from "@/lib/wishlist/server";
+import { attachActivePoolState } from "@/lib/pools/server";
 
 const ADD_MODES: AddItemMode[] = ["catalog", "url", "manual"];
 
@@ -39,11 +40,17 @@ export default async function WishlistDetailPage({
   const { id } = await params;
   const { add } = await searchParams;
   const { supabase, user } = await requireDashboardUser(`/wishlists/${id}`);
-  const wishlist = await getOwnedWishlistDetail(supabase, user.id, id);
+  const baseWishlist = await getOwnedWishlistDetail(supabase, user.id, id);
 
-  if (!wishlist) {
+  if (!baseWishlist) {
     notFound();
   }
+
+  const [wishlistItems, profile] = await Promise.all([
+    attachActivePoolState(baseWishlist.items),
+    supabase.from("users").select("full_name").eq("id", user.id).maybeSingle(),
+  ]);
+  const wishlist = { ...baseWishlist, items: wishlistItems };
 
   const [summaries, occasions, reactivationPrompts] = await Promise.all([
     getWishlistSummaries(supabase, user.id),
@@ -116,6 +123,8 @@ export default async function WishlistDetailPage({
     <WishlistItemList
       key={wishlist.id}
       wishlist={wishlist}
+      receiverId={user.id}
+      receiverName={profile.data?.full_name || "Your"}
       occasion={occasion}
       initialAddMode={parseAddMode(add)}
       sidebar={<WishlistSidebar entries={entries} pastEntries={pastEntries} />}

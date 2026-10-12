@@ -31,27 +31,31 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 13. **A user may only leave a review for a catalog product if they have a completed order containing that product.** This must be checked against the `orders`/`order_items` tables, not merely against whether they're logged in.
 14. **A user may leave at most one review per product.**
 
-## Group gifting (v2-reserved, do not activate)
+## Gift pooling
 
-15. **The `group_gift_pools` table and `gifting_type` field exist in the schema but must never be connected to a live payment flow in v1.** If a task description implies building group payment collection, refunds, or contribution tracking with real money, stop and flag it — this is explicitly deferred.
+15. **Gift pooling is a distinct, live payment flow.** Use `group_gift_pools`, `pool_contributions`, and `pool_payouts`; never put pool contributions in `purchases`, `orders`, or the catalog cart.
+16. **A pool contribution requires an authenticated account and an immediate Flutterwave payment in NGN.** There is no pledge mode, wallet, or stored customer balance.
+17. **Pool capacity is reserved and confirmed atomically in Postgres.** A webhook must verify Flutterwave's signature and match contribution amount/currency before confirmation. Captured payments that arrive after closure are marked for a manual refund in Retool; never add them to `amount_raised`.
+18. **An item marked for group gifting cannot be claimed or bought through the individual external/catalog flows.** Only the pool procurement operation may mark an item pool's wishlist item purchased.
+19. **Manual cash payouts are tracked in `pool_payouts`.** Retool is the operational interface; do not add a custom admin dashboard or automated bank transfer in v1.
 
 ## Reminders
 
-16. **A user must explicitly opt in before being enrolled in Flow 2 reminders (friend reminded about someone else's occasion).** Never auto-enroll an invitee just because they were invited to a wishlist.
-17. **Reminder timing is fixed at 14 days and 3 days before the occasion date.** Don't introduce additional reminder intervals without this being a deliberate product decision (see `PRD.md` for context).
+20. **A user must explicitly opt in before being enrolled in Flow 2 reminders (friend reminded about someone else's occasion).** Never auto-enroll an invitee just because they were invited to a wishlist.
+21. **Reminder timing is fixed at 14 days and 3 days before the occasion date.** Don't introduce additional reminder intervals without this being a deliberate product decision (see `PRD.md` for context).
 
 ## Currency & locale
 
-18. **All prices throughout the application are in Nigerian Naira (₦) with no currency conversion logic.** Do not introduce a currency parameter to formatting functions, price fields, or payment calls — Naira is hardcoded by design for v1.
+22. **All prices throughout the application are in Nigerian Naira (₦) with no currency conversion logic.** Do not introduce a currency parameter to formatting functions, price fields, or payment calls — Naira is hardcoded by design for v1.
 
 ## Authentication & data access
 
-19. **Wishlist visibility tiers (private / friends & family / public) are enforced via Supabase RLS policies, not solely application-level checks.** Any new query path against `wishlists` or `wishlist_items` must work correctly under RLS — do not introduce service-role bypasses for convenience in customer-facing code.
-20. **Friends & family access is resolved through the `wishlist_invites` table**, matching on `invitee_user_id` or `invitee_email` against the authenticated user. There is no separate "shared with me" permission record.
+23. **Wishlist visibility tiers (private / friends & family / public) are enforced via Supabase RLS policies, not solely application-level checks.** Any new query path against `wishlists` or `wishlist_items` must work correctly under RLS — do not introduce service-role bypasses for convenience in customer-facing code.
+24. **Friends & family access is resolved through the `wishlist_invites` table**, matching on `invitee_user_id` or `invitee_email` against the authenticated user. There is no separate "shared with me" permission record.
 
 ## Scope boundaries (see also PROJECT_OVERVIEW.md)
 
-21. **Do not build a custom admin dashboard.** Retool is the intentional v1 operational interface.
-22. **Do not build a wallet or stored balance feature.** No financial holding of customer funds beyond the immediate Flutterwave transaction.
-23. **Do not build a social feed.** Out of scope entirely for v1.
-24. **Do not build automated supplier API integration.** Order forwarding to suppliers is a manual, human-driven step in v1.
+25. **Do not build a custom admin dashboard.** Retool is the intentional v1 operational interface.
+26. **Do not build a wallet or stored balance feature.** Pool funds remain tied to their specific pool until procurement or manual payout; they never become an available customer balance.
+27. **Do not build a social feed.** Out of scope entirely for v1.
+28. **Do not build automated supplier API integration.** Order forwarding to suppliers is a manual, human-driven step in v1.
