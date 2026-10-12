@@ -485,6 +485,12 @@ stone-border, rounded-2xl surface; keep the three order status tabs and their
 counts visible without horizontal scrolling. GSAP entrances respect reduced
 motion preferences.
 
+The saved-address screen uses a one-column mobile grid and two columns on
+desktop. Card actions live in a three-dot menu, deletion requires confirmation,
+and removing the current default never selects a replacement. Checkout keeps
+the saved-address selector above the editable shipping fields and includes the
+save-for-next-time checkbox in that same panel.
+
 ### Gift checkout and purchase resume
 
 File: components/checkout/GiftCheckoutForm.tsx, app/w/[id]/gift/[itemId]/checkout/page.tsx, app/gift/resume/page.tsx

@@ -4,10 +4,17 @@ import { useRef, useState, type FormEvent } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
-import { Loader2, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Gift, Loader2, MapPin, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { AddressForm, type AddressFieldName } from "@/components/address/AddressForm";
 import { Button } from "@/components/ui/Button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/Dialog";
 import { Form, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/Form";
 import { Input } from "@/components/ui/Input";
 import {
@@ -37,7 +44,7 @@ const addressFieldNames: Record<AddressFieldName, FieldPath<AddressFormInput>> =
 
 function getAddressFormValues(address?: SavedAddressRecord | null): AddressFormInput {
   return {
-    label: address?.label || "Home",
+    label: address?.label || "",
     first_name: address?.first_name || "",
     last_name: address?.last_name || "",
     phone: address?.phone || "",
@@ -68,7 +75,9 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
   const [addresses, setAddresses] = useState(initialAddresses);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<SavedAddressRecord | null>(null);
+  const [fullNameValue, setFullNameValue] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SavedAddressRecord | null>(null);
   const newAddressId = useRef<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -94,19 +103,21 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
 
   const openAddSheet = () => {
     setEditingAddress(null);
+    setFullNameValue("");
     form.reset(getAddressFormValues());
     setSheetOpen(true);
   };
 
   const openEditSheet = (address: SavedAddressRecord) => {
     setEditingAddress(address);
+    setFullNameValue(`${address.first_name} ${address.last_name}`.trim());
     form.reset(getAddressFormValues(address));
     setSheetOpen(true);
   };
 
   const onSave = async (values: AddressValues) => {
     const isEditing = Boolean(editingAddress);
-    const endpoint = editingAddress ? `/api/addresses/${editingAddress.id}` : "/api/addresses";
+    const endpoint = editingAddress ? `/api/account/addresses/${editingAddress.id}` : "/api/account/addresses";
     try {
       const response = await fetch(endpoint, {
         method: editingAddress ? "PATCH" : "POST",
@@ -114,9 +125,10 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
         body: JSON.stringify(values),
       });
       const data = await response.json() as { address?: SavedAddressRecord; error?: string };
-      if (!response.ok || !data.address) throw new Error(data.error || "Couldn't save address. Try again.");
+      if (!response.ok || !data.address) throw new Error(data.error || "Couldn't save this address. Please try again.");
 
       const saved = data.address;
+      const isFirstAddress = !isEditing && addresses.length === 0;
       setAddresses((current) => {
         const updated = current
           .filter((item) => item.id !== saved.id)
@@ -128,12 +140,12 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
         return [saved, ...updated].sort((a, b) => Number(b.is_default) - Number(a.is_default) || b.created_at.localeCompare(a.created_at));
       });
       if (!isEditing) newAddressId.current = saved.id;
-      trackEvent(isEditing ? "account.address.edited" : "account.address.added", isEditing ? {} : { is_default: values.is_default });
-      if (values.is_default || values.is_default_billing) trackEvent("account.address.set_default");
+      trackEvent(isEditing ? "address.edited" : "address.added", isEditing ? {} : { is_first: isFirstAddress });
+      if (values.is_default) trackEvent("address.set_default");
       toast({ title: isEditing ? "Address updated." : "Address saved.", variant: "success" });
       setSheetOpen(false);
     } catch {
-      toast({ title: "Couldn't save address. Try again.", variant: "danger" });
+      toast({ title: "Couldn't save this address. Please try again.", variant: "danger" });
     }
   };
 
@@ -145,23 +157,26 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
     gsap.to(card, { autoAlpha: 0, y: -10, duration: 0.3, onComplete: finish });
   });
 
-  const removeAddress = async (address: SavedAddressRecord) => {
+  const removeAddress = async () => {
+    const address = deleteTarget;
+    if (!address) return;
     if (deletingId) return;
     setDeletingId(address.id);
     try {
-      const response = await fetch(`/api/addresses/${address.id}`, { method: "DELETE" });
-      const data = await response.json() as { error?: string; addresses?: SavedAddressRecord[] };
-      if (!response.ok) throw new Error(data.error || "Couldn't remove address. Try again.");
+      const response = await fetch(`/api/account/addresses/${address.id}`, { method: "DELETE" });
+      const data = await response.json() as { error?: string; deleted?: boolean };
+      if (!response.ok || !data.deleted) throw new Error(data.error || "Couldn't delete this address. Please try again.");
 
       const card = Array.from(listRef.current?.querySelectorAll<HTMLElement>("[data-address-card]") ?? [])
         .find((element) => element.dataset.addressId === address.id);
       animateDelete(card, () => {
-        setAddresses(data.addresses ?? []);
+        setAddresses((current) => current.filter((item) => item.id !== address.id));
       });
-      trackEvent("account.address.deleted", { was_default: address.is_default || address.is_default_billing });
+      trackEvent("address.deleted", { was_default: address.is_default });
       toast({ title: "Address removed", variant: "success" });
+      setDeleteTarget(null);
     } catch {
-      toast({ title: "Couldn't remove address. Try again.", variant: "danger" });
+      toast({ title: "Couldn't delete this address. Please try again.", variant: "danger" });
     } finally {
       setDeletingId(null);
     }
@@ -169,18 +184,16 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
 
   const setDefault = async (address: SavedAddressRecord) => {
     try {
-      const response = await fetch(`/api/addresses/${address.id}`, {
+      const response = await fetch(`/api/account/addresses/${address.id}/set-default`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_default: true }),
       });
-      const data = await response.json() as { address?: SavedAddressRecord; error?: string };
-      if (!response.ok || !data.address) throw new Error(data.error || "Couldn't update address. Try again.");
+      const data = await response.json() as { updated?: boolean; error?: string };
+      if (!response.ok || !data.updated) throw new Error(data.error || "Couldn't set as default. Please try again.");
       setAddresses((current) => current.map((item) => ({ ...item, is_default: item.id === address.id })));
-      trackEvent("account.address.set_default");
+      trackEvent("address.set_default");
       toast({ title: "Default address updated.", variant: "success" });
     } catch {
-      toast({ title: "Couldn't update address. Try again.", variant: "danger" });
+      toast({ title: "Couldn't set as default. Please try again.", variant: "danger" });
     }
   };
 
@@ -192,50 +205,63 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
     <div className="mx-auto max-w-[640px]">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink md:text-3xl">Addresses</h1>
+          <h1 className="text-2xl font-bold text-ink md:text-3xl">Saved addresses</h1>
           <p className="mt-2 text-sm text-muted">Manage your saved delivery details.</p>
         </div>
-        <Button variant="ghost" onClick={openAddSheet}><Plus aria-hidden="true" className="h-4 w-4" />Add new address</Button>
+        <Button size="sm" onClick={openAddSheet}><Plus aria-hidden="true" className="h-4 w-4" />Add address</Button>
       </header>
 
       {addresses.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-stone-100 bg-white px-4 py-12 text-center shadow-sm">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
-            <MapPin aria-hidden="true" className="h-10 w-10 text-muted" strokeWidth={1.5} />
+            <span className="relative flex h-12 w-12 items-center justify-center">
+              <Gift aria-hidden="true" className="absolute left-0 top-0 h-8 w-8 text-brand" strokeWidth={1.5} />
+              <MapPin aria-hidden="true" className="absolute bottom-0 right-0 h-7 w-7 text-muted" strokeWidth={1.5} />
+            </span>
           </div>
           <h2 className="mt-5 text-lg font-semibold text-ink">No saved addresses yet</h2>
           <p className="mt-2 text-sm text-muted">Add one for faster checkout.</p>
-          <Button className="mt-5" onClick={openAddSheet}>Add address</Button>
+          <Button className="mt-5" size="sm" onClick={openAddSheet}>Add your first address</Button>
         </div>
       ) : (
-        <div ref={listRef} className="mt-8 space-y-4">
+        <div ref={listRef} className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
           {addresses.map((address) => (
             <article key={address.id} data-address-card data-address-id={address.id} className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted">{address.label}</span>
-                    {address.is_default && <span className="rounded-full bg-brand text-white px-3 py-1 text-xs font-semibold">Default</span>}
-                    {!address.is_default && address.is_default_billing && <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">Default billing</span>}
+                    {address.label ? <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted">{address.label}</span> : null}
+                    {address.is_default && <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">Default</span>}
                   </div>
-                  <h2 className="mt-3 text-sm font-semibold text-ink">{address.first_name} {address.last_name}</h2>
+                  <h2 className="mt-3 text-sm font-semibold text-ink">
+                    {[address.first_name, address.last_name].filter(Boolean).join(" ")}
+                  </h2>
                   <div className="mt-1 text-sm leading-6 text-muted">
                     {formatAddress(address).map((line) => <p key={line}>{line}</p>)}
                   </div>
                   <p className="mt-1 text-sm text-muted">{formatPhone(address.phone)}</p>
                 </div>
-                <div className="flex shrink-0 gap-1">
-                  <button type="button" aria-label={`Edit ${address.label} address`} onClick={() => openEditSheet(address)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-brand">
-                    <Pencil aria-hidden="true" className="h-4 w-4" />
-                  </button>
-                  <button type="button" aria-label={`Delete ${address.label} address`} disabled={deletingId === address.id} onClick={() => void removeAddress(address)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-red-50 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50">
-                    {deletingId === address.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 aria-hidden="true" className="h-4 w-4" />}
-                  </button>
+                <div className="relative shrink-0">
+                  <details className="group">
+                    <summary aria-label={`Actions for ${address.label || "saved"} address`} className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
+                      <MoreVertical aria-hidden="true" className="h-5 w-5" />
+                    </summary>
+                    <div className="absolute right-0 top-11 z-10 min-w-44 rounded-xl border border-stone-100 bg-white p-1 shadow-lg">
+                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openEditSheet(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
+                        <Pencil aria-hidden="true" className="h-4 w-4" />Edit
+                      </button>
+                      {!address.is_default && (
+                        <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); void setDefault(address); }} className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
+                          Set as default
+                        </button>
+                      )}
+                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setDeleteTarget(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-red-700 hover:bg-red-50">
+                        <Trash2 aria-hidden="true" className="h-4 w-4" />Delete
+                      </button>
+                    </div>
+                  </details>
                 </div>
               </div>
-              {!address.is_default && (
-                <button type="button" onClick={() => void setDefault(address)} className="mt-3 min-h-11 text-sm font-medium text-muted underline-offset-4 hover:text-brand hover:underline">Set as default</button>
-              )}
             </article>
           ))}
         </div>
@@ -250,17 +276,46 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
           <Form {...form}>
             <form onSubmit={handleFormSubmit} className="mt-6 space-y-5">
               <FormField control={form.control} name="label" render={({ field }) => (
-                <FormItem><FormLabel>Label</FormLabel><Input placeholder="e.g. Home, Office, Mum's place" maxLength={50} {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
+                <FormItem><FormLabel>Label (optional)</FormLabel><Input placeholder="e.g. Home, Work, Mum's house" maxLength={50} {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
               )} />
-              <AddressForm control={form.control} fieldName={(field) => addressFieldNames[field]} />
+              <FormField control={form.control} name="first_name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full name</FormLabel>
+                  <Input
+                    autoComplete="name"
+                    placeholder="Jane Doe"
+                    required
+                    value={fullNameValue}
+                    onChange={(event) => {
+                      const fullName = event.currentTarget.value;
+                      const normalized = fullName.trimStart();
+                      const splitIndex = normalized.search(/\s/);
+                      const firstName = splitIndex < 0 ? normalized : normalized.slice(0, splitIndex);
+                      const lastName = splitIndex < 0 ? "" : normalized.slice(splitIndex).trimStart();
+                      setFullNameValue(fullName);
+                      field.onChange(firstName);
+                      form.setValue("last_name", lastName, { shouldDirty: true, shouldValidate: true });
+                    }}
+                    maxLength={100}
+                  />
+                  <FormMessage />
+                  {form.formState.errors.last_name?.message ? (
+                    <p className="text-xs text-brand">{form.formState.errors.last_name.message}</p>
+                  ) : null}
+                </FormItem>
+              )} />
+              <AddressForm
+                control={form.control}
+                fieldName={(field) => addressFieldNames[field]}
+                phoneRequired
+                showNameFields={false}
+                addressLine1Label="Address line 1"
+                addressLine2Label="Address line 2"
+              />
               <div className="space-y-3 rounded-xl bg-surface p-4">
                 <label className="flex items-start gap-3 text-sm text-ink">
                   <input type="checkbox" className="mt-1 accent-brand" {...form.register("is_default")} />
-                  <span>Set as default shipping address</span>
-                </label>
-                <label className="flex items-start gap-3 text-sm text-ink">
-                  <input type="checkbox" className="mt-1 accent-brand" {...form.register("is_default_billing")} />
-                  <span>Set as default billing address</span>
+                  <span>Set as default</span>
                 </label>
               </div>
               <div className="flex flex-col-reverse gap-3 sm:flex-row">
@@ -273,6 +328,21 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
           </Form>
         </SheetContent>
       </Sheet>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open && !deletingId) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete address?</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this address? This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={Boolean(deletingId)}>Cancel</Button>
+            <button type="button" onClick={() => void removeAddress()} disabled={Boolean(deletingId)} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-red-600 px-6 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:pointer-events-none disabled:opacity-50">
+              {deletingId ? <><Loader2 className="h-4 w-4 animate-spin" />Deleting…</> : "Delete"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

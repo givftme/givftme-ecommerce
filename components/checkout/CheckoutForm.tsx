@@ -107,7 +107,7 @@ function getDefaultValues({
   return {
     shipping: {
       first_name: defaultAddress?.first_name || initialFirstName,
-      last_name: defaultAddress?.last_name || initialLastName,
+      last_name: defaultAddress ? defaultAddress.last_name : initialLastName,
       email: initialEmail,
       phone: defaultAddress?.phone || "",
       street_address: defaultAddress?.street_address || "",
@@ -118,6 +118,7 @@ function getDefaultValues({
       delivery_instructions: defaultAddress?.delivery_instructions || "",
     },
     preferred_payment: "card",
+    save_address: savedAddresses.length === 0,
   };
 }
 
@@ -207,6 +208,7 @@ export function CheckoutForm({
         shouldValidate: true,
       }
     );
+    trackEvent("address.used_at_checkout");
   };
 
   const handleEnterNewAddress = () => {
@@ -263,6 +265,7 @@ export function CheckoutForm({
       })),
       shipping: values.shipping,
       preferred_payment: values.preferred_payment,
+      save_address: values.save_address,
       order_source: "self",
     });
 
@@ -386,7 +389,12 @@ export function CheckoutForm({
 
               <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
                 <div className="space-y-4">
-                  <AddressForm control={form.control} fieldName={(field) => checkoutAddressFieldNames[field]} phoneRequired />
+                  <AddressForm
+                    control={form.control}
+                    fieldName={(field) => checkoutAddressFieldNames[field]}
+                    phoneRequired
+                    lastNameOptional
+                  />
                   <FormField
                     control={form.control}
                     name="shipping.email"
@@ -399,6 +407,14 @@ export function CheckoutForm({
                     )}
                   />
                 </div>
+                <label className="mt-5 flex items-start gap-3 border-t border-stone-100 pt-4 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    className="mt-1 accent-brand"
+                    {...form.register("save_address")}
+                  />
+                  <span>Save this address for next time</span>
+                </label>
               </div>
             </fieldset>
 

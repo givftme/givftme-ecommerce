@@ -1,46 +1,9 @@
 import { z } from "zod";
+import { NIGERIAN_STATES, type NigerianState } from "@/lib/constants";
+import { nigerianPhoneSchema } from "@/lib/validation/nigerian-phone";
 
-export const NIGERIAN_STATES = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "FCT - Abuja",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
-] as const;
-
-export type NigerianState = (typeof NIGERIAN_STATES)[number];
+export { NIGERIAN_STATES } from "@/lib/constants";
+export type { NigerianState } from "@/lib/constants";
 
 export const paymentPreferenceSchema = z.enum([
   "card",
@@ -76,16 +39,13 @@ const optionalTrimmedString = (maxLength?: number) => {
 };
 
 export const checkoutShippingSchema = z.object({
-  first_name: z.string().trim().min(1, "First name required"),
-  last_name: z.string().trim().min(1, "Last name required"),
+  first_name: z.string().trim().min(1, "First name required").max(100),
+  last_name: z.string().trim().max(100).default(""),
   email: z.string().trim().email("Enter a valid email").toLowerCase(),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^(\+234|0)[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
-  street_address: z.string().trim().min(5, "Enter your full street address"),
-  apartment: optionalTrimmedString(120),
-  city: z.string().trim().min(2, "City required"),
+  phone: nigerianPhoneSchema,
+  street_address: z.string().trim().min(5, "Enter your full street address").max(200),
+  apartment: optionalTrimmedString(200),
+  city: z.string().trim().min(2, "City required").max(100),
   state: nigerianStateSchema,
   postal_code: optionalTrimmedString(20),
   delivery_instructions: optionalTrimmedString(500),
@@ -103,6 +63,7 @@ export const checkoutSchema = z.object({
   cart_items: z.array(checkoutCartItemSchema).min(1, "Cart is empty"),
   shipping: checkoutShippingSchema,
   preferred_payment: paymentPreferenceSchema.optional(),
+  save_address: z.boolean().default(false),
   // Which flow this order is, and nothing about which wishlist it belongs
   // to. `wishlist_item_id` used to be accepted here and came from
   // localStorage: a signed in buyer could name any wishlist item they
@@ -126,10 +87,7 @@ export const giftContactSchema = z.object({
   first_name: z.string().trim().min(1, "First name required"),
   last_name: z.string().trim().min(1, "Last name required"),
   email: z.string().trim().email("Enter a valid email").toLowerCase(),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^(\+234|0)[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
+  phone: nigerianPhoneSchema,
 });
 
 export const giftCheckoutSchema = z.object({
@@ -158,6 +116,7 @@ export const giftCheckoutFormSchema = z.object({
 export const checkoutFormSchema = z.object({
   shipping: checkoutShippingSchema,
   preferred_payment: paymentPreferenceSchema.default("card"),
+  save_address: z.boolean().default(false),
 });
 
 export type CheckoutInput = z.output<typeof checkoutSchema>;

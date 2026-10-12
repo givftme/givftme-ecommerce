@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
+import { trackEvent } from "@/lib/analytics";
 import {
   reinitiateOrderPayment,
   releasePaymentClaim,
@@ -29,6 +30,127 @@ interface CheckoutOrder extends ReinitiatableOrder {
 
 const CHECKOUT_ORDER_SELECT =
   "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, order_source, wishlist_item_id, price_changes";
+
+async function persistAddressFromCheckout(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orderId: string,
+  shipping: CheckoutInput["shipping"]
+) {
+  const { data: existingAddress, error: lookupError } = await supabase
+    .from("addresses")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("saved_from_order_id", orderId)
+    .maybeSingle();
+
+  if (lookupError) {
+    console.error(
+      "Checkout address save failed while checking for a previous save.",
+      { userId, orderId }
+    );
+    return false;
+  }
+
+  if (existingAddress) {
+    return true;
+  }
+
+  const { count, error: countError } = await supabase.from("addresses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (countError) {
+    console.error(
+      "Checkout address save failed while checking existing addresses.",
+      { userId, orderId }
+    );
+    return false;
+  }
+
+  const { data: address, error: insertError } = await supabase.from("addresses")
+    .insert({
+      user_id: userId,
+      saved_from_order_id: orderId,
+      label: "Home",
+      first_name: shipping.first_name,
+      last_name: shipping.last_name,
+      phone: shipping.phone,
+      street_address: shipping.street_address,
+      apt_suite_unit: shipping.apartment ?? null,
+      city: shipping.city,
+      state: shipping.state,
+      postal_code: shipping.postal_code ?? null,
+      delivery_instructions: shipping.delivery_instructions ?? null,
+      is_default: false,
+      is_default_billing: false,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !address) {
+    // The same order can be retried while an earlier after() callback is
+    // still saving. The unique index makes that race idempotent.
+    if (insertError?.code === "23505") {
+      const { data: savedAddress } = await supabase
+        .from("addresses")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("saved_from_order_id", orderId)
+        .maybeSingle();
+      if (savedAddress) return true;
+    }
+
+    console.error(
+      "Checkout address save failed while inserting the address.",
+      { userId, orderId }
+    );
+    return false;
+  }
+
+  if ((count ?? 0) === 0) {
+    const { data, error } = await supabase.rpc("gifvtme_update_address_defaults", {
+      target_address_id: address.id,
+      set_shipping_default: true,
+      set_billing_default: null,
+    });
+    if (error || !data) {
+      console.error(
+        "Checkout address was saved but could not be made the default.",
+        { userId, orderId }
+      );
+      return false;
+    }
+  }
+
+  trackEvent("address.saved_from_checkout");
+  return true;
+}
+
+async function saveAddressFromCheckout(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orderId: string,
+  shipping: CheckoutInput["shipping"]
+) {
+  try {
+    return await persistAddressFromCheckout(supabase, userId, orderId, shipping);
+  } catch {
+    console.error("Checkout address save failed unexpectedly.", { userId, orderId });
+    return false;
+  }
+}
+
+function scheduleAddressSaveFromCheckout(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  orderId: string,
+  shipping: CheckoutInput["shipping"]
+) {
+  after(async () => {
+    await saveAddressFromCheckout(supabase, userId, orderId, shipping);
+  });
+}
 
 async function respondForExistingOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -278,6 +400,19 @@ export async function POST(request: Request) {
   }
 
   if (existingOrder) {
+    const checkoutInput = isGiftOrder ? null : (parsed.data as CheckoutInput);
+    if (
+      checkoutInput?.save_address &&
+      (existingOrder as CheckoutOrder).order_source === "self"
+    ) {
+      scheduleAddressSaveFromCheckout(
+        supabase,
+        user.id,
+        (existingOrder as CheckoutOrder).id,
+        checkoutInput.shipping
+      );
+    }
+
     return respondForExistingOrder(
       supabase,
       existingOrder as CheckoutOrder,
@@ -329,7 +464,7 @@ export async function POST(request: Request) {
     return jsonError("Cart total must be greater than zero.", 400);
   }
 
-  const shippingName = `${contact.first_name} ${contact.last_name}`;
+  const shippingName = [contact.first_name, contact.last_name].filter(Boolean).join(" ");
   // A gift order stores no address at all until the recipient's
   // destination exists. Inventing one is explicitly refused by AC-25.
   const shippingAddress = isGiftOrder
@@ -392,6 +527,19 @@ export async function POST(request: Request) {
       return jsonError("Couldn't create your order. Try again.", 500);
     }
 
+    const checkoutInput = isGiftOrder ? null : (parsed.data as CheckoutInput);
+    if (
+      checkoutInput?.save_address &&
+      (raceOrder as CheckoutOrder).order_source === "self"
+    ) {
+      scheduleAddressSaveFromCheckout(
+        supabase,
+        user.id,
+        (raceOrder as CheckoutOrder).id,
+        checkoutInput.shipping
+      );
+    }
+
     return respondForExistingOrder(
       supabase,
       raceOrder as CheckoutOrder,
@@ -404,6 +552,10 @@ export async function POST(request: Request) {
   }
 
   const orderId = createdOrderId as string;
+  if (!isGiftOrder && (parsed.data as CheckoutInput).save_address) {
+    const shipping = (parsed.data as CheckoutInput).shipping;
+    scheduleAddressSaveFromCheckout(supabase, user.id, orderId, shipping);
+  }
 
   try {
     const payment = await initiateFlutterwavePayment({

@@ -24,6 +24,7 @@ export function AddressSelector({
   defaultAddressId,
   disabled,
 }: AddressSelectorProps) {
+  const enterNewAddressValue = "__enter_new_address__";
   const [selectedAddressId, setSelectedAddressId] = useState(defaultAddressId || "");
 
   if (addresses.length === 0) {
@@ -38,9 +39,14 @@ export function AddressSelector({
           disabled={disabled}
           value={selectedAddressId}
           onChange={(event) => {
-            const address = addresses.find(
-              (item) => item.id === event.currentTarget.value
-            );
+            const selectedId = event.currentTarget.value;
+            if (selectedId === enterNewAddressValue) {
+              setSelectedAddressId("");
+              onEnterNewAddress();
+              return;
+            }
+
+            const address = addresses.find((item) => item.id === selectedId);
 
             if (address) {
               setSelectedAddressId(address.id);
@@ -50,28 +56,19 @@ export function AddressSelector({
           className="h-12 w-full rounded-xl border border-stone-200 bg-white px-4 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-70"
         >
           <option value="" disabled>
-            Use a saved address
+            Choose a saved address
           </option>
           {addresses.map((address) => (
             <option key={address.id} value={address.id}>
-              {address.label}
-              {address.is_default ? " - default" : ""}
+              {address.label ||
+                [address.first_name, address.last_name].filter(Boolean).join(" ")}
+              {" — "}
+              {address.street_address}, {address.city}
             </option>
           ))}
+          <option value={enterNewAddressValue}>Enter a new address ↓</option>
         </select>
       </label>
-      <button
-        type="button"
-        className="mt-3 text-sm font-medium text-brand hover:underline"
-        onClick={() => {
-          setSelectedAddressId("");
-          onEnterNewAddress();
-          const form = document.getElementById("checkout-shipping-form");
-          form?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
-      >
-        Or enter a new address
-      </button>
     </div>
   );
 }

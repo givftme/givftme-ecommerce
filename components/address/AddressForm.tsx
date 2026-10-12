@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/Form";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { NIGERIAN_STATES } from "@/lib/checkout/validation";
+import { NIGERIAN_STATES } from "@/lib/constants";
 
 export type AddressFieldName =
   | "first_name"
@@ -26,21 +26,35 @@ export function AddressForm<TFieldValues extends FieldValues>({
   control,
   fieldName,
   phoneRequired = false,
+  lastNameOptional = false,
+  showNameFields = true,
+  addressLine1Label = "Street address",
+  addressLine2Label = "Apt, suite, unit",
 }: {
   control: Control<TFieldValues>;
   fieldName: (field: AddressFieldName) => FieldPath<TFieldValues>;
   phoneRequired?: boolean;
+  lastNameOptional?: boolean;
+  showNameFields?: boolean;
+  addressLine1Label?: string;
+  addressLine2Label?: string;
 }) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <FormField control={control} name={fieldName("first_name")} render={({ field }) => (
-          <FormItem><FormLabel>First name</FormLabel><Input autoComplete="given-name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
-        )} />
-        <FormField control={control} name={fieldName("last_name")} render={({ field }) => (
-          <FormItem><FormLabel>Last name</FormLabel><Input autoComplete="family-name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
-        )} />
-      </div>
+      {showNameFields ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <FormField control={control} name={fieldName("first_name")} render={({ field }) => (
+            <FormItem><FormLabel>First name</FormLabel><Input autoComplete="given-name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
+          )} />
+          <FormField control={control} name={fieldName("last_name")} render={({ field }) => (
+            <FormItem>
+              <FormLabel>{lastNameOptional ? "Last name (optional)" : "Last name"}</FormLabel>
+              <Input autoComplete="family-name" {...field} value={field.value ?? ""} />
+              <FormMessage />
+            </FormItem>
+          )} />
+        </div>
+      ) : null}
 
       <label className="block space-y-2">
         <span className="text-xs font-medium text-ink">Country / Region</span>
@@ -48,11 +62,11 @@ export function AddressForm<TFieldValues extends FieldValues>({
       </label>
 
       <FormField control={control} name={fieldName("street_address")} render={({ field }) => (
-        <FormItem><FormLabel>Street address</FormLabel><Input autoComplete="street-address" placeholder="House number and street name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
+        <FormItem><FormLabel>{addressLine1Label}</FormLabel><Input autoComplete="street-address" placeholder="House number and street name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
       )} />
 
       <FormField control={control} name={fieldName("apartment")} render={({ field }) => (
-        <FormItem><FormLabel>Apt, suite, unit</FormLabel><Input placeholder="Apartment, suite, unit, etc. (optional)" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
+        <FormItem><FormLabel>{addressLine2Label}</FormLabel><Input placeholder="Apartment, suite, unit, etc. (optional)" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
       )} />
 
       <div className="grid gap-4 md:grid-cols-2">

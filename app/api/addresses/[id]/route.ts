@@ -70,29 +70,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     .delete().eq("id", id).eq("user_id", user.id);
   if (deleteError) return jsonError("Couldn't remove address. Try again.", 500);
 
-  // Promote the newest remaining address for each default role it had held.
-  // If a promotion fails, deletion still succeeds and the user may proceed
-  // with no default address (the checkout form remains editable).
-  if (address.is_default || address.is_default_billing) {
-    const { data: remaining } = await supabase.from("addresses")
-      .select("id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (remaining) {
-      await supabase.rpc("gifvtme_update_address_defaults", {
-        target_address_id: remaining.id,
-        set_shipping_default: address.is_default ? true : null,
-        set_billing_default: address.is_default_billing ? true : null,
-      });
-    }
-  }
-
-  const { data: addresses } = await supabase.from("addresses")
-    .select(ADDRESS_SELECT)
-    .eq("user_id", user.id)
-    .order("is_default", { ascending: false })
-    .order("created_at", { ascending: false });
-  return NextResponse.json({ success: true, addresses: addresses ?? [] });
+  // Deleting a default leaves no default. A remaining address is never
+  // promoted implicitly; the owner can choose one explicitly.
+  return NextResponse.json({ deleted: true });
 }
