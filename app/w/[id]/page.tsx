@@ -84,11 +84,13 @@ export default async function SharedWishlistPage({
     );
   }
 
+  const wishlistWithPoolState = wishlist;
+
   const estimates: Record<string, GiftEstimate | null> = {};
   // Each estimate makes sequential reads; cap the page's database concurrency.
-  for (let offset = 0; offset < wishlist.items.length; offset += ESTIMATE_BATCH_SIZE) {
+  for (let offset = 0; offset < wishlistWithPoolState.items.length; offset += ESTIMATE_BATCH_SIZE) {
     const entries = await Promise.all(
-      wishlist.items.slice(offset, offset + ESTIMATE_BATCH_SIZE).map(async (item) => [
+      wishlistWithPoolState.items.slice(offset, offset + ESTIMATE_BATCH_SIZE).map(async (item) => [
         item.id,
         await getSharedGiftEstimate(item, wishlist.prices_visible),
       ] as const),
@@ -98,7 +100,7 @@ export default async function SharedWishlistPage({
 
   return (
     <SharedWishlistClient
-      wishlist={wishlist}
+      wishlist={wishlistWithPoolState}
       estimates={estimates}
       isAuthenticated={Boolean(user)}
     />

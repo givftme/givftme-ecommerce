@@ -4,7 +4,7 @@ Read this file first. It orients you to what Gifvtme is before you touch any cod
 
 ## What Gifvtme is
 
-Gifvtme is a gifting platform, a gift museum, and an e-commerce platform, built as one product. It is not three separate apps stitched together — it is a single coherent experience with two genuinely different transaction models living side by side. Understanding that duality is the single most important thing to internalize before writing any code in this codebase.
+Gifvtme is a gifting platform, a gift museum, and an e-commerce platform, built as one product. It is a single coherent experience with three separate transaction flows. Keep each flow isolated in its own payment and purchase records.
 
 In one sentence: people create wishlists for life occasions (birthdays, weddings, anniversaries), share them with friends and family, and those friends either buy the gift from wherever it's listed online (an affiliate redirect, no money touches Gifvtme) or buy it from Gifvtme's own curated dropshipping catalog (a full checkout, Gifvtme handles payment and fulfillment coordination).
 
@@ -27,15 +27,21 @@ If you are touching purchase logic, checkout logic, or pricing logic, you must k
 
 ## v1 scope (what exists or is being built right now)
 
-Wishlist creation (evergreen + occasion-specific, pulling from each other), URL scraping, affiliate redirects, the Gifvtme product catalog and gift museum (occasion → collection → product), flash sales, cart and checkout via Flutterwave, manual order tracking via Retool, reminders (two flows, 14-day and 3-day notice), automated + personal thank-you messages, reviews from verified purchasers only, three-tier wishlist sharing (private/friends-family/public).
+Wishlist creation (evergreen + occasion-specific, pulling from each other), URL scraping, affiliate redirects, the Gifvtme product catalog and gift museum (occasion → collection → product), flash sales, cart and checkout via Flutterwave, manual order tracking via Retool, reminders (two flows, 14-day and 3-day notice), automated + personal thank-you messages, reviews from verified purchasers only, three-tier wishlist sharing (private/friends-family/public), and authenticated gift-pool contributions with manual cash payouts.
+
+## The three transaction flows
+
+- **External/affiliate:** the giver buys from the retailer. Gifvtme records a confirmed purchase and never processes the item's payment.
+- **Catalog/commerce:** the giver pays Gifvtme through checkout. The order and its item-price snapshots are handled in the commerce tables.
+- **Gift pooling:** authenticated contributors pay immediately through Flutterwave into a pool. Pool contributions and payouts are separate from `purchases` and `orders`; item pools are procured by ops, while general pools and receiver cash-outs are paid manually.
 
 ## Explicitly NOT in v1 (do not build these without being asked)
 
-Group gifting payment flows (the data model is reserved but must never be wired to a live payment), any in-app wallet or stored balance, a custom admin dashboard (Retool is intentional), native mobile apps, multi-currency support (Naira only), automated supplier API integration (order forwarding is manual), any social feed feature.
+An in-app wallet or stored balance, a custom admin dashboard (Retool is intentional), native mobile apps, multi-currency support (Naira only), automated supplier API integration (order forwarding is manual), any social feed feature.
 
 ## Timeline context
 
-This is being built by a single solo developer over a 4-month window. Every architectural decision in this project — Retool instead of a custom admin, deferring group gifting payments, manual order review instead of supplier API integration — was made specifically to fit this constraint. If you are asked to add scope, flag the timeline tradeoff rather than silently absorbing the complexity.
+This is being built by a single solo developer over a 4-month window. Every architectural decision in this project — Retool instead of a custom admin and manual order review instead of supplier API integration — was made specifically to fit this constraint. If you are asked to add scope, flag the timeline tradeoff rather than silently absorbing the complexity.
 
 ## Where to go next
 

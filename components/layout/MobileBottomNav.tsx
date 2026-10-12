@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gift, Home, User } from "lucide-react";
+import { Gift, HandCoins, Home, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { label: "Home", href: "/", icon: Home },
   { label: "Wishlist", href: "/wishlists", icon: Gift },
+  { label: "Pools", href: "/dashboard/pools", icon: HandCoins },
   { label: "Account", href: "/account", icon: User },
 ];
 

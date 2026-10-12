@@ -43,6 +43,19 @@ export async function POST(request: Request) {
     return jsonError("Catalog gifts go through checkout.", 400);
   }
 
+  const { data: poolItem, error: poolItemError } = await supabase
+    .from("wishlist_items")
+    .select("gifting_type")
+    .eq("id", row.id)
+    .maybeSingle();
+
+  if (poolItemError) {
+    return jsonError("Couldn't verify this item's gifting setup.", 500);
+  }
+  if (poolItem?.gifting_type === "group") {
+    return jsonError("This item is part of a gift pool. Contribute through the pool link instead.", 409);
+  }
+
   const { data: purchase, error } = await supabase
     .from("purchases")
     .insert({

@@ -8,11 +8,13 @@ const FLUTTERWAVE_REQUEST_TIMEOUT_MS = 15_000;
 interface FlutterwaveCustomer {
   email: string;
   name: string;
-  phone: string;
+  phone?: string;
 }
 
 interface InitiateFlutterwavePaymentInput {
-  orderId: string;
+  orderId?: string;
+  poolContributionId?: string;
+  poolToken?: string;
   amount: number;
   customer: FlutterwaveCustomer;
   preferredPayment?: PaymentPreference;
@@ -48,16 +50,31 @@ function getPaymentOptions(preferredPayment?: PaymentPreference) {
 
 export async function initiateFlutterwavePayment({
   orderId,
+  poolContributionId,
+  poolToken,
   amount,
   customer,
   preferredPayment,
 }: InitiateFlutterwavePaymentInput): Promise<FlutterwavePaymentResult> {
+  if (!orderId && !poolContributionId) {
+    return { ok: false, error: "Missing payment reference." };
+  }
+  if (orderId && poolContributionId) {
+    return { ok: false, error: "Conflicting payment references." };
+  }
+  if (Boolean(poolContributionId) !== Boolean(poolToken)) {
+    return { ok: false, error: "Incomplete pool payment reference." };
+  }
+
   const appUrl = getAppUrl();
   const secretKey = requireEnv(
     process.env.FLUTTERWAVE_SECRET_KEY,
     "FLUTTERWAVE_SECRET_KEY"
   );
-  const transactionRef = createFlutterwaveTransactionRef(orderId);
+  const transactionRef = poolContributionId
+    ? poolContributionId
+    : createFlutterwaveTransactionRef(orderId!);
+  const isPoolPayment = Boolean(poolContributionId && poolToken);
 
   // Flutterwave setup notes:
   // - Configure the dashboard webhook URL as [your-domain]/api/flutterwave/webhook.
@@ -74,19 +91,25 @@ export async function initiateFlutterwavePayment({
       tx_ref: transactionRef,
       amount,
       currency: "NGN",
-      redirect_url: `${appUrl}/checkout/processing?order=${orderId}`,
+      redirect_url: isPoolPayment
+        ? `${appUrl}/pool/${poolToken}?contributed=true&contribution_id=${poolContributionId}`
+        : `${appUrl}/checkout/processing?order=${orderId}`,
       meta: {
-        order_id: orderId,
+        ...(isPoolPayment
+          ? { pool_contribution_id: poolContributionId }
+          : { order_id: orderId }),
       },
       customer: {
         email: customer.email,
         name: customer.name,
-        phonenumber: customer.phone,
+        ...(customer.phone ? { phonenumber: customer.phone } : {}),
       },
       customizations: {
         title: "Gifvtme",
         // The provider rejected "Order #..." with Cloudflare 403 in testing.
-        description: `Order ${orderId.slice(0, 8)}`,
+        description: isPoolPayment
+          ? "Gift pool contribution"
+          : `Order ${orderId!.slice(0, 8)}`,
         logo: `${appUrl}/logo.png`,
       },
       payment_options: getPaymentOptions(preferredPayment),
@@ -120,7 +143,8 @@ export async function initiateFlutterwavePayment({
   // One string preserves these fields in the Next.js development log.
   // Keep the request body, raw response, and hosted link out of diagnostics.
   console.info(`[Flutterwave] Initialization response ${JSON.stringify({
-    orderId,
+    orderId: orderId ?? null,
+    poolContributionId: poolContributionId ?? null,
     tx_ref: transactionRef,
     httpStatus: response.status,
     contentType: response.headers.get("content-type"),

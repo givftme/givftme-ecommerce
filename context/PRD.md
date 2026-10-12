@@ -52,7 +52,7 @@ Catalog items are different — Gifvtme curates and owns the relationship with t
 
 ## Group gifting
 
-**Decision: data model is reserved (a `gifting_type` field and a `group_gift_pools` table exist) but no payment flow is built in v1.** Group gifting requires holding customer funds temporarily, refund logic if a goal isn't reached, and real financial/regulatory exposure — explicitly out of scope for a solo 4-month build. The schema exists so v2 extends rather than restructures.
+**Decision: gift pooling is a separate, active v1 transaction flow.** Contributors must be signed in and pay immediately through Flutterwave. `group_gift_pools`, `pool_contributions`, and `pool_payouts` record this flow separately from external purchases and catalog orders. Cash payouts and exceptional refunds are handled manually by ops in Retool; there is no wallet or stored customer balance. Migration 032's service-only `gift_pools` ledger remains independent from this customer-facing model.
 
 ## Reminders
 

@@ -512,6 +512,18 @@ Gift checkout is one gift at quantity one, so it has no cart, no quantity contro
 
 `/gift/resume` is a set of single message screens sharing one centred layout: an icon, a heading, one short paragraph and up to two stacked full width actions. There is one screen per way a resume can end (expired, taken, bought, account mismatch, missing reference), and every one of them offers a way back to the gift or the wishlist. Keep the copy free of blame and always state that nothing was charged.
 
+### Gift Pooling
+
+Files: `components/pools/PoolCreationDialog.tsx`, `components/pools/PoolPageClient.tsx`, `components/pools/PoolProgress.tsx`
+
+Pool pages use a `bg-surface` canvas with white `rounded-2xl` panels, brand-red
+progress, pill CTAs, and compact contributor rows. Creation and contribution
+flows share the Dialog primitive with a mobile bottom-sheet position. Animate
+the circular and horizontal progress with `useGSAP` and keep the reduced-motion
+state immediate. The pool page is public to view; contributor details follow
+the pool's visibility setting. Management controls appear only to the creator
+and receiver, and the receiver alone edits the title.
+
 ### Homepage Museum, Wishlist and Pool
 
 File: app/_components/home/Museum.tsx, app/_components/home/Wishlist.tsx, app/_components/home/Pool.tsx

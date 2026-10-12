@@ -237,16 +237,18 @@ function EditItemForm({
           {form.formState.isSubmitting ? "Saving..." : "Save changes"}
         </Button>
 
-        <button
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          className="w-full text-center text-sm font-medium text-red-600 hover:text-red-700"
-        >
-          Delete item
-        </button>
+        {item.gifting_type !== "group" && (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="w-full text-center text-sm font-medium text-red-600 hover:text-red-700"
+          >
+            Delete item
+          </button>
+        )}
       </form>
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+      <Dialog open={confirmDelete && item.gifting_type !== "group"} onOpenChange={setConfirmDelete}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete this item?</DialogTitle>
