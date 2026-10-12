@@ -45,7 +45,7 @@ export function DeleteAccountDialog() {
         type="button"
         variant="text"
         onClick={() => { setConfirmation(""); setError(""); setOpen(true); }}
-        className="text-red-700 hover:bg-red-50"
+        className="text-danger hover:bg-brand-light"
       >
         <Trash2 aria-hidden="true" className="h-4 w-4" />
         Delete account

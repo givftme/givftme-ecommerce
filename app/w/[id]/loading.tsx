@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 export default function SharedWishlistLoading() {
   return (
     <main className="min-h-dvh bg-surface pb-10">
-      <div className="bg-brand px-4 pb-6 pt-8 md:hidden">
+      <div className="bg-primary px-4 pb-6 pt-8 md:hidden">
         <div className="flex items-center gap-3">
           <Skeleton className="h-12 w-12 rounded-full bg-white/20" />
           <div className="space-y-2">
@@ -17,7 +17,7 @@ export default function SharedWishlistLoading() {
           <aside className="hidden md:block">
             <Skeleton className="h-64 rounded-2xl" />
           </aside>
-          <section className="space-y-3 md:rounded-2xl md:border md:border-stone-100 md:bg-white md:p-5">
+          <section className="space-y-3 md:rounded-2xl md:border md:border-line md:bg-card md:p-5">
             <div className="flex gap-2">
               <Skeleton className="h-9 w-28 rounded-full" />
               <Skeleton className="h-9 w-32 rounded-full" />

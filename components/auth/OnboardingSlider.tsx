@@ -74,7 +74,7 @@ export function OnboardingSlider({
   };
 
   return (
-    <main className="min-h-dvh overflow-hidden bg-white">
+    <main className="min-h-dvh overflow-hidden bg-card">
       <div
         className="mx-auto min-h-dvh max-w-[430px] overflow-hidden"
         onTouchStart={(event) => {
@@ -114,7 +114,7 @@ export function OnboardingSlider({
                     onClick={() => goToSlide(dot)}
                     className={cn(
                       "h-2 rounded-full transition-all",
-                      dot === activeSlide ? "w-8 bg-brand" : "w-2 bg-stone-300"
+                      dot === activeSlide ? "w-8 bg-brand" : "w-2 bg-muted/30"
                     )}
                   />
                 ))}

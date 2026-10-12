@@ -53,7 +53,7 @@ function ExclusiveDraftCard({
   onRemove: (id: string) => void;
 }) {
   return (
-    <article className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-line bg-card p-4 shadow-sm">
       <div className="flex items-center gap-3">
         {item.image_url ? (
           <img
@@ -76,7 +76,7 @@ function ExclusiveDraftCard({
           type="button"
           aria-label="Remove item"
           onClick={() => onRemove(item.id)}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-brand-light hover:text-danger"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -258,7 +258,7 @@ export function CreateOccasionForm({
 
   return (
     <main className="min-h-dvh bg-surface pb-24 md:pb-10">
-      <div className="mx-auto min-h-dvh max-w-2xl bg-white px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-8 md:shadow-sm">
+      <div className="mx-auto min-h-dvh max-w-2xl bg-card px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-line md:p-8 md:shadow-sm">
         <header>
           <div className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
             <button
@@ -337,7 +337,7 @@ export function CreateOccasionForm({
                   </Button>
                 }
               />
-              <div className="sticky bottom-0 mt-6 rounded-2xl border border-stone-100 bg-white p-4 shadow-lg">
+              <div className="sticky bottom-0 mt-6 rounded-2xl border border-line bg-card p-4 shadow-lg">
                 <p className="text-center text-sm font-medium text-muted">
                   {selectedIds.length} {selectedIds.length === 1 ? "item" : "items"} selected
                 </p>
@@ -365,7 +365,7 @@ export function CreateOccasionForm({
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-stone-100 bg-white px-4 py-8 text-center shadow-sm">
+                <div className="rounded-2xl border border-line bg-card px-4 py-8 text-center shadow-sm">
                   <p className="text-sm leading-6 text-muted">
                     Add special items for this occasion, or create it with only your main wishlist picks.
                   </p>
@@ -383,7 +383,7 @@ export function CreateOccasionForm({
                 Add item
               </Button>
 
-              <div className="sticky bottom-0 mt-6 rounded-2xl border border-stone-100 bg-white p-4 shadow-lg">
+              <div className="sticky bottom-0 mt-6 rounded-2xl border border-line bg-card p-4 shadow-lg">
                 <p className="text-center text-sm font-medium text-muted">
                   {selectedIds.length} from your wishlist&nbsp; • &nbsp;
                   {exclusiveItems.length} exclusive{" "}

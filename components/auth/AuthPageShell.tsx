@@ -55,7 +55,7 @@ export function AuthPageShell({
   };
 
   return (
-    <main className="min-h-dvh bg-white px-6 py-8">
+    <main className="min-h-dvh bg-card px-6 py-8">
       <div
         ref={contentRef}
         className={cn(

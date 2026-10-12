@@ -64,7 +64,7 @@ export function CartItem({
   return (
     <article
       ref={itemRef}
-      className="overflow-hidden rounded-2xl border border-stone-100 bg-white p-4 shadow-sm"
+      className="overflow-hidden rounded-2xl border border-line bg-card p-4 shadow-sm"
     >
       <div className="relative flex gap-3">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface">
@@ -108,7 +108,7 @@ export function CartItem({
       </div>
 
       {unavailableReason ? (
-        <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+        <p className="mt-3 rounded-xl bg-brand-light px-3 py-2 text-xs font-medium text-danger">
           {unavailableReason}
         </p>
       ) : null}

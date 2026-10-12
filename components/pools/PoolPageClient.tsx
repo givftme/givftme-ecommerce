@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Clipboard, Loader2, UsersRound } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
@@ -119,6 +119,12 @@ export function PoolPageClient({
   const [amountRaised, setAmountRaised] = useState(initialData.pool.amount_raised);
   const [contributorCount, setContributorCount] = useState(initialData.contributor_count);
   const [status, setStatus] = useState<PoolStatus>(initialData.pool.status);
+  const [previousServerProgress, setPreviousServerProgress] = useState(() => ({
+    poolId: initialData.pool.id,
+    amountRaised: initialData.pool.amount_raised,
+    contributorCount: initialData.contributor_count,
+    status: initialData.pool.status,
+  }));
   const [contributionOpen, setContributionOpen] = useState(false);
   const [cashoutOpen, setCashoutOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -142,7 +148,13 @@ export function PoolPageClient({
     mode: "onChange",
     defaultValues: { amount: Math.max(2000, pool.min_contribution) },
   });
-  const chosenAmount = contributionForm.watch("amount") || 0;
+  const [previousContributionReturnStatus, setPreviousContributionReturnStatus] =
+    useState(contributionReturn.status);
+  if (contributionReturn.status !== previousContributionReturnStatus) {
+    setPreviousContributionReturnStatus(contributionReturn.status);
+    if (contributionReturn.status === "paid") setResumableAmount(undefined);
+  }
+  const chosenAmount = useWatch({ control: contributionForm.control, name: "amount" }) || 0;
   const cappedAmount = Math.min(chosenAmount || 0, remaining);
   const poolUrl = typeof window === "undefined" ? `/pool/${pool.token}` : `${window.location.origin}/pool/${pool.token}`;
   const displayOrganiser = initialData.creator.full_name || initialData.receiver.full_name || "a Gifvtme member";
@@ -176,16 +188,23 @@ export function PoolPageClient({
     };
   }, [pool.id, router]);
 
-  useEffect(() => {
-    setAmountRaised(initialData.pool.amount_raised);
-    setContributorCount(initialData.contributor_count);
-    setStatus(initialData.pool.status);
-  }, [
-    initialData.contributor_count,
-    initialData.pool.amount_raised,
-    initialData.pool.id,
-    initialData.pool.status,
-  ]);
+  if (
+    initialData.pool.id !== previousServerProgress.poolId ||
+    initialData.pool.amount_raised !== previousServerProgress.amountRaised ||
+    initialData.contributor_count !== previousServerProgress.contributorCount ||
+    initialData.pool.status !== previousServerProgress.status
+  ) {
+    const nextServerProgress = {
+      poolId: initialData.pool.id,
+      amountRaised: initialData.pool.amount_raised,
+      contributorCount: initialData.contributor_count,
+      status: initialData.pool.status,
+    };
+    setPreviousServerProgress(nextServerProgress);
+    setAmountRaised(nextServerProgress.amountRaised);
+    setContributorCount(nextServerProgress.contributorCount);
+    setStatus(nextServerProgress.status);
+  }
 
   useEffect(() => {
     trackEvent("pool.viewed", {
@@ -201,7 +220,6 @@ export function PoolPageClient({
   useEffect(() => {
     if (contributionReturn.status === "paid") {
       clearContributionAttempt(pool.id, contributionAttemptMemory.current);
-      setResumableAmount(undefined);
     }
   }, [contributionReturn.status, pool.id]);
 
@@ -363,41 +381,43 @@ export function PoolPageClient({
     amount,
     label: formatPrice(amount),
   })), []);
-  const submitContribution = contributionForm.handleSubmit(async (values) => {
-    setActionError(null);
-    if (contributionStep === 1) {
-      setContributionStep(2);
-      return;
-    }
-    await startPayment(values);
-  });
+  const submitContribution = (event: FormEvent<HTMLFormElement>) => {
+    void contributionForm.handleSubmit(async (values) => {
+      setActionError(null);
+      if (contributionStep === 1) {
+        setContributionStep(2);
+        return;
+      }
+      await startPayment(values);
+    })(event);
+  };
 
   return (
     <>
       <div className="min-h-dvh bg-surface px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-3xl space-y-5">
           {acceptedReturn && contributionReturn.amount !== null && (
-            <div role="status" className="rounded-2xl border border-green-100 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+            <div role="status" className="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success">
               Thank you! Your contribution of {formatPrice(contributionReturn.amount)} has been received.
             </div>
           )}
           {contributionReturn.refundRequired && contributionReturn.amount !== null && (
-            <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div role="status" className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
               Your payment of {formatPrice(contributionReturn.amount)} was captured after this pool closed. The Gifvtme team has been asked to refund it manually.
             </div>
           )}
           {contributionReturn.status === "pending_payment" && (
-            <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div role="status" className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
               Your payment is being confirmed. Refresh this page in a moment to see the updated progress.
             </div>
           )}
           {contributionReturn.status === "failed" && (
-            <div role="alert" className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-brand">
-              The payment wasn't completed. Nothing was added to this pool.
+            <div role="alert" className="rounded-2xl border border-danger/20 bg-brand-light px-4 py-3 text-sm text-brand">
+              The payment wasn&apos;t completed. Nothing was added to this pool.
             </div>
           )}
 
-          <section className="rounded-2xl bg-white p-5 shadow-sm sm:p-7">
+          <section className="rounded-2xl bg-card p-5 shadow-sm sm:p-7">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">
               {pool.wishlist_item_id ? "Item gift pool" : "Gift fund"}
             </p>
@@ -426,9 +446,9 @@ export function PoolPageClient({
           )}
 
           {initialData.contributors && initialData.contributors.length > 0 && (
-            <section className="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
+            <section className="rounded-2xl bg-card p-5 shadow-sm sm:p-6">
               <h2 className="text-base font-semibold text-ink">Contributors</h2>
-              <ul className="mt-3 divide-y divide-stone-100">
+              <ul className="mt-3 divide-y divide-line">
                 {initialData.contributors.map((contributor) => (
                   <li key={contributor.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                     {contributor.avatar_url
@@ -453,7 +473,7 @@ export function PoolPageClient({
           ) : null}
 
           {initialData.viewer_is_manager && (
-            <section className="space-y-4 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm sm:p-6">
+            <section className="space-y-4 rounded-2xl border border-line bg-card p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-base font-semibold text-ink">Manage this pool</h2>
@@ -475,7 +495,7 @@ export function PoolPageClient({
                   </Button>
                 )}
                 {initialData.creator.id === pool.created_by && status === "open" && pool.amount_raised === 0 && (
-                  <Button type="button" variant="text" fullWidth className="text-red-700 hover:bg-red-50" onClick={() => { setActionError(null); setCancelOpen(true); }}>
+                  <Button type="button" variant="text" fullWidth className="text-danger hover:bg-brand-light" onClick={() => { setActionError(null); setCancelOpen(true); }}>
                     Cancel pool
                   </Button>
                 )}
@@ -511,7 +531,7 @@ export function PoolPageClient({
                         "rounded-full border px-3 py-2.5 text-sm font-medium",
                         !isCustomAmount && chosenAmount === amount
                           ? "border-brand bg-brand-light text-brand"
-                          : "border-stone-200 bg-white text-ink hover:border-brand/40",
+                          : "border-line bg-card text-ink hover:border-brand/40",
                       )}>
                       {label}
                     </button>
@@ -524,7 +544,7 @@ export function PoolPageClient({
                       "rounded-full border px-3 py-2.5 text-sm font-medium",
                       isCustomAmount
                         ? "border-brand bg-brand-light text-brand"
-                        : "border-stone-200 bg-white text-ink hover:border-brand/40",
+                        : "border-line bg-card text-ink hover:border-brand/40",
                     )}>
                     Custom
                   </button>
@@ -542,7 +562,7 @@ export function PoolPageClient({
                   </p>
                 )}
                 {remaining < pool.min_contribution && remaining > 0 && (
-                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  <p className="rounded-xl bg-warning/10 px-3 py-2 text-sm text-warning">
                     The remaining amount is below the pool&apos;s minimum contribution.
                   </p>
                 )}
@@ -620,7 +640,7 @@ export function PoolPageClient({
           {actionError && <p role="alert" className="mt-4 text-sm text-brand">{actionError}</p>}
           <div className="mt-6 grid grid-cols-2 gap-3">
             <Button type="button" variant="ghost" disabled={isWorking} onClick={() => setCancelOpen(false)}>Keep pool</Button>
-            <Button type="button" disabled={isWorking} className="bg-red-700 hover:bg-red-800" onClick={() => void cancelPool()}>
+            <Button type="button" disabled={isWorking} className="bg-danger text-primary-foreground hover:bg-primary-hover" onClick={() => void cancelPool()}>
               {isWorking ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Cancel pool
             </Button>
           </div>

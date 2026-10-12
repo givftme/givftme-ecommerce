@@ -181,7 +181,7 @@ export function CartPageClient({ isAuthenticated }: CartPageClientProps) {
               ) : null}
 
               {hasUnavailableItems ? (
-                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mt-3 rounded-xl bg-brand-light px-4 py-3 text-sm text-danger">
                   Remove unavailable items before checkout.
                 </div>
               ) : null}
@@ -219,8 +219,8 @@ export function CartPageClient({ isAuthenticated }: CartPageClientProps) {
                     onClick={() => setActiveFilter(filter)}
                     className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                       activeFilter === filter
-                        ? "bg-brand text-white"
-                        : "bg-white text-muted hover:bg-brand-light hover:text-brand"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-card text-muted hover:bg-brand-light hover:text-brand"
                     }`}
                   >
                     {filter}
@@ -246,7 +246,7 @@ export function CartPageClient({ isAuthenticated }: CartPageClientProps) {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-16 z-40 border-t border-stone-100 bg-white p-4 shadow-lg md:hidden">
+      <div className="fixed inset-x-0 bottom-16 z-40 border-t border-line bg-card p-4 shadow-lg md:hidden">
         <Button
           type="button"
           fullWidth

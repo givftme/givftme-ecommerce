@@ -8,7 +8,7 @@ export function CreateOccasionStepper({ step }: { step: 1 | 2 | 3 }) {
           key={value}
           className={cn(
             "h-2.5 w-2.5 rounded-full transition-colors",
-            step === value ? "bg-brand" : "bg-stone-200"
+            step === value ? "bg-brand" : "bg-line"
           )}
         />
       ))}

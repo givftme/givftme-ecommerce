@@ -12,6 +12,7 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 | `ui/Form.tsx` | Form field composition |
 | `ui/PriceDisplay.tsx` | Price presentation |
 | `cart/CartContext.tsx` | Cart state and persistence |
+| `layout/ThemeSelector.tsx` | Accessible system, light, and dark appearance control |
 | `layout/PublicPageShell.tsx` | Cart and toast providers for public pages |
 | `checkout/CheckoutForm.tsx` | Checkout interaction and price change confirmation |
 | `pools/PoolPageClient.tsx`, `pools/PoolProgress.tsx` | Public pool contribution and management experience |
@@ -20,6 +21,11 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 ## Conventions
 
 You can compose the existing primitives and merge class overrides with `cn()` from `lib/utils.ts`. Existing files use PascalCase names, so you can check the actual import path before adding a primitive.
+
+Use the semantic CSS variables from `app/globals.css` for surfaces, text, borders,
+and filled controls so they respond to the active theme. The public Navbar exposes
+`ThemeSelector`; the root layout owns `ThemeProvider`. Inter is the interface font
+and Belleza is reserved for editorial display text.
 
 You can reuse shared domain validation with React Hook Form and Zod resolvers. Keep interactive state in the smallest practical client component. One responsive component handles both mobile and desktop layouts.
 

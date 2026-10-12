@@ -20,7 +20,7 @@ export default async function SecurityPage() {
       <section className="mt-8" aria-labelledby="connected-methods">
         <h2 id="connected-methods" className="text-base font-semibold text-ink">Connected methods</h2>
         {methods.length ? (
-          <ul className="mt-4 divide-y divide-stone-100">
+          <ul className="mt-4 divide-y divide-line">
             {methods.map(method => (
               <li key={method.provider} className="py-5 first:pt-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">

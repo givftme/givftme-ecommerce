@@ -16,10 +16,10 @@ export function FlashSaleBanner({ saleEndTime, maxDiscountPercent }: FlashSaleBa
   }
 
   return (
-    <section className="bg-brand text-white">
+    <section className="bg-primary text-primary-foreground">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-8">
         <div className="flex items-center gap-3 text-sm font-semibold sm:text-base">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-brand">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-card text-brand">
             <Zap className="h-5 w-5" fill="currentColor" />
           </span>
           <span>

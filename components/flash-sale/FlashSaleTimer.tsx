@@ -102,7 +102,7 @@ export function FlashSaleTimer({
       ref={timerRef}
       className={cn(
         !disableUrgencyColor &&
-          (isUrgent ? "text-red-600" : isWarning ? "text-amber-600" : undefined),
+          (isUrgent ? "text-danger" : isWarning ? "text-warning" : undefined),
         className
       )}
     >

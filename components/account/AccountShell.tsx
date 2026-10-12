@@ -99,9 +99,9 @@ export function AccountShell({
             <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Back to Account
           </Link>
         )}
-        <div className="rounded-2xl border border-stone-100 bg-white lg:flex">
-          <aside className={cn("min-w-0 p-5 md:p-6 lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-stone-100", !isHub && "hidden")}>
-            <div className="flex items-center gap-3 border-b border-stone-100 pb-6">
+        <div className="rounded-2xl border border-line bg-card lg:flex">
+          <aside className={cn("min-w-0 p-5 md:p-6 lg:flex lg:w-60 lg:shrink-0 lg:flex-col lg:border-r lg:border-line", !isHub && "hidden")}>
+            <div className="flex items-center gap-3 border-b border-line pb-6">
               <AccountAvatar name={name} userId={userId} avatarUrl={avatarUrl} size={isHub ? "md" : "sm"} />
               <div className="min-w-0">
                 <p className={cn("break-words font-semibold text-ink", isHub ? "text-lg" : "text-base")}>{name}</p>
@@ -136,7 +136,7 @@ export function AccountShell({
                 </section>
               ))}
             </nav>
-            <div className="mt-auto border-t border-stone-100 pt-5"><SignOutButton /></div>
+            <div className="mt-auto border-t border-line pt-5"><SignOutButton /></div>
           </aside>
           <div className={cn("min-w-0 flex-1 p-5 md:p-8 lg:p-10", isHub && "hidden lg:block")}>
             {children}

@@ -4,6 +4,7 @@ import * as React from "react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/ui/Toast";
 import { AccountShell } from "./AccountShell";
 
 const auth = vi.hoisted(() => ({ signOut: vi.fn(), getSession: vi.fn() }));
@@ -11,6 +12,8 @@ const route = vi.hoisted(() => ({ pathname: "/account" }));
 vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth }) }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
+vi.mock("@gsap/react", () => ({ useGSAP: () => undefined }));
+vi.mock("gsap", () => ({ gsap: { registerPlugin: vi.fn() } }));
 
 let container: HTMLDivElement;
 let root: Root;
@@ -45,7 +48,24 @@ async function renderShell() {
     name: "Ada", email: "ada@example.test", avatarUrl: null,
     children: React.createElement("h1", null, "Account content"),
   };
-  await act(async () => root.render(React.createElement(AccountShell, props)));
+  await act(async () => root.render(
+    React.createElement(ToastProvider, null, React.createElement(AccountShell, props)),
+  ));
+}
+
+async function openSignOutConfirmation() {
+  const trigger = [...container.querySelectorAll("button")].find(button =>
+    button.textContent?.trim() === "Sign out",
+  );
+  expect(trigger).toBeDefined();
+  await act(async () => trigger?.click());
+
+  const dialog = document.querySelector('[role="dialog"]');
+  const confirm = [...(dialog?.querySelectorAll("button") ?? [])].find(button =>
+    button.textContent?.trim() === "Sign out",
+  );
+  expect(confirm).toBeDefined();
+  return confirm as HTMLButtonElement;
 }
 
 describe("Account navigation", () => {
@@ -53,20 +73,26 @@ describe("Account navigation", () => {
     await renderShell();
     const links = [...container.querySelectorAll("nav a")];
     expect(links.map(link => link.getAttribute("href"))).toEqual([
-      "/account/profile", "/account/orders", "/account/notifications", "/account/security",
+      "/account/profile", "/account/addresses", "/account/orders", "/dashboard/pools",
     ]);
     expect(container.textContent).toContain("ada@example.test");
-    expect(container.querySelector("button")?.textContent).toContain("Sign out");
+    expect([...container.querySelectorAll("button")].some(button =>
+      button.textContent?.includes("Sign out"),
+    )).toBe(true);
     expect(container.textContent).not.toMatch(/delete account/i);
     expect(container.querySelector('[aria-current="page"]')).toBeNull();
   });
 
-  it.each(["profile", "orders", "orders/owned-order", "notifications", "security"])(
-    "marks the parent section active on %s and offers a return to Account", async path => {
-      route.pathname = `/account/${path}`;
+  it.each([
+    { pathname: "/account/profile", href: "/account/profile" },
+    { pathname: "/account/addresses", href: "/account/addresses" },
+    { pathname: "/account/orders", href: "/account/orders" },
+    { pathname: "/dashboard/pools", href: "/dashboard/pools" },
+  ])("marks $pathname active and offers a return to Account", async ({ pathname, href }) => {
+      route.pathname = pathname;
       await renderShell();
       expect(container.querySelector('[aria-current="page"]')?.getAttribute("href"))
-        .toBe(`/account/${path.split("/")[0]}`);
+        .toBe(href);
       expect(container.querySelector('a[href="/account"]')?.textContent).toContain("Back to Account");
     },
   );
@@ -77,7 +103,7 @@ describe("Account sign out", () => {
     let finish!: (value: { error: null }) => void;
     auth.signOut.mockReturnValue(new Promise(resolve => { finish = resolve; }));
     await renderShell();
-    const button = container.querySelector("button")!;
+    const button = await openSignOutConfirmation();
     await act(async () => { button.click(); button.click(); });
     expect(auth.signOut).toHaveBeenCalledTimes(1);
     expect(button.disabled).toBe(true);
@@ -91,9 +117,9 @@ describe("Account sign out", () => {
   it("keeps failed sign out retryable without navigating", async () => {
     auth.signOut.mockResolvedValueOnce({ error: new Error("Offline") });
     await renderShell();
-    const button = container.querySelector("button")!;
+    const button = await openSignOutConfirmation();
     await act(async () => button.click());
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain("Couldn't sign out");
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain("Couldn't sign out");
     expect(button.disabled).toBe(false);
     expect(replace).not.toHaveBeenCalled();
     await act(async () => button.click());
@@ -106,8 +132,9 @@ describe("Account sign out", () => {
   ])("does not report success when session removal is unconfirmed", async result => {
     auth.getSession.mockResolvedValue(result);
     await renderShell();
-    await act(async () => container.querySelector("button")!.click());
+    const button = await openSignOutConfirmation();
+    await act(async () => button.click());
     expect(replace).not.toHaveBeenCalled();
-    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(document.querySelector('[role="alert"]')).not.toBeNull();
   });
 });

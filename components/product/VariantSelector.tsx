@@ -103,15 +103,15 @@ export function VariantSelector({
                     "inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition-colors",
                     selected
                       ? "border-brand bg-brand-light text-brand"
-                      : "border-stone-200 bg-white text-ink hover:border-brand/40",
+                      : "border-line bg-card text-ink hover:border-brand/40",
                     !available &&
-                      "cursor-not-allowed border-stone-100 bg-surface text-muted line-through"
+                      "cursor-not-allowed border-line bg-surface text-muted line-through"
                   )}
                 >
                   {option.colorHex ? (
                     <span
                       aria-hidden="true"
-                      className="h-4 w-4 rounded-full border border-stone-200"
+                      className="h-4 w-4 rounded-full border border-line"
                       style={{ backgroundColor: option.colorHex }}
                     />
                   ) : null}

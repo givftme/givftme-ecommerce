@@ -24,7 +24,7 @@ function SharedItemImage({ item }: { item: WishlistItem }) {
   if (!item.image_url || failed) {
     return (
       <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-surface">
-        <Gift className="h-7 w-7 text-stone-300" strokeWidth={1.5} />
+        <Gift className="h-7 w-7 text-muted/40" strokeWidth={1.5} />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export function SharedWishlistItem({
     <article
       ref={ref}
       className={cn(
-        "rounded-2xl border border-stone-100 bg-white p-4 shadow-sm",
+        "rounded-2xl border border-line bg-card p-4 shadow-sm",
         (claimed || unavailable) && "opacity-50"
       )}
     >
@@ -125,7 +125,7 @@ export function SharedWishlistItem({
                 : `From ${domain || "store"}`}
             </span>
             {!claimed && !unavailable && (
-              <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+              <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
                 Available
               </span>
             )}
@@ -141,7 +141,7 @@ export function SharedWishlistItem({
         {claimed ? (
           <ClaimedBadge className="shrink-0" />
         ) : unavailable ? (
-          <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
+          <span className="shrink-0 rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-muted">
             No longer available
           </span>
         ) : item.gifting_type === "group" && item.group_pool_token ? (

@@ -212,7 +212,7 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
       </header>
 
       {addresses.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-stone-100 bg-white px-4 py-12 text-center shadow-sm">
+        <div className="mt-8 rounded-2xl border border-line bg-card px-4 py-12 text-center shadow-sm">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
             <span className="relative flex h-12 w-12 items-center justify-center">
               <Gift aria-hidden="true" className="absolute left-0 top-0 h-8 w-8 text-brand" strokeWidth={1.5} />
@@ -226,7 +226,7 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
       ) : (
         <div ref={listRef} className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
           {addresses.map((address) => (
-            <article key={address.id} data-address-card data-address-id={address.id} className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+            <article key={address.id} data-address-card data-address-id={address.id} className="rounded-2xl border border-line bg-card p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -246,7 +246,7 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
                     <summary aria-label={`Actions for ${address.label || "saved"} address`} className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
                       <MoreVertical aria-hidden="true" className="h-5 w-5" />
                     </summary>
-                    <div className="absolute right-0 top-11 z-10 min-w-44 rounded-xl border border-stone-100 bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 top-11 z-10 min-w-44 rounded-xl border border-line bg-card p-1 shadow-lg">
                       <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openEditSheet(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
                         <Pencil aria-hidden="true" className="h-4 w-4" />Edit
                       </button>
@@ -255,7 +255,7 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
                           Set as default
                         </button>
                       )}
-                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setDeleteTarget(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-red-700 hover:bg-red-50">
+                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setDeleteTarget(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-danger hover:bg-brand-light">
                         <Trash2 aria-hidden="true" className="h-4 w-4" />Delete
                       </button>
                     </div>
@@ -337,7 +337,7 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
           </DialogHeader>
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={Boolean(deletingId)}>Cancel</Button>
-            <button type="button" onClick={() => void removeAddress()} disabled={Boolean(deletingId)} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-red-600 px-6 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:pointer-events-none disabled:opacity-50">
+            <button type="button" onClick={() => void removeAddress()} disabled={Boolean(deletingId)} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-danger px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover disabled:pointer-events-none disabled:opacity-50">
               {deletingId ? <><Loader2 className="h-4 w-4 animate-spin" />Deleting…</> : "Delete"}
             </button>
           </div>

@@ -72,7 +72,7 @@ function sortItems(items: WishlistItem[]) {
 
 function EmptySection({ copy }: { copy: string }) {
   return (
-    <div className="rounded-2xl border border-stone-100 bg-white px-4 py-6 text-center shadow-sm">
+    <div className="rounded-2xl border border-line bg-card px-4 py-6 text-center shadow-sm">
       <p className="text-sm text-muted">{copy}</p>
     </div>
   );
@@ -385,7 +385,7 @@ export function OccasionDetailClient({
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-stone-100 bg-white p-2 shadow-lg">
+            <div className="absolute right-0 top-12 z-20 w-48 rounded-2xl border border-line bg-card p-2 shadow-lg">
               {!archived && (
                 <button
                   type="button"
@@ -415,7 +415,7 @@ export function OccasionDetailClient({
                     setMenuOpen(false);
                     setDeleteOpen(true);
                   }}
-                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-danger hover:bg-brand-light"
                 >
                   Delete occasion
                 </button>
@@ -441,7 +441,7 @@ export function OccasionDetailClient({
         )}
 
         {!archived && allGifted && (
-          <div className="mt-5 rounded-2xl border border-stone-100 bg-white px-4 py-3 text-center text-sm font-medium text-ink shadow-sm">
+          <div className="mt-5 rounded-2xl border border-line bg-card px-4 py-3 text-center text-sm font-medium text-ink shadow-sm">
             Everything on this list has been gifted! 🎉
           </div>
         )}

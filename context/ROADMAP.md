@@ -1,7 +1,7 @@
 # Gifvtme — Build Status
 
-This checkout did not include a prior roadmap. This file records the feature
-implemented in this change without inferring status for unrelated modules.
+This checkout did not include a prior roadmap. This file records implemented
+features without inferring status for unrelated modules.
 
 ## Implemented
 
@@ -15,6 +15,10 @@ implemented in this change without inferring status for unrelated modules.
   authenticated Flutterwave contributions with idempotent reservations, live
   progress, public pool pages, receiver/creator management, receipt and status
   emails, and manual payout tracking.
+- **Application design system**: app-wide light, dark, and system appearance,
+  Inter interface typography with Belleza display headings, semantic color and
+  surface tokens, accessible navigation controls, and responsive styling across
+  the existing routes and shared components.
 
 ## Operational follow-up
 

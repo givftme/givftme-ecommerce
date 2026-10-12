@@ -30,9 +30,9 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const variantClasses: Record<ToastVariant, string> = {
-  default: "border-stone-100 bg-white text-ink",
-  danger: "border-red-100 bg-red-50 text-ink",
-  success: "border-green-100 bg-green-50 text-ink",
+  default: "border-line bg-card text-ink",
+  danger: "border-danger/20 bg-brand-light text-ink",
+  success: "border-success/20 bg-success/10 text-ink",
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -78,7 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 type="button"
                 aria-label="Dismiss message"
                 onClick={() => dismiss(item.id)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-white hover:text-ink"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-card hover:text-ink"
               >
                 <X className="h-4 w-4" />
               </button>

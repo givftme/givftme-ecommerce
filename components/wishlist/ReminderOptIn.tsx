@@ -66,7 +66,7 @@ export function ReminderOptIn({
 
   return (
     <>
-      <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-light text-brand">
             <Bell className="h-5 w-5" />

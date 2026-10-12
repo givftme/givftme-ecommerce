@@ -32,7 +32,7 @@ export default async function PurchaseConfirmationPage({
 
   return (
     <main className="min-h-dvh bg-surface pb-10">
-      <div className="mx-auto min-h-dvh max-w-md bg-white px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-6 md:shadow-sm">
+      <div className="mx-auto min-h-dvh max-w-md bg-card px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-line md:p-6 md:shadow-sm">
         <header className="mb-6 grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
           <Link
             href={`/w/${id}/item/${item.id}`}

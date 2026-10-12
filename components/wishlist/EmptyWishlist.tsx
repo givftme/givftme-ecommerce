@@ -42,7 +42,7 @@ export function EmptyWishlist({
   return (
     <div
       ref={ref}
-      className="flex flex-col items-center gap-2.5 rounded-3xl bg-white px-5 py-9 text-center"
+      className="flex flex-col items-center gap-2.5 rounded-3xl bg-card px-5 py-9 text-center"
     >
       <Image
         src="/images/givftme-wave.png"

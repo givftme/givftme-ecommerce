@@ -106,7 +106,7 @@ export function DiasporaCard() {
               className={cx(
                 "h-[38px] min-w-[54px] cursor-pointer rounded-full border-0 px-3.5 text-sm font-semibold transition-colors motion-reduce:transition-none",
                 currency === code
-                  ? "bg-white text-red"
+                  ? "bg-card text-red"
                   : "bg-transparent text-white hover:bg-white/15",
               )}
             >
@@ -119,11 +119,11 @@ export function DiasporaCard() {
       <div
         // The first row restates the choice made above, so announce the swap.
         aria-live="polite"
-        className="relative z-1 flex flex-col rounded-card-lg bg-white p-[22px] text-ink"
+        className="relative z-1 flex flex-col rounded-card-lg bg-card p-[22px] text-ink"
       >
         <RouteRow
           icon={CreditCard}
-          iconClass="bg-blue-50 text-blue"
+          iconClass="bg-blue/10 text-blue"
           title={active.paid}
           sub={active.city}
         />
@@ -137,7 +137,7 @@ export function DiasporaCard() {
         <DashLine />
         <RouteRow
           icon={MapPin}
-          iconClass="bg-green-50 text-green"
+          iconClass="bg-success/10 text-success"
           title="Delivered to Mum"
           sub="Surulere, Lagos · photo sent"
         />

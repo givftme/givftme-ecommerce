@@ -54,7 +54,7 @@ export default async function OccasionPage({
           collection_count: collections.length,
         }}
       />
-      <section className="relative h-[40vh] min-h-[320px] overflow-hidden bg-ink md:h-[50vh]">
+      <section className="relative h-[40vh] min-h-[320px] overflow-hidden bg-ink-deep md:h-[50vh]">
         {occasion.coverImageUrl ? (
           <Image
             src={occasion.coverImageUrl}

@@ -307,12 +307,12 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
             </p>
           ) : null}
 
-          <div className="flex items-center justify-between rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between rounded-2xl border border-line bg-card p-4 shadow-sm">
             <span className="text-sm font-semibold text-ink">Quantity</span>
             <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={99} />
           </div>
 
-          <div className="rounded-2xl border border-stone-100 bg-white p-4 text-sm text-muted shadow-sm">
+          <div className="rounded-2xl border border-line bg-card p-4 text-sm text-muted shadow-sm">
             <p>
               Estimated delivery:{" "}
               <span className="font-semibold text-ink">
@@ -390,7 +390,7 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
             </Link>
           </div>
 
-          <dl className="grid gap-2 border-t border-stone-100 pt-5 text-sm">
+          <dl className="grid gap-2 border-t border-line pt-5 text-sm">
             {product.baseSku || selectedVariant?.sku ? (
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">SKU</dt>
@@ -419,9 +419,9 @@ export function ProductDetail({ product, reviews, currentUserId }: ProductDetail
         </div>
       </section>
 
-      <section id="reviews" className="border-t border-stone-100 py-12">
+      <section id="reviews" className="border-t border-line py-12">
         <div className="mx-auto max-w-7xl px-4 lg:px-8">
-          <div className="flex gap-2 border-b border-stone-100">
+          <div className="flex gap-2 border-b border-line">
             {[
               { id: "description", label: "Description" },
               { id: "reviews", label: `Reviews (${reviewsSummary.count})` },

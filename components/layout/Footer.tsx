@@ -35,7 +35,7 @@ const footerLinks = [
 
 export function Footer() {
   return (
-    <footer className="bg-white">
+    <footer className="bg-card">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 py-12 sm:grid-cols-4 lg:px-8">
         {perks.map((perk) => (
           <div key={perk.title} className="flex flex-col items-start gap-3">
@@ -69,7 +69,7 @@ export function Footer() {
                 id="newsletter-email"
                 type="email"
                 placeholder="Enter your email..."
-                className="h-11 w-full rounded-full border border-stone-200 bg-white px-5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="h-11 w-full rounded-full border border-line bg-card px-5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
               <Button type="submit" variant="filled" size="md">
                 Search
@@ -79,7 +79,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-stone-100">
+      <div className="border-t border-line">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-muted sm:flex-row lg:px-8">
           <Image src="/logo.png" alt="Gifvtme" width={110} height={37} />
           <ul className="flex flex-wrap items-center justify-center gap-6">

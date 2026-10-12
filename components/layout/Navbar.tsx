@@ -12,9 +12,7 @@ import {
   ChevronUp,
   Clock,
   Home,
-  Info,
   ListChecks,
-  Mail,
   Menu,
   Search,
   ShoppingBag,
@@ -26,6 +24,7 @@ import {
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { FlashSaleNavbarStrip } from "@/components/flash-sale/FlashSaleNavbarStrip";
+import { ThemeSelector } from "@/components/layout/ThemeSelector";
 import { cn } from "@/lib/utils";
 import { withRedirect } from "@/lib/auth/redirect";
 
@@ -128,7 +127,7 @@ export function Navbar({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b bg-white/90 backdrop-blur-[14px] backdrop-saturate-150 transition-colors duration-300",
+        "sticky top-0 z-50 border-b bg-card/90 backdrop-blur-[14px] backdrop-saturate-150 transition-colors duration-300",
         isScrolled ? "border-line" : "border-transparent"
       )}
     >
@@ -159,12 +158,12 @@ export function Navbar({
               type="search"
               defaultValue={searchQuery}
               placeholder="Electronic blender"
-              className="h-11 w-full rounded-full border border-line bg-white pl-5 pr-12 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+              className="h-11 w-full rounded-full border border-line bg-card pl-5 pr-12 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
             />
             <button
               type="submit"
               aria-label="Search"
-              className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white transition-colors hover:bg-brand-dark"
+              className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover"
             >
               <Search className="h-4 w-4" />
             </button>
@@ -202,11 +201,11 @@ export function Navbar({
               <Link
                 ref={desktopCartRef}
                 href="/cart"
-                className="hidden h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark md:inline-flex"
+                className="hidden h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover md:inline-flex"
               >
                 <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
                 Cart
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-semibold text-brand">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-card px-1.5 text-[11px] font-semibold text-brand">
                   {cartCount}
                 </span>
               </Link>
@@ -219,7 +218,7 @@ export function Navbar({
               >
                 <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
                 {cartCount > 0 && (
-                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] text-white">
+                  <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
                     {cartCount}
                   </span>
                 )}
@@ -228,7 +227,7 @@ export function Navbar({
           ) : (
             <Link
               href={loginHref}
-              className="inline-flex h-11 items-center rounded-full bg-brand px-5 text-sm font-medium text-white transition-colors hover:bg-brand-dark max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
+              className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
             >
               Get started
             </Link>
@@ -240,7 +239,7 @@ export function Navbar({
             aria-expanded={isMenuOpen}
             aria-controls="nav-drawer"
             onClick={() => setIsMenuOpen((open) => !open)}
-            className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-white text-ink md:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-line bg-card text-ink md:hidden"
           >
             {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -270,26 +269,29 @@ export function Navbar({
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={() => setIsRecentlyViewedOpen((open) => !open)}
-            className={cn(underline, "after:scale-x-0 flex items-center gap-2 text-[14.5px] font-medium text-ink")}
-          >
-            <Clock className="h-4 w-4 text-brand" />
-            Recently Viewed
-            {isRecentlyViewedOpen ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
-            )}
-          </button>
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setIsRecentlyViewedOpen((open) => !open)}
+              className={cn(underline, "after:scale-x-0 flex items-center gap-2 text-[14.5px] font-medium text-ink")}
+            >
+              <Clock className="h-4 w-4 text-brand" />
+              Recently Viewed
+              {isRecentlyViewedOpen ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </button>
+            <ThemeSelector showLabel={false} />
+          </div>
         </div>
       </nav>
 
       <div
         id="nav-drawer"
         className={cn(
-          "flex-col border-t border-line bg-white px-5.5 pt-1.5 pb-5 md:hidden",
+          "flex-col border-t border-line bg-card px-5.5 pt-1.5 pb-5 md:hidden",
           isMenuOpen ? "flex" : "hidden"
         )}
       >
@@ -316,10 +318,14 @@ export function Navbar({
           <User className="h-5 w-5 text-brand" />
           {accountSecondaryLabel}
         </Link>
+        <div className="flex items-center justify-between gap-4 border-b border-line py-3.5">
+          <span className="font-medium text-ink">Appearance</span>
+          <ThemeSelector showLabel={false} />
+        </div>
       </div>
 
       {isMobileSearchOpen ? (
-        <div className="fixed inset-0 z-60 bg-white md:hidden">
+        <div className="fixed inset-0 z-60 bg-card md:hidden">
           <div className="flex items-center gap-3 border-b border-line px-4 py-4">
             <form
               action="/search"
@@ -338,7 +344,7 @@ export function Navbar({
                 type="search"
                 defaultValue={searchQuery}
                 placeholder="Electronic blender"
-                className="h-11 w-full rounded-full border border-line bg-white px-5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="h-11 w-full rounded-full border border-line bg-card px-5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
             </form>
             <button

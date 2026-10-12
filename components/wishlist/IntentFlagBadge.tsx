@@ -30,7 +30,7 @@ export function IntentFlagBadge({ className }: { className?: string }) {
     <span
       ref={ref}
       className={cn(
-        "inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700",
+        "inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning",
         className
       )}
     >

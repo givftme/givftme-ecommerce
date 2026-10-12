@@ -78,7 +78,7 @@ export function GiftClaimedSuccess({
   }, [item.id, showReminder]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-white px-4 py-10">
+    <main className="flex min-h-dvh items-center justify-center bg-card px-4 py-10">
       <div className="w-full max-w-md space-y-6 text-center">
         <div
           ref={iconRef}
@@ -105,7 +105,7 @@ export function GiftClaimedSuccess({
           </p>
         </section>
 
-        <div className="mx-auto flex max-w-xs items-center gap-3 rounded-xl border border-stone-100 bg-white p-3 text-left shadow-sm">
+        <div className="mx-auto flex max-w-xs items-center gap-3 rounded-xl border border-line bg-card p-3 text-left shadow-sm">
           {item.image_url ? (
             <img
               src={item.image_url}

@@ -34,7 +34,7 @@ export function PaymentMethodSelector({
   disabled,
 }: PaymentMethodSelectorProps) {
   return (
-    <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
       <h2 className="text-sm font-semibold text-ink">Payment</h2>
       <p className="mt-1 text-xs leading-5 text-muted">
         All options are processed securely through Flutterwave.
@@ -50,7 +50,7 @@ export function PaymentMethodSelector({
                 "flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-colors",
                 selected
                   ? "border-brand bg-brand-light"
-                  : "border-stone-100 bg-white hover:bg-brand-light"
+                  : "border-line bg-card hover:bg-brand-light"
               )}
             >
               <input
@@ -65,7 +65,7 @@ export function PaymentMethodSelector({
               <span
                 className={cn(
                   "flex h-10 w-10 items-center justify-center rounded-full",
-                  selected ? "bg-white text-brand" : "bg-surface text-muted"
+                  selected ? "bg-card text-brand" : "bg-surface text-muted"
                 )}
               >
                 <Icon className="h-5 w-5" />

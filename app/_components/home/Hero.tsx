@@ -82,7 +82,7 @@ export function Hero() {
           >
             {TRUST.map(({ icon, label }) => (
               <li key={label} className="inline-flex items-center gap-1.5">
-                <Icon as={icon} size={16} className="text-green" />
+                <Icon as={icon} size={16} className="text-success" />
                 {label}
               </li>
             ))}
