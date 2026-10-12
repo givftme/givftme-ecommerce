@@ -5,7 +5,7 @@ import { readJson } from "@/lib/api/response";
 const analyticsEventSchema = z.object({
   event: z.string().min(1),
   properties: z
-    .record(z.string(), z.union([z.boolean(), z.number(), z.string(), z.null()]))
+    .record(z.string(), z.union([z.boolean(), z.number(), z.string(), z.array(z.string()), z.null()]))
     .optional(),
 });
 

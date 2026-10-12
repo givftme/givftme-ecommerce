@@ -1,4 +1,4 @@
-type AnalyticsProperties = Record<string, boolean | number | string | null | undefined>;
+type AnalyticsProperties = Record<string, boolean | number | string | string[] | null | undefined>;
 
 const ANALYTICS_ENDPOINT = "/api/analytics";
 

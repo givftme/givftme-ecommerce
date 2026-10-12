@@ -10,18 +10,18 @@ export type OrderStatus =
   | "refunded";
 
 export type OrderStatusGroup = "active" | "completed" | "cancelled";
+export type OrderDisplayStatus = OrderStatus | "payment_expired";
 
 export const ACTIVE_STATUSES: OrderStatus[] = [
+  "pending_payment",
   "confirmed",
   "under_review",
   "forwarded",
   "shipped",
 ];
 export const COMPLETED_STATUSES: OrderStatus[] = ["delivered"];
-export const CANCELLED_STATUSES: OrderStatus[] = ["cancelled", "refunded"];
+export const CANCELLED_STATUSES: OrderStatus[] = ["cancelled", "refunded", "payment_failed"];
 
-// pending_payment/payment_failed orders don't appear in the tracking list —
-// they're still being resolved on /checkout/processing or /checkout/failed.
 export const STATUS_GROUPS: Record<OrderStatusGroup, OrderStatus[]> = {
   active: ACTIVE_STATUSES,
   completed: COMPLETED_STATUSES,
@@ -46,13 +46,18 @@ export function statusGroupOf(status: OrderStatus): OrderStatusGroup | null {
 export interface OrderCardItem {
   product_title: string;
   product_image_url: string | null;
+  catalog_product_id: string;
+  quantity: number;
 }
 
 export interface OrderCardData {
   id: string;
   status: OrderStatus;
+  display_status: OrderDisplayStatus;
   created_at: string;
   total_amount: number;
+  estimated_delivery: string | null;
+  unreviewed_product_id: string | null;
   items: OrderCardItem[];
 }
 

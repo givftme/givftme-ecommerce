@@ -14,7 +14,7 @@ export default async function AccountLayout({ children }: { children: ReactNode 
   if (error) throw new Error("Couldn't load your account. Please try again.");
   return (
     <PageWrapper isAuthenticated>
-      <AccountShell name={profile?.full_name || "Your account"} email={user.email || ""} avatarUrl={profile?.avatar_url || null}>
+      <AccountShell userId={user.id} name={profile?.full_name || "Your account"} email={user.email || ""} avatarUrl={profile?.avatar_url || null}>
         {children}
       </AccountShell>
     </PageWrapper>

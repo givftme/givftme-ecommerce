@@ -1,8 +1,60 @@
 "use server";
 
+import { z } from "zod";
 import { validateAuthEnv } from "@/lib/env";
-import { isValidDeleteConfirmation } from "@/lib/account/validation";
+import {
+  isValidDeleteConfirmation,
+  profileSchema,
+} from "@/lib/account/validation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+
+export type AccountActionResult =
+  | { success: true }
+  | { success: false; error: string };
+
+export async function updateProfileAction(input: unknown): Promise<AccountActionResult> {
+  const parsed = profileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Check your details and try again." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "You need to sign in first." };
+  }
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      full_name: parsed.data.full_name,
+      phone: parsed.data.phone || null,
+      default_thank_you_msg: parsed.data.default_thank_you_msg || null,
+    })
+    .eq("id", user.id);
+
+  return error
+    ? { success: false, error: "Couldn't save changes. Try again." }
+    : { success: true };
+}
+
+export async function requestEmailChangeAction(email: string): Promise<AccountActionResult> {
+  const parsedEmail = z.string().trim().email().toLowerCase().safeParse(email);
+  if (!parsedEmail.success) {
+    return { success: false, error: "Enter a valid email address." };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { success: false, error: "You need to sign in first." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ email: parsedEmail.data });
+  return error
+    ? { success: false, error: "Couldn't request an email change. Try again." }
+    : { success: true };
+}
 
 // Orders in these statuses represent in-flight fulfillment work the internal
 // ops team (Retool) is tracking — deleting the account would cascade-delete
@@ -63,5 +115,5 @@ export async function deleteAccountAction(confirmation: string): Promise<DeleteA
 
   await supabase.auth.signOut();
 
-  return { success: true, redirectTo: "/?deleted=true" };
+  return { success: true, redirectTo: "/" };
 }

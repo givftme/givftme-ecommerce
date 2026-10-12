@@ -10,6 +10,8 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 |---|---|
 | `../../lib/api/response.ts` | `readJson` and `jsonError` helpers |
 | `../../lib/wishlist/server.ts` | Shared API authentication and wishlist ownership helpers |
+| `addresses/route.ts`, `addresses/[id]/route.ts` | Owner-scoped address book CRUD and default promotion |
+| `orders/route.ts` | Authenticated order history tabs and pagination |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |
 | `../../vercel.json` | Configured cron paths and schedules |
@@ -31,6 +33,10 @@ Admin handlers under `admin/` authorize with `getAdminApiUser()` from `lib/admin
 Scheduled jobs and payment webhooks use their own authentication contracts. Their access checks are distinct from a customer session. A scheduled endpoint existing in this directory does not mean it is configured in `vercel.json`.
 
 Checkout and external purchase marking remain separate flows. You can consult root AGENTS.md and inspect the relevant handler and tests before changing either contract.
+
+Account APIs authenticate inside each handler. Address rows are protected by
+their own RLS policy; keep user ownership in every query. `/api/orders` accepts
+`tab=active|completed|cancelled` and a one-based `page` value.
 
 ## Related context
 
