@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/components/ui/Toast";
+import {
+  createPoolSchema,
+  type CreatePoolFormValues,
+  type CreatePoolInput,
+} from "@/lib/pools/validation";
 import type { WishlistItem } from "@/lib/wishlist/types";
 import { formatPrice } from "@/lib/utils";
 
@@ -33,47 +40,62 @@ export function PoolCreationDialog({
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const selectedItem = initialItem?.status === "available" ? initialItem : null;
-  const [title, setTitle] = useState(initialItem?.title ?? `${receiverName}'s Gift Fund`);
-  const [targetAmount, setTargetAmount] = useState(String(Math.max(1500, Math.round(initialItem?.price ?? 1500))));
-  const [minimum, setMinimum] = useState("1500");
-  const [message, setMessage] = useState("");
-  const [contributorsVisible, setContributorsVisible] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const form = useForm<CreatePoolFormValues, unknown, CreatePoolInput>({
+    resolver: zodResolver(createPoolSchema),
+    mode: "onChange",
+    defaultValues: {
+      wishlist_id: wishlistId,
+      wishlist_item_id: selectedItem?.id,
+      receiver_id: receiverId,
+      title: initialItem?.title ?? `${receiverName}'s Gift Fund`,
+      target_amount: Math.max(1500, Math.round(initialItem?.price ?? 1500)),
+      min_contribution: 1500,
+      message: "",
+      contributors_visible: true,
+    },
+  });
+  const title = form.watch("title") ?? "";
+  const targetAmount = form.watch("target_amount");
+  const minimum = form.watch("min_contribution");
+  const message = form.watch("message") ?? "";
+  const error = form.formState.errors.root?.server?.message;
+  const { reset } = form;
 
   useEffect(() => {
     if (!open) return;
     setStep(1);
-    setTitle(initialItem?.title ?? `${receiverName}'s Gift Fund`);
-    setTargetAmount(String(Math.max(1500, Math.round(initialItem?.price ?? 1500))));
-    setMinimum("1500");
-    setMessage("");
-    setContributorsVisible(true);
-    setError(null);
-  }, [initialItem, open, receiverName]);
+    reset({
+      wishlist_id: wishlistId,
+      wishlist_item_id: selectedItem?.id,
+      receiver_id: receiverId,
+      title: initialItem?.title ?? `${receiverName}'s Gift Fund`,
+      target_amount: Math.max(1500, Math.round(initialItem?.price ?? 1500)),
+      min_contribution: 1500,
+      message: "",
+      contributors_visible: true,
+    });
+  }, [initialItem, open, receiverId, receiverName, reset, selectedItem?.id, wishlistId]);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
+  const submit = async (values: CreatePoolInput) => {
+    form.clearErrors("root.server");
     if (step === 1) {
       setStep(2);
       return;
     }
 
-    setIsSubmitting(true);
     try {
       const response = await fetch("/api/pools", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          wishlist_id: wishlistId,
-          wishlist_item_id: selectedItem?.id,
-          receiver_id: receiverId,
-          title: title.trim() || undefined,
-          target_amount: Number(targetAmount),
-          min_contribution: Number(minimum),
-          message: message.trim() || undefined,
-          contributors_visible: contributorsVisible,
+          wishlist_id: values.wishlist_id,
+          wishlist_item_id: values.wishlist_item_id,
+          receiver_id: values.receiver_id,
+          title: values.title?.trim() || undefined,
+          target_amount: values.target_amount,
+          min_contribution: values.min_contribution,
+          message: values.message?.trim() || undefined,
+          contributors_visible: values.contributors_visible,
         }),
       });
       const payload = await response.json().catch(() => null) as {
@@ -88,19 +110,13 @@ export function PoolCreationDialog({
       router.push(`/pool/${payload.pool.token}`);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Couldn't create this pool. Try again.";
-      setError(message);
+      form.setError("root.server", { type: "server", message });
       toast({ title: message, variant: "danger" });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const parsedTarget = Number(targetAmount);
-  const parsedMinimum = Number(minimum);
-  const canContinue = title.trim().length >= 3 && title.trim().length <= 100
-    && Number.isInteger(parsedTarget) && parsedTarget >= 1500
-    && Number.isInteger(parsedMinimum) && parsedMinimum >= 1500 && parsedMinimum <= 5000
-    && message.length <= 300;
+  const parsedTarget = targetAmount ?? 0;
+  const parsedMinimum = minimum ?? 1500;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,7 +130,10 @@ export function PoolCreationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={submit} className="mt-5 space-y-4">
+        <form noValidate onSubmit={form.handleSubmit(submit)} className="mt-5 space-y-4">
+          <input type="hidden" {...form.register("wishlist_id")} />
+          {selectedItem && <input type="hidden" {...form.register("wishlist_item_id")} />}
+          <input type="hidden" {...form.register("receiver_id")} />
           {step === 1 ? (
             <>
               <div className="rounded-xl bg-surface px-3 py-2.5 text-sm text-muted">
@@ -123,30 +142,34 @@ export function PoolCreationDialog({
 
               <div className="space-y-1.5">
                 <Label htmlFor="pool-title">Pool title</Label>
-                <Input id="pool-title" value={title} maxLength={100} onChange={(event) => setTitle(event.target.value)} required />
+                <Input id="pool-title" maxLength={100} aria-invalid={Boolean(form.formState.errors.title)} {...form.register("title")} required />
+                {form.formState.errors.title?.message && <p role="alert" className="text-xs text-brand">{form.formState.errors.title.message}</p>}
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="pool-target">Target amount (₦)</Label>
-                  <Input id="pool-target" type="number" min={1500} step={1} value={targetAmount} onChange={(event) => setTargetAmount(event.target.value)} required />
+                  <Input id="pool-target" type="number" min={1500} step={1} aria-invalid={Boolean(form.formState.errors.target_amount)} {...form.register("target_amount", { valueAsNumber: true })} required />
+                  {form.formState.errors.target_amount?.message && <p role="alert" className="text-xs text-brand">{form.formState.errors.target_amount.message}</p>}
                   {selectedItem?.price ? <p className="text-xs text-muted">Item price: {formatPrice(selectedItem.price)}</p> : null}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="pool-minimum">Minimum contribution (₦)</Label>
-                  <Input id="pool-minimum" type="number" min={1500} max={5000} step={1} value={minimum} onChange={(event) => setMinimum(event.target.value)} required />
+                  <Input id="pool-minimum" type="number" min={1500} max={5000} step={1} aria-invalid={Boolean(form.formState.errors.min_contribution)} {...form.register("min_contribution", { valueAsNumber: true })} required />
+                  {form.formState.errors.min_contribution?.message && <p role="alert" className="text-xs text-brand">{form.formState.errors.min_contribution.message}</p>}
                   <p className="text-xs text-muted">Choose ₦1,500 to ₦5,000.</p>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="pool-message">Message to contributors <span className="font-normal text-muted">(optional)</span></Label>
-                <Textarea id="pool-message" value={message} maxLength={300} placeholder="Help me get this special gift!" onChange={(event) => setMessage(event.target.value)} />
+                <Textarea id="pool-message" maxLength={300} placeholder="Help me get this special gift!" aria-invalid={Boolean(form.formState.errors.message)} {...form.register("message")} />
+                {form.formState.errors.message?.message && <p role="alert" className="text-xs text-brand">{form.formState.errors.message.message}</p>}
                 <p className="text-right text-xs text-muted">{message.length}/300</p>
               </div>
 
               <label className="flex items-start gap-3 rounded-xl bg-surface p-3 text-sm text-ink">
-                <input type="checkbox" checked={contributorsVisible} onChange={(event) => setContributorsVisible(event.target.checked)} className="mt-0.5 accent-brand" />
+                <input type="checkbox" className="mt-0.5 accent-brand" {...form.register("contributors_visible")} />
                 <span>Show contributor names and amounts on the public pool page</span>
               </label>
             </>
@@ -166,9 +189,9 @@ export function PoolCreationDialog({
 
           <div className="flex gap-3 pt-1">
             {step === 2 && <Button type="button" variant="ghost" fullWidth onClick={() => setStep(1)}>Back</Button>}
-            <Button type="submit" fullWidth disabled={!canContinue || isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {step === 1 ? "Review pool" : isSubmitting ? "Creating…" : "Create pool"}
+            <Button type="submit" fullWidth disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {step === 1 ? "Review pool" : form.formState.isSubmitting ? "Creating…" : "Create pool"}
             </Button>
           </div>
         </form>

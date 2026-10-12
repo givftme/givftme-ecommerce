@@ -232,6 +232,8 @@ CREATE TABLE IF NOT EXISTS public.pool_contributions (
   status text NOT NULL DEFAULT 'pending_payment'
     CHECK (status IN ('pending_payment', 'paid', 'failed')),
   flutterwave_transaction_id text UNIQUE,
+  flutterwave_payment_link text,
+  payment_claimed_at timestamptz,
   idempotency_key text NOT NULL,
   payment_expires_at timestamptz NOT NULL DEFAULT (now() + interval '30 minutes'),
   applied_to_pool boolean NOT NULL DEFAULT false,
@@ -242,6 +244,10 @@ CREATE TABLE IF NOT EXISTS public.pool_contributions (
   UNIQUE (contributor_id, idempotency_key),
   CHECK (status <> 'paid' OR paid_at IS NOT NULL)
 );
+
+ALTER TABLE public.pool_contributions
+  ADD COLUMN IF NOT EXISTS flutterwave_payment_link text,
+  ADD COLUMN IF NOT EXISTS payment_claimed_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS pool_contributions_pool_id_idx
   ON public.pool_contributions(pool_id, created_at DESC);
@@ -276,22 +282,44 @@ CREATE TABLE IF NOT EXISTS public.group_gift_pool_progress (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.group_gift_pool_cashout_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  pool_id uuid NOT NULL REFERENCES public.group_gift_pools(id) ON DELETE RESTRICT,
+  contribution_id uuid NOT NULL REFERENCES public.pool_contributions(id) ON DELETE RESTRICT,
+  contributor_id uuid NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
+  retry_count integer NOT NULL DEFAULT 0 CHECK (retry_count >= 0),
+  next_attempt_at timestamptz NOT NULL DEFAULT now(),
+  claimed_at timestamptz,
+  sent_at timestamptz,
+  last_error text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (pool_id, contributor_id)
+);
+
+CREATE INDEX IF NOT EXISTS group_gift_pool_cashout_notifications_pending_idx
+  ON public.group_gift_pool_cashout_notifications(next_attempt_at, created_at)
+  WHERE sent_at IS NULL;
+
 ALTER TABLE public.group_gift_pools ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pool_contributions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pool_payouts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_gift_pool_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.group_gift_pool_cashout_notifications ENABLE ROW LEVEL SECURITY;
 
 -- Customer requests use narrow SECURITY DEFINER RPCs below. Raw pool,
 -- contribution, and payout rows remain inaccessible to browser clients.
 REVOKE ALL ON TABLE public.group_gift_pools, public.pool_contributions,
-  public.pool_payouts, public.group_gift_pool_progress
+  public.pool_payouts, public.group_gift_pool_progress,
+  public.group_gift_pool_cashout_notifications
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.group_gift_pools, public.pool_contributions,
-  public.pool_payouts, public.group_gift_pool_progress
+  public.pool_payouts, public.group_gift_pool_progress,
+  public.group_gift_pool_cashout_notifications
   FROM service_role;
 GRANT SELECT, INSERT, UPDATE ON TABLE public.group_gift_pools,
   public.pool_contributions, public.pool_payouts,
-  public.group_gift_pool_progress TO service_role;
+  public.group_gift_pool_progress,
+  public.group_gift_pool_cashout_notifications TO service_role;
 
 -- Realtime publishes only progress values. Contributor identity, messages,
 -- share tokens, creator/receiver ids, and payout details are kept off this
@@ -316,6 +344,39 @@ BEGIN
   END IF;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.gifvtme_queue_group_pool_cashout_notifications()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.group_gift_pool_cashout_notifications (
+    pool_id, contribution_id, contributor_id
+  )
+  SELECT NEW.id, first_contribution.id, first_contribution.contributor_id
+  FROM (
+    SELECT DISTINCT ON (contribution.contributor_id)
+      contribution.id, contribution.contributor_id
+    FROM public.pool_contributions contribution
+    WHERE contribution.pool_id = NEW.id
+      AND contribution.status = 'paid'
+      AND contribution.applied_to_pool
+    ORDER BY contribution.contributor_id, contribution.created_at, contribution.id
+  ) first_contribution
+  ON CONFLICT (pool_id, contributor_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS group_gift_pools_queue_cashout_notifications
+  ON public.group_gift_pools;
+CREATE TRIGGER group_gift_pools_queue_cashout_notifications
+AFTER UPDATE OF status ON public.group_gift_pools
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM 'paid_out' AND NEW.status = 'paid_out')
+EXECUTE FUNCTION public.gifvtme_queue_group_pool_cashout_notifications();
 
 CREATE OR REPLACE FUNCTION public.gifvtme_refresh_group_gift_pool_progress(p_pool_id uuid)
 RETURNS void
@@ -628,7 +689,7 @@ DECLARE
   updated_rows integer;
 BEGIN
   UPDATE public.pool_contributions
-  SET status = 'failed', updated_at = now()
+  SET status = 'failed', payment_claimed_at = NULL, updated_at = now()
   WHERE id = p_contribution_id AND status = 'pending_payment';
   GET DIAGNOSTICS updated_rows = ROW_COUNT;
   RETURN jsonb_build_object('failed', updated_rows = 1);
@@ -645,7 +706,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  pool_id uuid;
+  v_pool_id uuid;
   target_pool record;
   target_contribution record;
   next_amount numeric;
@@ -654,23 +715,26 @@ DECLARE
   refund_required boolean := false;
   payout_id uuid;
 BEGIN
-  SELECT contribution.pool_id INTO pool_id
+  SELECT contribution.pool_id INTO v_pool_id
   FROM public.pool_contributions contribution
   WHERE contribution.id = p_contribution_id;
   IF NOT FOUND THEN RETURN jsonb_build_object('outcome', 'not_found'); END IF;
 
   SELECT * INTO target_pool FROM public.group_gift_pools
-  WHERE id = pool_id FOR UPDATE;
+  WHERE id = v_pool_id FOR UPDATE;
   SELECT * INTO target_contribution FROM public.pool_contributions
   WHERE id = p_contribution_id FOR UPDATE;
 
   IF target_contribution.status = 'paid' THEN
-    RETURN jsonb_build_object('outcome', 'already_paid', 'pool_id', pool_id,
+    RETURN jsonb_build_object('outcome', 'already_paid', 'pool_id', v_pool_id,
       'applied_to_pool', target_contribution.applied_to_pool,
       'refund_required', NOT target_contribution.applied_to_pool);
   END IF;
-  IF target_contribution.status <> 'pending_payment' THEN
-    RETURN jsonb_build_object('outcome', 'not_pending', 'pool_id', pool_id);
+  -- Flutterwave can report a failed attempt before a later retry succeeds
+  -- against the same contribution reference. Recheck current pool capacity
+  -- below before applying that captured payment.
+  IF target_contribution.status NOT IN ('pending_payment', 'failed') THEN
+    RETURN jsonb_build_object('outcome', 'not_pending', 'pool_id', v_pool_id);
   END IF;
 
   next_amount := target_pool.amount_raised + target_contribution.amount;
@@ -704,11 +768,11 @@ BEGIN
         fully_funded_at = CASE WHEN newly_funded THEN now() ELSE fully_funded_at END,
         cashed_out_at = CASE WHEN next_status = 'paid_out' THEN now() ELSE cashed_out_at END,
         cashed_out_amount = CASE WHEN next_status = 'paid_out' THEN next_amount ELSE cashed_out_amount END
-    WHERE id = pool_id;
+    WHERE id = v_pool_id;
 
     IF next_status = 'paid_out' THEN
       INSERT INTO public.pool_payouts(pool_id, receiver_id, amount)
-      VALUES (pool_id, target_pool.receiver_id, next_amount)
+      VALUES (v_pool_id, target_pool.receiver_id, next_amount)
       ON CONFLICT (pool_id) DO NOTHING
       RETURNING id INTO payout_id;
     END IF;
@@ -716,7 +780,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'outcome', 'paid',
-    'pool_id', pool_id,
+    'pool_id', v_pool_id,
     'pool_status', CASE WHEN refund_required THEN target_pool.status ELSE next_status END,
     'newly_funded', newly_funded,
     'refund_required', refund_required,
@@ -841,10 +905,12 @@ BEGIN
   END IF;
 
   UPDATE public.group_gift_pools SET status = 'procured' WHERE id = p_pool_id;
+  PERFORM set_config('gifvtme.procurement_group_pool_id', p_pool_id::text, true);
   UPDATE public.wishlist_items
   SET status = 'purchased'
   WHERE id = target_pool.wishlist_item_id AND status = 'available';
   GET DIAGNOSTICS changed_rows = ROW_COUNT;
+  PERFORM set_config('gifvtme.procurement_group_pool_id', '', true);
   IF changed_rows <> 1 THEN RAISE EXCEPTION 'item_unavailable'; END IF;
 
   SELECT master_item_id INTO target_master_item
@@ -922,7 +988,13 @@ BEGIN
        SELECT 1 FROM public.group_gift_pools pool
        WHERE pool.wishlist_item_id = OLD.id
          AND pool.status IN ('open', 'fully_funded')
-     ) THEN
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.group_gift_pools procured_pool
+        WHERE procured_pool.id::text = current_setting('gifvtme.procurement_group_pool_id', true)
+          AND procured_pool.wishlist_item_id = OLD.id
+          AND procured_pool.status = 'procured'
+      ) THEN
     RAISE EXCEPTION 'group_pool_active';
   END IF;
   RETURN NEW;
@@ -957,6 +1029,7 @@ FOR EACH ROW EXECUTE FUNCTION public.gifvtme_protect_wishlist_gifting_type();
 REVOKE ALL ON FUNCTION public.gifvtme_refresh_group_gift_pool_progress(uuid) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.gifvtme_sync_group_gift_pool_progress() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.gifvtme_sync_group_gift_contribution_progress() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.gifvtme_queue_group_pool_cashout_notifications() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.gifvtme_reject_claim_for_group_pool() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.gifvtme_reject_external_purchase_for_group_pool() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.gifvtme_reject_solo_purchase_for_group_pool() FROM PUBLIC, anon, authenticated;

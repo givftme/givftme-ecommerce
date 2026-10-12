@@ -16,6 +16,7 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `flutterwave/webhook/route.ts` | Signature-verified payment callback for catalog orders and pool contributions |
 | `pools/route.ts`, `pools/[id]/route.ts` | Pool creation, public pool data by token, and receiver title edits |
 | `pools/[id]/contribute/route.ts`, `pools/[id]/cash-out/route.ts`, `pools/[id]/cancel/route.ts` | Authenticated pool payment and management actions |
+| `pools/notifications/route.ts` | CRON_SECRET-protected retries for queued pool cash-out emails |
 | `dashboard/pools/route.ts` | Current user's active and past pools |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |

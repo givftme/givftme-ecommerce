@@ -7,6 +7,19 @@ import {
 import { createServiceClient } from "@/lib/supabase/server";
 import type { GiftPool } from "@/lib/pools/types";
 
+const CASHOUT_EMAIL_BATCH_LIMIT = 50;
+const CASHOUT_EMAIL_IMMEDIATE_LIMIT = 10;
+const CASHOUT_EMAIL_CONCURRENCY = 5;
+const CLAIM_STALE_MS = 10 * 60 * 1000;
+
+interface CashoutNotificationRow {
+  id: string;
+  pool_id: string;
+  contribution_id: string;
+  contributor_id: string;
+  retry_count: number;
+}
+
 function asPool(value: unknown): GiftPool | null {
   if (typeof value !== "object" || value === null) return null;
   const row = value as Record<string, unknown>;
@@ -54,21 +67,6 @@ async function getContact(userId: string) {
     email: typeof data?.email === "string" ? data.email : null,
     full_name: typeof data?.full_name === "string" ? data.full_name : null,
   };
-}
-
-async function getAppliedContributions(poolId: string) {
-  const service = createServiceClient();
-  const rows: Array<{ id: string; amount: number; contributor_id: string; created_at: string }> = [];
-  for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await service.from("pool_contributions")
-      .select("id, amount, contributor_id, created_at")
-      .eq("pool_id", poolId).eq("status", "paid").eq("applied_to_pool", true)
-      .order("created_at", { ascending: true }).range(offset, offset + 999);
-    if (error) throw error;
-    rows.push(...(data ?? []) as typeof rows);
-    if (!data || data.length < 1000) break;
-  }
-  return rows;
 }
 
 async function getContributorCount(poolId: string) {
@@ -130,25 +128,146 @@ export async function sendPoolFullyFunded(poolId: string) {
 }
 
 export async function sendPoolCashedOut(poolId: string) {
-  const context = await getPool(poolId);
-  if (!context) return;
-  const contributions = await getAppliedContributions(poolId);
-  const firstContributionByUser = new Map<string, (typeof contributions)[number]>();
-  for (const contribution of contributions) {
-    if (!firstContributionByUser.has(contribution.contributor_id)) {
-      firstContributionByUser.set(contribution.contributor_id, contribution);
+  await processCashoutNotifications({ poolId, limit: CASHOUT_EMAIL_IMMEDIATE_LIMIT });
+}
+
+export async function processPendingPoolCashoutNotifications() {
+  return processCashoutNotifications({ limit: CASHOUT_EMAIL_BATCH_LIMIT });
+}
+
+async function deliverCashoutNotification(row: CashoutNotificationRow) {
+  const context = await getPool(row.pool_id);
+  if (!context || context.pool.status !== "paid_out") {
+    throw new Error("Paid-out pool is unavailable for notification delivery.");
+  }
+
+  const [contact, contributorCount] = await Promise.all([
+    getContact(row.contributor_id),
+    getContributorCount(row.pool_id),
+  ]);
+  if (!contact.email) throw new Error("Contributor email address is unavailable.");
+
+  await requireEmailDelivery(sendPoolCashedOutEmail({
+    to: contact.email,
+    poolTitle: context.pool.title,
+    cashedOutAmount: context.pool.cashed_out_amount ?? context.pool.amount_raised,
+    contributorCount,
+    poolUrl: context.url,
+    contributionId: row.contribution_id,
+  }));
+}
+
+function nextCashoutEmailAttempt(retryCount: number) {
+  const delayMs = Math.min(60 * 60 * 1000, 60 * 1000 * (2 ** Math.min(retryCount, 6)));
+  return new Date(Date.now() + delayMs).toISOString();
+}
+
+async function processCashoutNotification(
+  service: ReturnType<typeof createServiceClient>,
+  row: CashoutNotificationRow,
+): Promise<"sent" | "failed" | "skipped"> {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const staleBefore = new Date(now.getTime() - CLAIM_STALE_MS).toISOString();
+  const { data: claim, error: claimError } = await service
+    .from("group_gift_pool_cashout_notifications")
+    .update({ claimed_at: nowIso })
+    .eq("id", row.id)
+    .is("sent_at", null)
+    .lte("next_attempt_at", nowIso)
+    .or(`claimed_at.is.null,claimed_at.lt.${staleBefore}`)
+    .select("id")
+    .maybeSingle();
+
+  if (claimError) {
+    console.error("Could not claim pool cash-out notification.", claimError);
+    return "failed";
+  }
+  if (!claim) return "skipped";
+
+  try {
+    await deliverCashoutNotification(row);
+  } catch (error) {
+    const retryCount = row.retry_count + 1;
+    const { error: retryError } = await service
+      .from("group_gift_pool_cashout_notifications")
+      .update({
+        retry_count: retryCount,
+        next_attempt_at: nextCashoutEmailAttempt(row.retry_count),
+        last_error: error instanceof Error ? error.message.slice(0, 1000) : "Email delivery failed.",
+        claimed_at: null,
+      })
+      .eq("id", row.id)
+      .is("sent_at", null);
+    if (retryError) {
+      console.error("Could not schedule pool cash-out notification retry.", retryError);
+    }
+    console.error("Pool cash-out email delivery failed; notification remains queued.", {
+      notificationId: row.id,
+      error,
+    });
+    return "failed";
+  }
+
+  const { error: sentError } = await service
+    .from("group_gift_pool_cashout_notifications")
+    .update({ sent_at: new Date().toISOString(), claimed_at: null, last_error: null })
+    .eq("id", row.id)
+    .is("sent_at", null);
+
+  if (sentError) {
+    // The email may have reached Resend. Releasing the claim lets a retry
+    // recover the row; sendPoolCashedOutEmail uses the stable contribution
+    // idempotency key to avoid sending a duplicate.
+    const { error: releaseError } = await service
+      .from("group_gift_pool_cashout_notifications")
+      .update({ claimed_at: null, next_attempt_at: new Date().toISOString() })
+      .eq("id", row.id)
+      .is("sent_at", null);
+    console.error("Pool cash-out email sent but queue update failed.", sentError);
+    if (releaseError) console.error("Could not release sent pool email claim.", releaseError);
+    return "failed";
+  }
+
+  return "sent";
+}
+
+async function processCashoutNotifications({
+  poolId,
+  limit,
+}: {
+  poolId?: string;
+  limit: number;
+}) {
+  const service = createServiceClient();
+  const nowIso = new Date().toISOString();
+  const staleBefore = new Date(Date.now() - CLAIM_STALE_MS).toISOString();
+  let query = service
+    .from("group_gift_pool_cashout_notifications")
+    .select("id, pool_id, contribution_id, contributor_id, retry_count")
+    .is("sent_at", null)
+    .lte("next_attempt_at", nowIso)
+    .or(`claimed_at.is.null,claimed_at.lt.${staleBefore}`)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (poolId) query = query.eq("pool_id", poolId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const rows = (data ?? []) as CashoutNotificationRow[];
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (let offset = 0; offset < rows.length; offset += CASHOUT_EMAIL_CONCURRENCY) {
+    const results = await Promise.all(rows.slice(offset, offset + CASHOUT_EMAIL_CONCURRENCY)
+      .map((row) => processCashoutNotification(service, row)));
+    for (const result of results) {
+      if (result === "sent") sent += 1;
+      else if (result === "failed") failed += 1;
+      else skipped += 1;
     }
   }
-  await Promise.all([...firstContributionByUser.values()].map(async (contribution) => {
-    const contact = await getContact(contribution.contributor_id);
-    if (!contact.email) return;
-    await requireEmailDelivery(sendPoolCashedOutEmail({
-      to: contact.email,
-      poolTitle: context.pool.title,
-      cashedOutAmount: context.pool.cashed_out_amount ?? context.pool.amount_raised,
-      contributorCount: firstContributionByUser.size,
-      poolUrl: context.url,
-      contributionId: contribution.id,
-    }));
-  }));
+
+  return { sent, failed, skipped };
 }

@@ -34,6 +34,8 @@ interface WebhookOrderRow {
   buyer_id: string;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function ok() {
   return NextResponse.json({ received: true });
 }
@@ -70,11 +72,16 @@ function paymentMatchesOrder(
 
 function getPoolContributionId(payload: FlutterwaveWebhookPayload) {
   const meta = payload.data?.meta;
+  let candidate: unknown;
   if (typeof meta === "object" && meta !== null) {
-    const value = (meta as Record<string, unknown>).pool_contribution_id;
-    if (typeof value === "string" && value) return value;
+    candidate = (meta as Record<string, unknown>).pool_contribution_id;
   }
-  return payload.data?.tx_ref ?? null;
+  if (typeof candidate !== "string" || !UUID_PATTERN.test(candidate)) {
+    candidate = payload.data?.tx_ref;
+  }
+  return typeof candidate === "string" && UUID_PATTERN.test(candidate)
+    ? candidate
+    : null;
 }
 
 function paymentMatchesPoolContribution(

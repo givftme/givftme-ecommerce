@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Clipboard, Loader2, UsersRound } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { AuthGateSheet } from "@/components/wishlist/AuthGateSheet";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
@@ -10,9 +12,13 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { PoolProgress } from "@/components/pools/PoolProgress";
 import { trackEvent } from "@/lib/analytics";
+import {
+  createPoolContributionFormSchema,
+  type ContributeInput,
+} from "@/lib/pools/validation";
 import { createClient } from "@/lib/supabase/client";
 import type { PoolPageData, PoolStatus } from "@/lib/pools/types";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 type ContributionReturn = {
   status: "paid" | "pending_payment" | "failed" | null;
@@ -22,6 +28,67 @@ type ContributionReturn = {
 };
 
 const QUICK_AMOUNTS = [2000, 5000, 10000, 20000];
+const IDEMPOTENCY_KEY_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type StoredContributionAttempt = {
+  idempotencyKey: string;
+  selectedAmount: number;
+};
+
+function contributionAttemptStorageKey(poolId: string) {
+  return `gifvtme:pool-contribution-attempt:${poolId}`;
+}
+
+function readContributionAttempt(
+  poolId: string,
+  memory: Map<string, StoredContributionAttempt>
+) {
+  const storageKey = contributionAttemptStorageKey(poolId);
+  const memoryValue = memory.get(storageKey);
+  if (memoryValue) return memoryValue;
+
+  try {
+    const stored = window.sessionStorage.getItem(storageKey);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as Partial<StoredContributionAttempt>;
+    if (
+      typeof parsed.idempotencyKey !== "string" ||
+      !IDEMPOTENCY_KEY_PATTERN.test(parsed.idempotencyKey) ||
+      typeof parsed.selectedAmount !== "number" ||
+      !Number.isFinite(parsed.selectedAmount) ||
+      parsed.selectedAmount <= 0
+    ) return null;
+    const attempt = parsed as StoredContributionAttempt;
+    memory.set(storageKey, attempt);
+    return attempt;
+  } catch {
+    return null;
+  }
+}
+
+function storeContributionAttempt(
+  poolId: string,
+  attempt: StoredContributionAttempt,
+  memory: Map<string, StoredContributionAttempt>
+) {
+  const storageKey = contributionAttemptStorageKey(poolId);
+  memory.set(storageKey, attempt);
+  try {
+    window.sessionStorage.setItem(storageKey, JSON.stringify(attempt));
+  } catch {
+    // Keep the retry key in memory when browser storage is unavailable.
+  }
+}
+
+function clearContributionAttempt(poolId: string, memory: Map<string, StoredContributionAttempt>) {
+  const storageKey = contributionAttemptStorageKey(poolId);
+  memory.delete(storageKey);
+  try {
+    window.sessionStorage.removeItem(storageKey);
+  } catch {
+    // The memory entry is still cleared when browser storage is unavailable.
+  }
+}
 
 function getInitials(name: string | null) {
   if (!name) return "G";
@@ -59,13 +126,23 @@ export function PoolPageClient({
   const [editedTitle, setEditedTitle] = useState(initialData.pool.title);
   const [authOpen, setAuthOpen] = useState(false);
   const [contributionStep, setContributionStep] = useState<1 | 2>(1);
-  const [selectedAmount, setSelectedAmount] = useState(String(initialData.pool.min_contribution));
-  const [customAmount, setCustomAmount] = useState("");
+  const [isCustomAmount, setIsCustomAmount] = useState(false);
+  const [resumableAmount, setResumableAmount] = useState<number | undefined>();
   const [isWorking, setIsWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const contributionAttemptMemory = useRef(new Map<string, StoredContributionAttempt>());
   const pool = initialData.pool;
   const remaining = Math.max(0, pool.target_amount - amountRaised);
-  const chosenAmount = selectedAmount === "custom" ? Number(customAmount) : Number(selectedAmount);
+  const contributionFormSchema = useMemo(
+    () => createPoolContributionFormSchema(pool.min_contribution, remaining, resumableAmount),
+    [pool.min_contribution, remaining, resumableAmount],
+  );
+  const contributionForm = useForm<ContributeInput>({
+    resolver: zodResolver(contributionFormSchema),
+    mode: "onChange",
+    defaultValues: { amount: Math.max(2000, pool.min_contribution) },
+  });
+  const chosenAmount = contributionForm.watch("amount") || 0;
   const cappedAmount = Math.min(chosenAmount || 0, remaining);
   const poolUrl = typeof window === "undefined" ? `/pool/${pool.token}` : `${window.location.origin}/pool/${pool.token}`;
   const displayOrganiser = initialData.creator.full_name || initialData.receiver.full_name || "a Gifvtme member";
@@ -100,6 +177,17 @@ export function PoolPageClient({
   }, [pool.id, router]);
 
   useEffect(() => {
+    setAmountRaised(initialData.pool.amount_raised);
+    setContributorCount(initialData.contributor_count);
+    setStatus(initialData.pool.status);
+  }, [
+    initialData.contributor_count,
+    initialData.pool.amount_raised,
+    initialData.pool.id,
+    initialData.pool.status,
+  ]);
+
+  useEffect(() => {
     trackEvent("pool.viewed", {
       pool_id: pool.id,
       viewer_type: initialData.viewer_is_receiver
@@ -110,23 +198,49 @@ export function PoolPageClient({
     });
   }, [initialData.viewer_is_creator, initialData.viewer_is_receiver, isAuthenticated, pool.id]);
 
+  useEffect(() => {
+    if (contributionReturn.status === "paid") {
+      clearContributionAttempt(pool.id, contributionAttemptMemory.current);
+      setResumableAmount(undefined);
+    }
+  }, [contributionReturn.status, pool.id]);
+
   const openContribution = () => {
     if (!isAuthenticated) {
       setAuthOpen(true);
       return;
     }
     setContributionStep(1);
-    setSelectedAmount(String(Math.max(2000, pool.min_contribution)));
-    setCustomAmount("");
+    const previousAttempt = readContributionAttempt(pool.id, contributionAttemptMemory.current);
+    if (previousAttempt) {
+      setIsCustomAmount(!QUICK_AMOUNTS.includes(previousAttempt.selectedAmount));
+      setResumableAmount(previousAttempt.selectedAmount);
+      contributionForm.reset({ amount: previousAttempt.selectedAmount });
+    } else {
+      const defaultAmount = Math.max(2000, pool.min_contribution);
+      setIsCustomAmount(!QUICK_AMOUNTS.includes(defaultAmount));
+      setResumableAmount(undefined);
+      contributionForm.reset({ amount: defaultAmount });
+    }
+    contributionForm.clearErrors();
     setActionError(null);
     setContributionOpen(true);
   };
 
-  const startPayment = async () => {
-    if (cappedAmount < pool.min_contribution) {
-      setActionError(`Minimum contribution is ${formatPrice(pool.min_contribution)}.`);
-      return;
-    }
+  const startPayment = async (values: ContributeInput) => {
+    const selectedAmountValue = values.amount;
+    const previousAttempt = readContributionAttempt(pool.id, contributionAttemptMemory.current);
+    const isRetry = previousAttempt?.selectedAmount === selectedAmountValue;
+
+    const attempt = isRetry && previousAttempt
+      ? previousAttempt
+      : {
+          idempotencyKey: crypto.randomUUID(),
+          selectedAmount: selectedAmountValue,
+        };
+    storeContributionAttempt(pool.id, attempt, contributionAttemptMemory.current);
+    setResumableAmount(attempt.selectedAmount);
+    const requestAmount = isRetry ? attempt.selectedAmount : cappedAmount;
 
     setIsWorking(true);
     setActionError(null);
@@ -135,24 +249,41 @@ export function PoolPageClient({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": attempt.idempotencyKey,
         },
-        body: JSON.stringify({ amount: cappedAmount }),
+        body: JSON.stringify({ amount: requestAmount }),
       });
       const payload = await response.json().catch(() => null) as {
         error?: string;
         contribution_id?: string;
         payment_url?: string | null;
+        already_paid?: boolean;
+        payment_initializing?: boolean;
+        attempt_ended?: boolean;
       } | null;
-      if (!response.ok || !payload?.contribution_id) {
+      if (!response.ok) {
+        if (payload?.attempt_ended) {
+          clearContributionAttempt(pool.id, contributionAttemptMemory.current);
+          setResumableAmount(undefined);
+        }
         throw new Error(payload?.error || "Couldn't start this contribution.");
       }
+      if (!payload?.contribution_id) throw new Error("Couldn't start this contribution.");
       if (payload.payment_url) {
         window.location.assign(payload.payment_url);
         return;
       }
-      setContributionOpen(false);
-      router.push(`/pool/${pool.token}?contributed=true&contribution_id=${payload.contribution_id}`);
+      if (payload.already_paid) {
+        clearContributionAttempt(pool.id, contributionAttemptMemory.current);
+        setContributionOpen(false);
+        router.push(`/pool/${pool.token}?contributed=true&contribution_id=${payload.contribution_id}`);
+        return;
+      }
+      if (payload.payment_initializing) {
+        setActionError(payload.error || "Your payment link is still being prepared. Try again in a moment.");
+        return;
+      }
+      throw new Error("Couldn't recover this payment link. Try again.");
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Couldn't start this contribution.");
     } finally {
@@ -189,6 +320,7 @@ export function PoolPageClient({
       const payload = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "Couldn't cash out this pool.");
       setCashoutOpen(false);
+      setStatus("paid_out");
       toast({ title: "Cash out requested. The Gifvtme team will process the transfer.", variant: "success" });
       router.refresh();
     } catch (error) {
@@ -206,6 +338,7 @@ export function PoolPageClient({
       const payload = await response.json().catch(() => null) as { error?: string } | null;
       if (!response.ok) throw new Error(payload?.error || "Couldn't cancel this pool.");
       setCancelOpen(false);
+      setStatus("cancelled");
       toast({ title: "Pool cancelled.", variant: "success" });
       router.refresh();
     } catch (error) {
@@ -230,6 +363,14 @@ export function PoolPageClient({
     amount,
     label: formatPrice(amount),
   })), []);
+  const submitContribution = contributionForm.handleSubmit(async (values) => {
+    setActionError(null);
+    if (contributionStep === 1) {
+      setContributionStep(2);
+      return;
+    }
+    await startPayment(values);
+  });
 
   return (
     <>
@@ -357,57 +498,77 @@ export function PoolPageClient({
             </DialogDescription>
           </DialogHeader>
 
-          {contributionStep === 1 ? (
-            <div className="mt-5 space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                {amountChoices.map(({ amount, label }) => (
-                  <button key={amount} type="button" onClick={() => setSelectedAmount(String(amount))}
-                    className={`rounded-full border px-3 py-2.5 text-sm font-medium ${selectedAmount === String(amount) ? "border-brand bg-brand-light text-brand" : "border-stone-200 bg-white text-ink hover:border-brand/40"}`}>
-                    {label}
+          <form noValidate onSubmit={submitContribution} className="mt-5 space-y-4">
+            {contributionStep === 1 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  {amountChoices.map(({ amount, label }) => (
+                    <button key={amount} type="button" onClick={() => {
+                      setIsCustomAmount(false);
+                      contributionForm.setValue("amount", amount, { shouldDirty: true, shouldValidate: true });
+                    }}
+                      className={cn(
+                        "rounded-full border px-3 py-2.5 text-sm font-medium",
+                        !isCustomAmount && chosenAmount === amount
+                          ? "border-brand bg-brand-light text-brand"
+                          : "border-stone-200 bg-white text-ink hover:border-brand/40",
+                      )}>
+                      {label}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => {
+                    setIsCustomAmount(true);
+                    contributionForm.setValue("amount", pool.min_contribution, { shouldDirty: true, shouldValidate: true });
+                  }}
+                    className={cn(
+                      "rounded-full border px-3 py-2.5 text-sm font-medium",
+                      isCustomAmount
+                        ? "border-brand bg-brand-light text-brand"
+                        : "border-stone-200 bg-white text-ink hover:border-brand/40",
+                    )}>
+                    Custom
                   </button>
-                ))}
-                <button type="button" onClick={() => setSelectedAmount("custom")}
-                  className={`rounded-full border px-3 py-2.5 text-sm font-medium ${selectedAmount === "custom" ? "border-brand bg-brand-light text-brand" : "border-stone-200 bg-white text-ink hover:border-brand/40"}`}>
-                  Custom
-                </button>
-              </div>
-              {selectedAmount === "custom" && (
-                <div className="space-y-1.5">
-                  <label htmlFor="custom-contribution" className="text-xs font-medium text-ink">Amount in Naira</label>
-                  <Input id="custom-contribution" type="number" min={pool.min_contribution} step={1} value={customAmount} onChange={(event) => setCustomAmount(event.target.value)} placeholder="Enter an amount" />
                 </div>
-              )}
-              {chosenAmount > remaining && (
-                <p className="rounded-xl bg-brand-light px-3 py-2 text-sm text-brand">
-                  You&apos;re contributing {formatPrice(remaining)} to complete this pool.
-                </p>
-              )}
-              {remaining < pool.min_contribution && remaining > 0 && (
-                <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                  The remaining amount is below the pool&apos;s minimum contribution.
-                </p>
-              )}
-              {actionError && <p role="alert" className="text-sm text-brand">{actionError}</p>}
-              <Button type="button" fullWidth disabled={!Number.isInteger(cappedAmount) || cappedAmount < pool.min_contribution} onClick={() => { setActionError(null); setContributionStep(2); }}>
-                Proceed to payment
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-5 space-y-4">
-              <div className="rounded-xl bg-surface p-4 text-sm">
-                <p className="font-semibold text-ink">{formatPrice(cappedAmount)}</p>
-                <p className="mt-1 text-muted">Contributing to {pool.title}</p>
-              </div>
-              {actionError && <p role="alert" className="text-sm text-brand">{actionError}</p>}
-              <div className="flex gap-3">
-                <Button type="button" variant="ghost" fullWidth disabled={isWorking} onClick={() => setContributionStep(1)}>Back</Button>
-                <Button type="button" fullWidth disabled={isWorking} onClick={() => void startPayment()}>
-                  {isWorking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Pay with Flutterwave
+                {isCustomAmount && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="custom-contribution" className="text-xs font-medium text-ink">Amount in Naira</label>
+                    <Input id="custom-contribution" type="number" min={pool.min_contribution} step={1} aria-invalid={Boolean(contributionForm.formState.errors.amount)} {...contributionForm.register("amount", { valueAsNumber: true })} />
+                  </div>
+                )}
+                {contributionForm.formState.errors.amount?.message && <p role="alert" className="text-sm text-brand">{contributionForm.formState.errors.amount.message}</p>}
+                {chosenAmount > remaining && (
+                  <p className="rounded-xl bg-brand-light px-3 py-2 text-sm text-brand">
+                    You&apos;re contributing {formatPrice(remaining)} to complete this pool.
+                  </p>
+                )}
+                {remaining < pool.min_contribution && remaining > 0 && (
+                  <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    The remaining amount is below the pool&apos;s minimum contribution.
+                  </p>
+                )}
+                {actionError && <p role="alert" className="text-sm text-brand">{actionError}</p>}
+                <Button type="submit" fullWidth disabled={contributionForm.formState.isSubmitting}>
+                  Proceed to payment
                 </Button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-xl bg-surface p-4 text-sm">
+                  <p className="font-semibold text-ink">{formatPrice(cappedAmount)}</p>
+                  <p className="mt-1 text-muted">Contributing to {pool.title}</p>
+                </div>
+                {contributionForm.formState.errors.amount?.message && <p role="alert" className="text-sm text-brand">{contributionForm.formState.errors.amount.message}</p>}
+                {actionError && <p role="alert" className="text-sm text-brand">{actionError}</p>}
+                <div className="flex gap-3">
+                  <Button type="button" variant="ghost" fullWidth disabled={isWorking} onClick={() => setContributionStep(1)}>Back</Button>
+                  <Button type="submit" fullWidth disabled={isWorking || contributionForm.formState.isSubmitting}>
+                    {isWorking || contributionForm.formState.isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Pay with Flutterwave
+                  </Button>
+                </div>
+              </div>
+            )}
+          </form>
         </DialogContent>
       </Dialog>
 

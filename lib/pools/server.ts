@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { asPoolStatus, type DashboardPool, type GiftPool, type PoolPageData, type PoolPerson } from "@/lib/pools/types";
 import type { WishlistItem } from "@/lib/wishlist/types";
+import { signWishlistImage } from "@/lib/wishlist/server";
 
 type UnknownRow = Record<string, unknown>;
 
@@ -84,13 +85,13 @@ export async function getPoolPageData(token: string, viewerId: string | null): P
   const creator = normalizePerson(profileById.get(pool.created_by), pool.created_by);
   const itemRow = itemResult.data ? asRecord(itemResult.data) : null;
   const item = itemRow
-    ? {
+    ? await signWishlistImage(service, pool.receiver_id, {
         id: String(itemRow.id ?? ""),
         title: String(itemRow.title ?? ""),
         image_url: asString(itemRow.image_url),
         price: itemRow.price == null ? null : asNumber(itemRow.price),
         status: String(itemRow.status ?? "available"),
-      }
+      })
     : null;
   const contributorCount = asNumber(asRecord(progressResult.data).contributor_count);
   let contributors: PoolPageData["contributors"] = null;
