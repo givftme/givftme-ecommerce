@@ -77,9 +77,9 @@ export function AuthForm({ mode, redirectTo, initialError }: {
   };
 
   return (
-    <main className="min-h-dvh bg-peach lg:grid lg:grid-cols-9 lg:bg-white">
+    <main className="min-h-dvh bg-peach lg:grid lg:grid-cols-9 lg:bg-card">
       <AuthVisual mode={mode} />
-      <section aria-labelledby="auth-heading" className="relative flex min-w-0 flex-col rounded-t-3xl bg-white px-6 py-6 shadow-soft sm:px-12 lg:col-span-5 lg:justify-center lg:rounded-none lg:px-16 lg:py-12 lg:shadow-none">
+      <section aria-labelledby="auth-heading" className="relative flex min-w-0 flex-col rounded-t-3xl bg-card px-6 py-6 shadow-soft sm:px-12 lg:col-span-5 lg:justify-center lg:rounded-none lg:px-16 lg:py-12 lg:shadow-none">
         <div className="mx-auto w-full max-w-[344px] lg:max-w-[380px]">
           <header className="mb-5">
             <h1 id="auth-heading" className="font-display text-3xl text-ink lg:text-4xl">{isSignup ? "Create your account" : "Welcome back"}</h1>

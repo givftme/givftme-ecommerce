@@ -18,7 +18,7 @@ export function CartSummary({
   disabled,
 }: CartSummaryProps) {
   return (
-    <aside className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm lg:sticky lg:top-36">
+    <aside className="rounded-2xl border border-line bg-card p-5 shadow-sm lg:sticky lg:top-36">
       <h2 className="text-lg font-semibold text-ink">Order Summary</h2>
 
       <div className="mt-5 space-y-3">
@@ -40,16 +40,16 @@ export function CartSummary({
         ))}
       </div>
 
-      <dl className="mt-6 space-y-3 border-t border-stone-100 pt-5 text-sm">
+      <dl className="mt-6 space-y-3 border-t border-line pt-5 text-sm">
         <div className="flex justify-between">
           <dt className="text-muted">Subtotal</dt>
           <dd className="font-semibold text-ink">{formatPrice(total)}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted">Shipping</dt>
-          <dd className="font-semibold text-green-700">FREE</dd>
+          <dd className="font-semibold text-success">FREE</dd>
         </div>
-        <div className="flex items-end justify-between border-t border-stone-100 pt-4">
+        <div className="flex items-end justify-between border-t border-line pt-4">
           <dt className="text-base font-semibold text-ink">Total</dt>
           <dd className="text-xl font-bold text-brand">{formatPrice(total)}</dd>
         </div>

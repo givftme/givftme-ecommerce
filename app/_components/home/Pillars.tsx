@@ -29,13 +29,13 @@ const TONES: Record<PillarTone, { icon: string; blob: string; glare: string }> =
     glare: "rgba(197,4,4,0.07)",
   },
   orange: {
-    icon: "bg-orange-50 text-orange-600",
-    blob: "after:bg-orange-50",
+    icon: "bg-peach text-orange",
+    blob: "after:bg-peach",
     glare: "rgba(234,88,12,0.08)",
   },
   green: {
-    icon: "bg-green-50 text-green-700",
-    blob: "after:bg-green-50",
+    icon: "bg-success/10 text-success",
+    blob: "after:bg-success/10",
     glare: "rgba(21,128,61,0.07)",
   },
 };
@@ -125,7 +125,7 @@ function Pillar({ pillar, index }: { pillar: PillarData; index: number }) {
         href={pillar.href}
         {...tilt}
         className={cx(
-          "group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] border border-line bg-white px-7 pt-7.5 pb-7 outline-none transition-[transform,box-shadow,border-color] duration-250 will-change-transform hover:border-transparent hover:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 max-sm:px-5.5 max-sm:py-6",
+          "group relative isolate flex h-full flex-col overflow-hidden rounded-[28px] border border-line bg-card px-7 pt-7.5 pb-7 outline-none transition-[transform,box-shadow,border-color] duration-250 will-change-transform hover:border-transparent hover:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.22)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 max-sm:px-5.5 max-sm:py-6",
           // Corner blob in the pillar's tone, swelling on hover.
           "after:absolute after:-top-10 after:-right-10 after:-z-1 after:size-32.5 after:rounded-full after:transition-transform after:duration-500 after:content-[''] hover:after:scale-[1.35]",
           tone.blob,

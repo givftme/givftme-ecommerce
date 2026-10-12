@@ -516,7 +516,7 @@ export default function HeroStage() {
           >
             <span ref={holderRef} className="block size-full" />
           </button>
-          <div className="pointer-events-none absolute bottom-[2%] left-1/2 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-white px-4 py-[9px] text-[13px] font-medium shadow-soft">
+          <div className="pointer-events-none absolute bottom-[2%] left-1/2 inline-flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-card px-4 py-[9px] text-[13px] font-medium shadow-soft">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75 motion-reduce:animate-none" />
               <span className="relative inline-flex size-2 rounded-full bg-brand" />
@@ -539,7 +539,7 @@ export default function HeroStage() {
       )}
 
       <FloatChip className="top-[14%] left-0 max-sm:top-[2%]">
-        <span className="grid size-[38px] shrink-0 place-items-center rounded-xl bg-red-50 text-red max-sm:size-8 max-sm:rounded-[10px]">
+        <span className="grid size-[38px] shrink-0 place-items-center rounded-xl bg-brand-light text-red max-sm:size-8 max-sm:rounded-[10px]">
           <Icon as={CalendarHeart} />
         </span>
         <span>
@@ -548,7 +548,7 @@ export default function HeroStage() {
       </FloatChip>
 
       <FloatChip className="top-[8%] right-0 [animation-delay:-2s] max-sm:top-auto max-sm:bottom-[18%]">
-        <span className="grid size-[38px] shrink-0 place-items-center rounded-xl bg-[#fff1e4] text-orange max-sm:size-8 max-sm:rounded-[10px]">
+        <span className="grid size-[38px] shrink-0 place-items-center rounded-xl bg-peach text-orange max-sm:size-8 max-sm:rounded-[10px]">
           <Icon as={Users} />
         </span>
         <span>
@@ -570,7 +570,7 @@ export default function HeroStage() {
       <div
         aria-live="polite"
         className={cx(
-          "pointer-events-none absolute top-[6%] left-1/2 whitespace-nowrap rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-white transition-all duration-350 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+          "pointer-events-none absolute top-[6%] left-1/2 whitespace-nowrap rounded-full bg-ink-deep px-4 py-2.5 text-sm font-medium text-white transition-all duration-350 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
           bubble.show
             ? "translate-x-[-50%] translate-y-0 scale-100 opacity-100"
             : "translate-x-[-50%] translate-y-2.5 scale-90 opacity-0",
@@ -592,7 +592,7 @@ function FloatChip({
   return (
     <div
       className={cx(
-        "animate-floaty pointer-events-none absolute flex max-w-[210px] items-center gap-2.5 rounded-[18px] border border-line bg-white py-2.5 pr-3.5 pl-2.5 text-[13px] leading-tight shadow-soft",
+        "animate-floaty pointer-events-none absolute flex max-w-[210px] items-center gap-2.5 rounded-[18px] border border-line bg-card py-2.5 pr-3.5 pl-2.5 text-[13px] leading-tight shadow-soft",
         "max-sm:max-w-[160px] max-sm:p-2 max-sm:pr-2.5 max-sm:text-xs",
         className,
       )}

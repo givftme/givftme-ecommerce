@@ -93,7 +93,7 @@ export function WishlistCoverPicker({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((isOpen) => !isOpen)}
-        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/90 px-3 text-[12.5px] font-medium text-ink transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        className="inline-flex h-9 items-center gap-1.5 rounded-full bg-card/90 px-3 text-[12.5px] font-medium text-ink transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
         <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
         Change cover
@@ -104,7 +104,7 @@ export function WishlistCoverPicker({
           id={panelId}
           role="radiogroup"
           aria-label="Cover colour"
-          className="absolute right-0 top-11 z-20 w-60 rounded-2xl bg-white p-3 text-ink shadow-float"
+          className="absolute right-0 top-11 z-20 w-60 rounded-2xl bg-card p-3 text-ink shadow-float"
         >
           <p className="mb-2 px-0.5 text-xs font-medium text-muted">Cover colour</p>
           <div className="grid grid-cols-4 gap-2">
@@ -121,7 +121,7 @@ export function WishlistCoverPicker({
                   title={WISHLIST_COVERS[cover].label}
                   onClick={() => void choose(cover)}
                   className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-xl border-2 border-white text-white ring-1 ring-line transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                    "flex h-12 w-12 items-center justify-center rounded-xl border-2 border-card text-white ring-1 ring-line transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                     WISHLIST_COVERS[cover].className,
                     selected && "ring-2 ring-ink"
                   )}

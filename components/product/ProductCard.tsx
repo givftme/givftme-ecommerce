@@ -68,7 +68,7 @@ export function ProductCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <Gift className="h-10 w-10 text-stone-300" strokeWidth={1.5} />
+              <Gift className="h-10 w-10 text-muted/40" strokeWidth={1.5} />
             </div>
           )}
           <span className="sr-only">View {product.title}</span>
@@ -97,7 +97,7 @@ export function ProductCard({
           </Badge>
         )}
         {showBadges && product.isNew && (
-          <Badge variant="muted" className="absolute right-3 top-3 bg-ink text-white">
+          <Badge variant="muted" className="absolute right-3 top-3 bg-ink-deep text-white">
             New
           </Badge>
         )}
@@ -107,7 +107,7 @@ export function ProductCard({
             type="button"
             aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             onClick={wishlistHandler}
-            className="pointer-events-auto absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm transition-colors hover:text-brand"
+            className="pointer-events-auto absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-ink shadow-sm transition-colors hover:text-brand"
           >
             <Heart
               className="h-4 w-4"
@@ -123,14 +123,14 @@ export function ProductCard({
               variant="filled"
               size="sm"
               onClick={() => onAddToCart(product)}
-              className="bg-ink hover:bg-black"
+              className="bg-ink-deep hover:bg-ink-deep/85"
             >
               {primaryCtaLabel}
             </Button>
           ) : (
             <Link
               href={productHref}
-              className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-black"
+              className="rounded-full bg-ink-deep px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink-deep/85"
             >
               View gift
             </Link>

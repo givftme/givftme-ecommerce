@@ -97,7 +97,7 @@ export function OrderList({ initialPage, counts }: { initialPage: OrderPage; cou
 
   return (
     <div>
-      <div role="tablist" aria-label="Order status" className="flex gap-5 border-b border-stone-200">
+      <div role="tablist" aria-label="Order status" className="flex gap-5 border-b border-line">
         {TABS.map((option) => (
           <button
             key={option.id}
@@ -128,7 +128,7 @@ export function OrderList({ initialPage, counts }: { initialPage: OrderPage; cou
             )}
           </>
         ) : (
-          <div className="rounded-2xl border border-stone-100 bg-white px-4 py-10 text-center shadow-sm">
+          <div className="rounded-2xl border border-line bg-card px-4 py-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-light">
               <Package aria-hidden="true" className="h-8 w-8 text-muted" strokeWidth={1.7} />
             </div>

@@ -296,10 +296,10 @@ export function ShareSettingsSheet({
                     type="button"
                     onClick={() => void changeVisibility(option.value)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-2xl border bg-white p-4 text-left transition-colors",
+                      "flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-left transition-colors",
                       selected
                         ? "border-brand bg-brand-light"
-                        : "border-stone-100 hover:border-brand/40 hover:bg-brand-light"
+                        : "border-line hover:border-brand/40 hover:bg-brand-light"
                     )}
                   >
                     <Icon className="h-5 w-5 text-brand" />
@@ -371,7 +371,7 @@ export function ShareSettingsSheet({
                     return (
                       <div
                         key={invite.id}
-                        className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-white p-3"
+                        className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3"
                       >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-light text-xs font-semibold text-brand">
                           {getInitials(contact)}
@@ -384,7 +384,7 @@ export function ShareSettingsSheet({
                             <span
                               className={cn(
                                 "h-2 w-2 rounded-full",
-                                accepted ? "bg-green-500" : "bg-stone-300"
+                                accepted ? "bg-success" : "bg-muted/30"
                               )}
                             />
                             {accepted ? "Accepted" : "Pending"}
@@ -394,7 +394,7 @@ export function ShareSettingsSheet({
                           type="button"
                           disabled={removingInviteId === invite.id}
                           onClick={() => void removeInvite(invite.id)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-brand-light hover:text-danger disabled:opacity-50"
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Remove invite</span>

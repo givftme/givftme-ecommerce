@@ -225,14 +225,14 @@ export function ProductExplorer({
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex rounded-full border border-stone-200 bg-white p-1">
+            <div className="flex rounded-full border border-line bg-card p-1">
               <button
                 type="button"
                 aria-label="Grid view"
                 onClick={() => setViewMode("grid")}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                  viewMode === "grid" ? "bg-brand text-white" : "text-muted"
+                  viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted"
                 )}
               >
                 <Grid2X2 className="h-4 w-4" />
@@ -243,7 +243,7 @@ export function ProductExplorer({
                 onClick={() => setViewMode("list")}
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                  viewMode === "list" ? "bg-brand text-white" : "text-muted"
+                  viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted"
                 )}
               >
                 <List className="h-4 w-4" />
@@ -255,7 +255,7 @@ export function ProductExplorer({
               <select
                 value={pageSize}
                 onChange={(event) => setPageSize(Number(event.target.value))}
-                className="h-10 rounded-full border border-stone-200 bg-white px-3 text-sm font-medium text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+                className="h-10 rounded-full border border-line bg-card px-3 text-sm font-medium text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               >
                 <option value={16}>16</option>
                 <option value={32}>32</option>
@@ -283,7 +283,7 @@ export function ProductExplorer({
             {filteredProducts.map((product, index) => (
               <article
                 key={product.id}
-                className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm"
+                className="rounded-2xl border border-line bg-card p-4 shadow-sm"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>

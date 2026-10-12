@@ -21,7 +21,7 @@ function DaysPill({ date }: { date: ImportantDate }) {
 
   if (days > 0) {
     return (
-      <span className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-white">
+      <span className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
         In {days} {days === 1 ? "day" : "days"}
       </span>
     );
@@ -72,7 +72,7 @@ export function ImportantDateCard({
   return (
     <article
       ref={ref}
-      className="relative rounded-2xl border border-stone-100 bg-white p-4 shadow-sm"
+      className="relative rounded-2xl border border-line bg-card p-4 shadow-sm"
     >
       <div className="flex items-center gap-3">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-[32px]">
@@ -107,7 +107,7 @@ export function ImportantDateCard({
       {isMenuOpen && (
         <div
           className={cn(
-            "absolute right-4 top-16 z-20 w-36 rounded-2xl border border-stone-100 bg-white p-2 shadow-lg"
+            "absolute right-4 top-16 z-20 w-36 rounded-2xl border border-line bg-card p-2 shadow-lg"
           )}
         >
           <button
@@ -126,7 +126,7 @@ export function ImportantDateCard({
               onMenuOpenChange(false);
               onDelete(date);
             }}
-            className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+            className="w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-danger hover:bg-brand-light"
           >
             Delete
           </button>

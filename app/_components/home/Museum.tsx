@@ -39,7 +39,7 @@ const ROOMS: Room[] = [
   {
     href: "/shop",
     icon: Heart,
-    cardClass: "bg-brand text-white",
+    cardClass: "bg-primary text-primary-foreground",
     iconClass: "text-brand",
     title: "For a mum who “needs nothing”",
     note: "Thoughtful, not flashy",
@@ -55,7 +55,7 @@ const ROOMS: Room[] = [
   {
     href: "/shop",
     icon: Plane,
-    cardClass: "bg-blue-50",
+    cardClass: "bg-blue/10",
     iconClass: "text-blue",
     title: "For someone who’s leaving",
     note: "Japa send-offs",
@@ -63,23 +63,23 @@ const ROOMS: Room[] = [
   {
     href: "/occasions/graduation",
     icon: GraduationCap,
-    cardClass: "bg-green-50",
-    iconClass: "text-green",
+    cardClass: "bg-success/10",
+    iconClass: "text-success",
     title: "For a new chapter",
     note: "Grads, new jobs, new homes",
   },
   {
     href: "/occasions/baby-shower",
     icon: Baby,
-    cardClass: "bg-amber-50",
-    iconClass: "text-amber-800",
+    cardClass: "bg-warning/10",
+    iconClass: "text-warning",
     title: "For a new baby",
     note: "Naming & Omugwo",
   },
   {
     href: "/occasions/other-festivities",
     icon: PartyPopper,
-    cardClass: "bg-ink text-white",
+    cardClass: "bg-ink-deep text-white",
     iconClass: "text-ink",
     title: "For Detty December",
     note: "Homecoming season",
@@ -223,7 +223,7 @@ export default function Museum({ products }: { products: ProductCardData[] }) {
             >
               <span
                 className={cx(
-                  "grid size-12 place-items-center rounded-2xl bg-white/75",
+                  "grid size-12 place-items-center rounded-2xl bg-card/75",
                   room.iconClass,
                 )}
               >

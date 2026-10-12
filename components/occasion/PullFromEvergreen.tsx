@@ -12,7 +12,7 @@ function MasterItemThumb({ item }: { item: MasterItem }) {
   if (!item.image_url) {
     return (
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface">
-        <Gift className="h-5 w-5 text-stone-300" strokeWidth={1.5} />
+        <Gift className="h-5 w-5 text-muted/40" strokeWidth={1.5} />
       </div>
     );
   }
@@ -50,9 +50,9 @@ export function PullFromEvergreen({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-stone-100 bg-white px-4 py-8 text-center shadow-sm">
+      <div className="rounded-2xl border border-line bg-card px-4 py-8 text-center shadow-sm">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface">
-          <Gift className="h-8 w-8 text-stone-300" strokeWidth={1.5} />
+          <Gift className="h-8 w-8 text-muted/40" strokeWidth={1.5} />
         </div>
         <p className="mx-auto mt-5 max-w-xs text-sm leading-6 text-muted">
           Your main wishlist is empty - you can still add items in the next step.
@@ -89,15 +89,15 @@ export function PullFromEvergreen({
             <label
               key={item.id}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm transition-colors",
-                checked ? "border-brand bg-brand-light" : "border-stone-100"
+                "flex cursor-pointer items-center gap-3 rounded-2xl border bg-card p-3 shadow-sm transition-colors",
+                checked ? "border-brand bg-brand-light" : "border-line"
               )}
             >
               <input
                 type="checkbox"
                 checked={checked}
                 onChange={() => toggle(item.id)}
-                className="h-5 w-5 rounded border-stone-300 accent-brand"
+                className="h-5 w-5 rounded border-line accent-brand"
               />
               <MasterItemThumb item={item} />
               <span className="min-w-0 flex-1">

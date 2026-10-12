@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 gsap.registerPlugin(useGSAP);
 
 const iconButtonClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-white text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:opacity-30";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-card text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:opacity-30";
 
 function WishlistItemImage({ item }: { item: WishlistItem }) {
   const [failed, setFailed] = useState(false);
@@ -128,7 +128,7 @@ export function WishlistItemCard({
       ref={ref}
       data-item-id={item.id}
       className={cn(
-        "flex flex-wrap items-center gap-3 rounded-[20px] bg-white p-3 transition-[opacity,box-shadow] hover:shadow-soft sm:flex-nowrap sm:gap-3.5 sm:rounded-[22px]",
+        "flex flex-wrap items-center gap-3 rounded-[20px] bg-card p-3 transition-[opacity,box-shadow] hover:shadow-soft sm:flex-nowrap sm:gap-3.5 sm:rounded-[22px]",
         isPurchased && "opacity-60",
         isRemoving && "opacity-40"
       )}

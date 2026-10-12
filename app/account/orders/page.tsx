@@ -33,7 +33,7 @@ export default async function OrdersPage() {
 
       <div className="mt-6">
         {hasOrders ? <OrderList initialPage={initialPage} counts={counts} /> : (
-          <div className="rounded-2xl border border-stone-100 bg-white px-5 py-12 text-center shadow-sm">
+          <div className="rounded-2xl border border-line bg-card px-5 py-12 text-center shadow-sm">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-light">
               <ShoppingBag aria-hidden="true" className="h-10 w-10 text-muted" strokeWidth={1.5} />
             </div>

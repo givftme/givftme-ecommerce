@@ -332,7 +332,7 @@ export function GiverItemActions({
       )}
 
       {(flaggedByOther || reservedByOther) && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium leading-6 text-amber-700">
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm font-medium leading-6 text-warning">
           {reservedByOther
             ? "Someone has already reserved this one."
             : "Someone else is planning to buy this."}
@@ -421,7 +421,7 @@ export function GiverItemActions({
           )}
 
           {redirected && (
-            <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
               <p className="text-sm leading-6 text-muted">
                 Once you&apos;ve bought it on {domain || "the store"}, come back
                 and confirm below.

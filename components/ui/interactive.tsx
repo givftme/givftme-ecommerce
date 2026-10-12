@@ -17,10 +17,10 @@ export type BtnTone = "brand" | "red" | "line" | "ink";
 export type BtnSize = "md" | "sm";
 
 const BTN_TONES: Record<BtnTone, string> = {
-  brand: "bg-brand text-white shadow-soft hover:bg-brand-dark",
-  red: "bg-red text-white shadow-[0_10px_24px_rgba(225,29,46,0.28)] hover:bg-red-600",
-  line: "border-line bg-white text-ink hover:border-ink",
-  ink: "bg-ink text-white",
+  brand: "bg-primary text-primary-foreground shadow-soft hover:bg-primary-hover",
+  red: "bg-red text-white shadow-soft hover:bg-red-600",
+  line: "border-line bg-card text-ink hover:border-ink",
+  ink: "bg-ink-deep text-white",
 };
 
 const BTN_SIZES: Record<BtnSize, string> = {
@@ -116,12 +116,18 @@ export function Reveal<T extends ElementType = "div">({
  * can fail. When one does we hide it and tint its frame instead of leaving a
  * broken-image glyph. The logo opts out — it has its own wordmark fallback.
  */
+type SmartImageProps = Omit<ComponentPropsWithoutRef<"img">, "alt"> & {
+  alt: string;
+};
+
 export function SmartImage({
   className,
+  alt,
   ...rest
-}: ComponentPropsWithoutRef<"img">) {
+}: SmartImageProps) {
   return (
     <img
+      alt={alt}
       onError={(e) => {
         e.currentTarget.style.visibility = "hidden";
         e.currentTarget.parentElement?.classList.add("img-fallback");

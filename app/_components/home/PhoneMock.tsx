@@ -24,7 +24,7 @@ type ScreenProps = { channel: string };
 
 const TINY = "text-[11px] text-muted";
 const BUBBLE =
-  "max-w-[92%] rounded-[4px_16px_16px_16px] bg-white px-3 py-2.5 text-[12.5px] leading-[1.45] shadow-[0_1px_1px_rgba(0,0,0,0.05)]";
+  "max-w-[92%] rounded-[4px_16px_16px_16px] bg-card px-3 py-2.5 text-[12.5px] leading-[1.45] shadow-[0_1px_1px_rgba(0,0,0,0.05)]";
 const APP_BAR = "flex items-center justify-between px-[18px] pt-[52px] pb-3";
 const APP_BODY = "flex min-h-0 flex-1 flex-col gap-3 px-4 pt-1 pb-4";
 const CTA_BAR =
@@ -33,19 +33,19 @@ const CTA_BAR =
 const UPCOMING = [
   {
     initials: "TA",
-    tone: "bg-[#fff1e4] text-[#c4520a]",
+    tone: "bg-peach text-accent-foreground",
     name: "Tunde & Ada",
     meta: "Anniversary · 12 Oct",
   },
   {
     initials: "BO",
-    tone: "bg-blue-50 text-blue",
+    tone: "bg-blue/10 text-blue",
     name: "Bola",
     meta: "Birthday · 19 Oct",
   },
   {
     initials: "KE",
-    tone: "bg-green-50 text-green",
+    tone: "bg-success/10 text-success",
     name: "Kemi’s baby",
     meta: "Naming ceremony · 2 Nov",
   },
@@ -94,7 +94,7 @@ function ScreenCountdown() {
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <span className="flex h-[38px] items-center justify-center gap-1.5 rounded-full bg-ink text-xs font-medium text-white">
+        <span className="flex h-[38px] items-center justify-center gap-1.5 rounded-full bg-ink-deep text-xs font-medium text-white">
             <Icon as={Sparkles} size={16} />
             Get ideas
           </span>
@@ -135,7 +135,7 @@ function ScreenCountdown() {
 function ScreenIdeas({ channel }: ScreenProps) {
   return (
     <>
-      <div className="flex items-center gap-2.5 border-b border-line bg-white px-4 pt-12 pb-3">
+      <div className="flex items-center gap-2.5 border-b border-line bg-card px-4 pt-12 pb-3">
         <span className="grid size-[34px] place-items-center rounded-full bg-red text-white">
           <Icon as={Gift} size={16} />
         </span>
@@ -146,21 +146,21 @@ function ScreenIdeas({ channel }: ScreenProps) {
           <span className={TINY}>{channel} · now</span>
         </div>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2.5 bg-[#f4f1ec] px-3 py-3.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5 bg-soft px-3 py-3.5">
         <div className={BUBBLE}>
           Chidinma turns 30 next Friday. Want to do something proper?
         </div>
         <div className={cx(BUBBLE, "p-2")}>
           <div className="grid grid-cols-3 gap-1.5">
-            <div className="overflow-hidden rounded-xl border border-line bg-white text-[10.5px] leading-tight">
-              <span className="grid aspect-square w-full place-items-center bg-red-50 text-red">
+            <div className="overflow-hidden rounded-xl border border-line bg-card text-[10.5px] leading-tight">
+              <span className="grid aspect-square w-full place-items-center bg-brand-light text-red">
                 <Icon as={ListChecks} />
               </span>
               <div className="p-1.5">
                 <b className="block font-semibold">Her list</b>She asked
               </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-line bg-white text-[10.5px] leading-tight">
+            <div className="overflow-hidden rounded-xl border border-line bg-card text-[10.5px] leading-tight">
               <SmartImage
                 src={`${BOX_SWEET_HOME}?w=200`}
                 alt="Sweet Home Box"
@@ -170,7 +170,7 @@ function ScreenIdeas({ channel }: ScreenProps) {
                 <b className="block font-semibold">Sweet Home</b>₦30,000
               </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-line bg-white text-[10.5px] leading-tight">
+            <div className="overflow-hidden rounded-xl border border-line bg-card text-[10.5px] leading-tight">
               <SmartImage
                 src={`${BOX_NEW_CHAPTER}?w=200`}
                 alt="The New Chapter Box"
@@ -244,7 +244,7 @@ function ScreenDelivered() {
         />
       </div>
       <div className="absolute top-12 right-3 left-3 z-2 flex justify-between">
-        <Pill tone="green" className="bg-white">
+        <Pill tone="green" className="bg-card">
           <Icon as={CircleCheck} size={16} />
           Delivered 10:42
         </Pill>
@@ -287,7 +287,7 @@ export default function PhoneMock({
         className,
       )}
     >
-      <div className="relative size-full overflow-hidden rounded-[37px] bg-white">
+      <div className="relative size-full overflow-hidden rounded-[37px] bg-card">
         {SCREENS.map((Screen, i) => (
           <div
             key={i}

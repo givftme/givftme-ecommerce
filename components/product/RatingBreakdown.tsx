@@ -34,7 +34,7 @@ export function RatingBreakdown({
   }, [reviews.breakdown]);
 
   return (
-    <div className="grid gap-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm md:grid-cols-[180px_1fr]">
+    <div className="grid gap-6 rounded-2xl border border-line bg-card p-5 shadow-sm md:grid-cols-[180px_1fr]">
       <div>
         <p className="text-4xl font-bold text-ink">{reviews.avg.toFixed(1)}</p>
         <div className="mt-2 flex gap-1 text-amber-500">

@@ -14,8 +14,8 @@ import {
 const AVATAR_TONES = {
   brand: "bg-brand-light text-brand",
   peach: "bg-peach text-orange",
-  blue: "bg-blue-50 text-blue",
-  green: "bg-green-50 text-green",
+  blue: "bg-blue/10 text-blue",
+  green: "bg-success/10 text-success",
 } as const;
 
 interface TeamMember {
@@ -68,7 +68,7 @@ export default function Business() {
       className="pb-24 max-sm:pb-16"
     >
       <Wrap>
-        <Reveal className="grid grid-cols-2 items-center gap-10 rounded-card-xl border border-line bg-white p-10 max-lg:grid-cols-1 max-sm:p-5.5">
+        <Reveal className="grid grid-cols-2 items-center gap-10 rounded-card-xl border border-line bg-card p-10 max-lg:grid-cols-1 max-sm:p-5.5">
           <div className="flex min-w-0 flex-col gap-4.5">
             <Eyebrow>
               <Icon as={Briefcase} size={16} />
@@ -108,7 +108,7 @@ export default function Business() {
               {TEAM.map(({ initials, tone, name, meta, status }) => (
                 <li
                   key={name}
-                  className="flex items-center gap-3 rounded-[14px] bg-white p-3"
+                  className="flex items-center gap-3 rounded-[14px] bg-card p-3"
                 >
                   <span
                     aria-hidden="true"

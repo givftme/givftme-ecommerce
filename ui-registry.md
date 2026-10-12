@@ -1,3 +1,13 @@
+## Application appearance
+
+`app/globals.css` owns the light and dark semantic tokens and the Inter/Belleza
+font variables. `app/layout.tsx` loads those fonts with `next/font/google` and
+wraps routes in `next-themes`; the public `Navbar` exposes
+`components/layout/ThemeSelector.tsx` for System, Light, and Dark preferences.
+Use semantic utilities such as `bg-background`, `bg-card`, `text-foreground`,
+`border-border`, and `bg-primary` for theme-aware surfaces and controls. Use
+Inter for interface text and Belleza only for editorial display headings.
+
 ## Gift pricing
 
 `components/admin/PricingControls.tsx` supplies `/admin/pricing` with four policy

@@ -411,7 +411,7 @@ export function WishlistItemList({
               <div className="flex flex-wrap gap-2">
                 {occasion ? (
                   <>
-                    <span className={cn(coverPillClass, "bg-white text-brand")}>
+                    <span className={cn(coverPillClass, "bg-card text-brand")}>
                       <span aria-hidden="true">
                         {OCCASION_EMOJIS[occasion.occasion_type]}
                       </span>
@@ -425,7 +425,7 @@ export function WishlistItemList({
                   </>
                 ) : (
                   <>
-                    <span className={cn(coverPillClass, "bg-white text-brand")}>
+                    <span className={cn(coverPillClass, "bg-card text-brand")}>
                       <Gift className="h-3.5 w-3.5" aria-hidden="true" />
                       Evergreen
                     </span>
@@ -457,7 +457,7 @@ export function WishlistItemList({
 
           <section
             aria-label="Wishlist overview"
-            className="flex flex-col gap-4 rounded-[20px] bg-white p-4 sm:rounded-3xl sm:p-5"
+            className="flex flex-col gap-4 rounded-[20px] bg-card p-4 sm:rounded-3xl sm:p-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div
@@ -478,7 +478,7 @@ export function WishlistItemList({
                       className={cn(
                         "inline-flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[12.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:px-3",
                         visibility === value
-                          ? "bg-white text-ink shadow-soft"
+                          ? "bg-card text-ink shadow-soft"
                           : "text-muted hover:text-ink"
                       )}
                     >
@@ -504,7 +504,7 @@ export function WishlistItemList({
                   href={`/w/${wishlist.id}`}
                   target="_blank"
                   rel="noopener"
-                  className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-line bg-white px-4 text-sm font-medium text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                  className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-line bg-card px-4 text-sm font-medium text-ink transition-colors hover:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   <Eye className="h-4 w-4" aria-hidden="true" />
                   Preview
@@ -554,7 +554,7 @@ export function WishlistItemList({
 
           <section
             aria-label="Add a wish"
-            className="flex flex-col gap-3 rounded-[20px] bg-white p-3.5 sm:rounded-3xl"
+            className="flex flex-col gap-3 rounded-[20px] bg-card p-3.5 sm:rounded-3xl"
           >
             <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 py-0.5">
               {ADD_OPTIONS.map(({ mode, label, icon: OptionIcon }) => (
@@ -566,8 +566,8 @@ export function WishlistItemList({
                   className={cn(
                     "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3.5 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
                     addTab === mode
-                      ? "border-ink bg-ink text-white"
-                      : "border-line bg-white text-muted hover:border-ink hover:text-ink"
+                      ? "border-ink-deep bg-ink-deep text-white"
+                      : "border-line bg-card text-muted hover:border-ink hover:text-ink"
                   )}
                 >
                   <OptionIcon className="h-4 w-4" aria-hidden="true" />
@@ -595,11 +595,11 @@ export function WishlistItemList({
                     aria-invalid={Boolean(linkError)}
                     aria-describedby={linkError ? "wishlist-link-error" : undefined}
                     placeholder="Paste a link from Jumia, Konga, Amazon, Instagram…"
-                    className="h-12 min-w-0 flex-1 rounded-2xl border-[1.5px] border-line bg-white px-4 text-base text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-brand sm:text-sm"
+                    className="h-12 min-w-0 flex-1 rounded-2xl border-[1.5px] border-line bg-card px-4 text-base text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-brand sm:text-sm"
                   />
                   <button
                     type="submit"
-                    className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors hover:bg-ink/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                    className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-ink-deep px-5 text-sm font-medium text-white transition-colors hover:bg-ink-deep/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                   >
                     <WandSparkles className="h-4 w-4" aria-hidden="true" />
                     Fetch

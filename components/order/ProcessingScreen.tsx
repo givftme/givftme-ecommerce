@@ -93,7 +93,7 @@ export function ProcessingScreen({ orderId }: ProcessingScreenProps) {
 
   if (!orderId) {
     return (
-      <main className="flex min-h-dvh items-center justify-center bg-white px-4">
+      <main className="flex min-h-dvh items-center justify-center bg-card px-4">
         <div className="max-w-sm text-center">
           <h1 className="text-2xl font-bold text-ink">Order not found</h1>
           <p className="mt-2 text-sm leading-6 text-muted">
@@ -108,7 +108,7 @@ export function ProcessingScreen({ orderId }: ProcessingScreenProps) {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-white px-4">
+    <main className="flex min-h-dvh items-center justify-center bg-card px-4">
       <div className="max-w-sm text-center">
         <div
           ref={ringRef}

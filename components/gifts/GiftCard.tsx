@@ -24,7 +24,7 @@ export function GiftCard({
   onSendThankYou: (gift: GiftReceived) => void;
 }) {
   return (
-    <article className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+    <article className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm">
       <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface">
         {gift.itemImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

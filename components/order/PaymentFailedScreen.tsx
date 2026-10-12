@@ -77,7 +77,7 @@ export function PaymentFailedScreen({ orderId, reason }: PaymentFailedScreenProp
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-white px-4">
+    <main className="flex min-h-dvh items-center justify-center bg-card px-4">
       <div className="max-w-sm text-center">
         <XCircle ref={iconRef} className="mx-auto h-16 w-16 text-brand" />
         <h1 className="mt-6 text-2xl font-bold text-ink">
@@ -88,7 +88,7 @@ export function PaymentFailedScreen({ orderId, reason }: PaymentFailedScreenProp
         </p>
 
         {error ? (
-          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          <p className="mt-4 rounded-xl bg-brand-light px-4 py-3 text-sm font-medium text-danger">
             {error}
           </p>
         ) : null}

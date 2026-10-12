@@ -80,7 +80,7 @@ export function ProductImageGallery({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Gift className="h-12 w-12 text-stone-300" strokeWidth={1.5} />
+            <Gift className="h-12 w-12 text-muted/40" strokeWidth={1.5} />
           </div>
         )}
 
@@ -93,7 +93,7 @@ export function ProductImageGallery({
           ) : null}
         </div>
         {isNew ? (
-          <Badge variant="muted" className="absolute right-4 top-4 bg-ink text-white">
+          <Badge variant="muted" className="absolute right-4 top-4 bg-ink-deep text-white">
             New
           </Badge>
         ) : null}
@@ -109,7 +109,7 @@ export function ProductImageGallery({
               onClick={() => swapImage(index)}
               className={cn(
                 "relative aspect-square overflow-hidden rounded-xl border bg-surface transition-colors",
-                index === activeIndex ? "border-brand" : "border-stone-100"
+                index === activeIndex ? "border-brand" : "border-line"
               )}
             >
               {image.url ? (
@@ -121,7 +121,7 @@ export function ProductImageGallery({
                   className="object-cover"
                 />
               ) : (
-                <Gift className="mx-auto h-full w-6 text-stone-300" />
+                <Gift className="mx-auto h-full w-6 text-muted/40" />
               )}
             </button>
           ))}

@@ -28,7 +28,7 @@ function EntryLink({
       href={entry.href}
       aria-current={entry.current ? "page" : undefined}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[18px] border-[1.5px] bg-white p-2.5 text-left transition-[border-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 lg:hover:translate-x-0.5",
+        "flex w-full items-center gap-3 rounded-[18px] border-[1.5px] bg-card p-2.5 text-left transition-[border-color,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 lg:hover:translate-x-0.5",
         entry.current ? "border-brand" : "border-transparent hover:border-line"
       )}
     >
@@ -36,7 +36,7 @@ function EntryLink({
         aria-hidden="true"
         className={cn(
           "flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] text-xl text-white",
-          muted ? "bg-stone-300" : getWishlistCoverClass(entry.cover)
+          muted ? "bg-muted/30" : getWishlistCoverClass(entry.cover)
         )}
       >
         {entry.emoji ?? <Gift className="h-5 w-5" strokeWidth={1.75} />}
@@ -79,7 +79,7 @@ export function WishlistSidebar({
           through the existing occasion flow. */}
       <Link
         href="/my-occasions/new"
-        className="flex h-13 items-center justify-center gap-2 rounded-[18px] border-[1.5px] border-dashed border-brand/30 bg-white font-medium text-brand transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="flex h-13 items-center justify-center gap-2 rounded-[18px] border-[1.5px] border-dashed border-brand/30 bg-card font-medium text-brand transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         New wishlist
@@ -104,7 +104,7 @@ export function WishlistSidebar({
         </details>
       )}
 
-      <div className="hidden items-center gap-3 rounded-[20px] bg-white p-4 lg:flex">
+      <div className="hidden items-center gap-3 rounded-[20px] bg-card p-4 lg:flex">
         <Image
           src="/images/givftme-wave.png"
           alt=""

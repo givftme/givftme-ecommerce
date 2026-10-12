@@ -387,7 +387,7 @@ export function CheckoutForm({
                 disabled={submitting || !isHydrated}
               />
 
-              <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
                 <div className="space-y-4">
                   <AddressForm
                     control={form.control}
@@ -407,7 +407,7 @@ export function CheckoutForm({
                     )}
                   />
                 </div>
-                <label className="mt-5 flex items-start gap-3 border-t border-stone-100 pt-4 text-sm text-ink">
+                <label className="mt-5 flex items-start gap-3 border-t border-line pt-4 text-sm text-ink">
                   <input
                     type="checkbox"
                     className="mt-1 accent-brand"
@@ -426,7 +426,7 @@ export function CheckoutForm({
                 </p>
               ) : null}
               {hasUnavailableItems ? (
-                <div className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                <div className="mt-3 rounded-xl bg-brand-light px-4 py-3 text-sm text-danger">
                   Remove unavailable items from your cart before checkout.
                 </div>
               ) : null}
@@ -440,7 +440,7 @@ export function CheckoutForm({
               />
 
               {globalError ? (
-                <p className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                <p className="rounded-xl bg-brand-light px-4 py-3 text-sm font-medium text-danger">
                   {globalError}
                 </p>
               ) : null}

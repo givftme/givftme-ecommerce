@@ -16,7 +16,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-stone-100 bg-white md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-card md:hidden">
       {tabs.map((tab) => {
         // Nested routes (e.g. /wishlists/[id]) keep their tab highlighted.
         const isActive =

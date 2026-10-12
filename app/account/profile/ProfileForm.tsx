@@ -202,15 +202,15 @@ export function ProfileForm({
   return (
     <div className="max-w-[560px] space-y-8">
       {showAddNameBanner && (
-        <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-900">
+        <div className="flex items-start justify-between gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4">
+          <p className="text-sm text-warning">
             Add your name so friends know whose wishlist they&apos;re viewing.
           </p>
           <button
             type="button"
             aria-label="Dismiss"
             onClick={dismissBanner}
-            className="shrink-0 text-amber-700 hover:text-amber-900"
+            className="shrink-0 text-warning hover:text-warning"
           >
             <X className="h-4 w-4" />
           </button>
@@ -252,7 +252,7 @@ export function ProfileForm({
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 border-t border-stone-100 pt-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 border-t border-line pt-8">
           <FormField
             control={form.control}
             name="full_name"
@@ -299,14 +299,14 @@ export function ProfileForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <p className="text-xs font-medium text-ink">Password</p>
-              <div className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-stone-200 px-4">
+              <div className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-line px-4">
                 <span className="text-sm text-muted">••••••••</span>
                 <Link href="/forgot-password" className="text-sm font-semibold text-brand hover:underline">Change password</Link>
               </div>
             </div>
             <div className="space-y-2">
               <p className="text-xs font-medium text-ink">Birthday</p>
-              <div className="flex min-h-12 items-center rounded-xl border border-stone-200 px-4 text-sm text-muted">
+              <div className="flex min-h-12 items-center rounded-xl border border-line px-4 text-sm text-muted">
                 {birthday || "Not provided"}
               </div>
             </div>
@@ -365,7 +365,7 @@ export function ProfileForm({
           </Button>
         </form>
       </Form>
-      <section className="space-y-4 border-t border-stone-100 pt-8" aria-labelledby="profile-danger-zone">
+      <section className="space-y-4 border-t border-line pt-8" aria-labelledby="profile-danger-zone">
         <div>
           <h2 id="profile-danger-zone" className="text-base font-semibold text-ink">Danger zone</h2>
           <p className="mt-1 text-sm text-muted">Sign out on this device or permanently delete your account.</p>

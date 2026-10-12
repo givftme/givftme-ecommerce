@@ -53,10 +53,10 @@ export function OccasionTypeSelector({
             aria-pressed={selected}
             onClick={() => selectType(type)}
             className={cn(
-              "flex min-h-[140px] flex-col items-center justify-center rounded-2xl border bg-white p-4 text-center transition-colors",
+              "flex min-h-[140px] flex-col items-center justify-center rounded-2xl border bg-card p-4 text-center transition-colors",
               selected
                 ? "border-brand bg-brand-light"
-                : "border-stone-100 hover:border-brand/40 hover:bg-brand-light/40"
+                : "border-line hover:border-brand/40 hover:bg-brand-light/40"
             )}
           >
             <span className="text-[36px]" aria-hidden="true">

@@ -67,8 +67,8 @@ function ComposeForm({
 
   return (
     <form className="mt-6 space-y-5" onSubmit={form.handleSubmit(send)}>
-      <div className="flex items-center gap-3 rounded-2xl border border-stone-100 bg-surface p-3">
-        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-white">
+      <div className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-3">
+        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-card">
           {gift.itemImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={gift.itemImageUrl} alt="" className="h-full w-full object-cover" />

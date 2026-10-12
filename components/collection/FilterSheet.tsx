@@ -115,7 +115,7 @@ function FilterControls({
 
 export function FilterSidebar(props: FilterControlsProps) {
   return (
-    <aside className="hidden w-60 shrink-0 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm lg:block">
+    <aside className="hidden w-60 shrink-0 rounded-2xl border border-line bg-card p-5 shadow-sm lg:block">
       <div className="mb-5 flex items-center gap-2 text-sm font-semibold text-ink">
         <SlidersHorizontal className="h-4 w-4" />
         Filter

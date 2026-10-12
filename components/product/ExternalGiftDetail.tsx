@@ -29,12 +29,12 @@ export function ExternalGiftDetail({ product }: ExternalGiftDetailProps) {
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <Gift className="h-16 w-16 text-stone-300" strokeWidth={1.5} />
+              <Gift className="h-16 w-16 text-muted/40" strokeWidth={1.5} />
             </div>
           )}
         </div>
 
-        <div className="self-start rounded-[2rem] border border-stone-100 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+        <div className="self-start rounded-[2rem] border border-line bg-card p-6 shadow-sm lg:sticky lg:top-24">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand">
             Fetched gift
           </p>
@@ -66,7 +66,7 @@ export function ExternalGiftDetail({ product }: ExternalGiftDetailProps) {
                 href={product.externalUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-stone-200 px-4 text-sm font-semibold text-ink transition-colors hover:border-brand/40 hover:text-brand"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-semibold text-ink transition-colors hover:border-brand/40 hover:text-brand"
               >
                 View source <ExternalLink className="h-4 w-4" />
               </a>

@@ -154,7 +154,7 @@ export default function Reminders() {
         >
           <div className="absolute inset-x-0 inset-y-[4%] overflow-hidden rounded-card-xl bg-peach before:absolute before:-top-20 before:-right-20 before:size-80 before:rounded-full before:bg-[rgba(255,122,26,0.16)] before:content-[''] after:absolute after:-bottom-[60px] after:-left-[70px] after:size-[260px] after:rounded-full after:bg-[rgba(225,29,46,0.1)] after:content-['']" />
 
-          <span className="absolute top-[calc(4%+18px)] left-5 z-2 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-red backdrop-blur max-lg:hidden">
+          <span className="absolute top-[calc(4%+18px)] left-5 z-2 inline-flex items-center gap-1.5 rounded-full bg-card/80 px-3 py-1 text-xs font-semibold text-red backdrop-blur max-lg:hidden">
             <Icon as={STEPS[stage].whenIcon} size={14} />
             {STEPS[stage].when}
           </span>
@@ -206,7 +206,7 @@ export default function Reminders() {
                     "relative h-10 shrink-0 snap-center cursor-pointer overflow-hidden rounded-full border-[1.5px] px-4 text-[13px] font-medium transition-colors",
                     stage === i
                       ? "border-red bg-red text-white"
-                      : "border-line bg-white text-ink hover:border-ink/40",
+                      : "border-line bg-card text-ink hover:border-ink/40",
                   )}
                 >
                   {stage === i && cycling && (
@@ -246,8 +246,8 @@ export default function Reminders() {
                   className={cx(
                     "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-[7px] text-[13px] transition-colors",
                     channel === label
-                      ? "border-ink bg-ink text-white"
-                      : "border-line bg-white text-ink hover:border-ink/40",
+                      ? "border-ink-deep bg-ink-deep text-white"
+                      : "border-line bg-card text-ink hover:border-ink/40",
                   )}
                 >
                   <Icon as={icon} size={16} />
@@ -293,7 +293,7 @@ export default function Reminders() {
                       "absolute top-1/2 left-0 size-4 -translate-y-1/2 rounded-full border-2 transition-colors duration-300",
                       i <= stage
                         ? "border-red bg-red"
-                        : "border-line bg-white",
+                        : "border-line bg-card",
                       stage === i && "ring-4 ring-red/15",
                     )}
                   />

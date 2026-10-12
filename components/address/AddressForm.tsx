@@ -82,7 +82,7 @@ export function AddressForm<TFieldValues extends FieldValues>({
               onBlur={field.onBlur}
               name={field.name}
               ref={field.ref}
-              className="h-12 w-full rounded-xl border border-stone-200 bg-white px-4 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20"
+              className="h-12 w-full rounded-xl border border-line bg-card px-4 text-sm text-ink outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20"
             >
               <option value="" disabled>Select a state</option>
               {NIGERIAN_STATES.map((state) => <option key={state} value={state}>{state}</option>)}

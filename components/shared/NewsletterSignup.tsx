@@ -61,7 +61,7 @@ export function NewsletterSignup() {
   return (
     <section className="bg-surface py-12">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
-        <div className="grid gap-6 rounded-2xl border border-stone-100 bg-white p-6 shadow-sm md:grid-cols-2 md:items-center">
+        <div className="grid gap-6 rounded-2xl border border-line bg-card p-6 shadow-sm md:grid-cols-2 md:items-center">
           <div className="flex items-start gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-light text-brand">
               <Mail className="h-5 w-5" />

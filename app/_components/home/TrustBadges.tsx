@@ -17,7 +17,7 @@ export function TrustBadges() {
           return (
             <div
               key={badge.label}
-              className="rounded-2xl border border-stone-100 bg-white p-5 text-center shadow-sm"
+              className="rounded-2xl border border-line bg-card p-5 text-center shadow-sm"
             >
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-brand-light text-brand">
                 <Icon className="h-5 w-5" />

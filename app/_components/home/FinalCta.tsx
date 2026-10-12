@@ -31,7 +31,7 @@ const SCHEDULE: [offset: number, label: string][] = [
 const MS_PER_DAY = 86_400_000;
 
 const FIELD =
-  "h-12 w-full min-w-0 appearance-none rounded-[14px] border-[1.5px] border-line bg-white px-3.5 text-[15px] text-ink outline-0 focus:border-red";
+  "h-12 w-full min-w-0 appearance-none rounded-[14px] border-[1.5px] border-line bg-card px-3.5 text-[15px] text-ink outline-0 focus:border-red";
 const LABEL = "flex flex-col gap-1.5 text-[12.5px] font-medium text-muted";
 
 interface Result {
@@ -168,7 +168,7 @@ export default function FinalCta() {
 
           <div
             ref={formBoxRef}
-            className="relative flex min-w-0 flex-col gap-3 rounded-card-lg bg-white p-5.5 text-ink shadow-float max-sm:p-4"
+            className="relative flex min-w-0 flex-col gap-3 rounded-card-lg bg-card p-5.5 text-ink shadow-float max-sm:p-4"
           >
             {!result ? (
               <form noValidate onSubmit={submit} className="flex flex-col gap-3">
@@ -256,7 +256,7 @@ export default function FinalCta() {
                     <li
                       key={label}
                       className={cx(
-                        "relative py-[7px] text-[13.5px] before:absolute before:top-3 before:-left-[26px] before:box-border before:size-3.5 before:rounded-full before:border-[3px] before:bg-white before:content-['']",
+                        "relative py-[7px] text-[13.5px] before:absolute before:top-3 before:-left-[26px] before:box-border before:size-3.5 before:rounded-full before:border-[3px] before:bg-card before:content-['']",
                         past
                           ? "text-muted line-through before:border-line"
                           : "before:border-red",
