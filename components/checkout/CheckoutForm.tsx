@@ -118,6 +118,7 @@ function getDefaultValues({
       delivery_instructions: defaultAddress?.delivery_instructions || "",
     },
     preferred_payment: "card",
+    save_address: savedAddresses.length === 0,
   };
 }
 
@@ -207,6 +208,7 @@ export function CheckoutForm({
         shouldValidate: true,
       }
     );
+    trackEvent("address.used_at_checkout");
   };
 
   const handleEnterNewAddress = () => {
@@ -263,6 +265,7 @@ export function CheckoutForm({
       })),
       shipping: values.shipping,
       preferred_payment: values.preferred_payment,
+      save_address: values.save_address,
       order_source: "self",
     });
 
@@ -399,6 +402,14 @@ export function CheckoutForm({
                     )}
                   />
                 </div>
+                <label className="mt-5 flex items-start gap-3 border-t border-stone-100 pt-4 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    className="mt-1 accent-brand"
+                    {...form.register("save_address")}
+                  />
+                  <span>Save this address for next time</span>
+                </label>
               </div>
             </fieldset>
 

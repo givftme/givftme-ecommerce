@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
+import { trackEvent } from "@/lib/analytics";
 import {
   reinitiateOrderPayment,
   releasePaymentClaim,
@@ -29,6 +30,73 @@ interface CheckoutOrder extends ReinitiatableOrder {
 
 const CHECKOUT_ORDER_SELECT =
   "id, buyer_id, total_amount, currency, status, shipping_email, shipping_name, shipping_phone, order_source, wishlist_item_id, price_changes";
+
+async function persistAddressFromCheckout(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  shipping: CheckoutInput["shipping"]
+) {
+  const { count, error: countError } = await supabase.from("addresses")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (countError) {
+    console.error("Checkout address save failed while checking existing addresses.", { userId });
+    return false;
+  }
+
+  const { data: address, error: insertError } = await supabase.from("addresses")
+    .insert({
+      user_id: userId,
+      label: "Home",
+      first_name: shipping.first_name,
+      last_name: shipping.last_name,
+      phone: shipping.phone,
+      street_address: shipping.street_address,
+      apt_suite_unit: shipping.apartment ?? null,
+      city: shipping.city,
+      state: shipping.state,
+      postal_code: shipping.postal_code ?? null,
+      delivery_instructions: shipping.delivery_instructions ?? null,
+      is_default: false,
+      is_default_billing: false,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !address) {
+    console.error("Checkout address save failed while inserting the address.", { userId });
+    return false;
+  }
+
+  if ((count ?? 0) === 0) {
+    const { data, error } = await supabase.rpc("gifvtme_update_address_defaults", {
+      target_address_id: address.id,
+      set_shipping_default: true,
+      set_billing_default: null,
+    });
+    if (error || !data) {
+      console.error("Checkout address was saved but could not be made the default.", { userId });
+      return false;
+    }
+  }
+
+  trackEvent("address.saved_from_checkout");
+  return true;
+}
+
+async function saveAddressFromCheckout(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  shipping: CheckoutInput["shipping"]
+) {
+  try {
+    return await persistAddressFromCheckout(supabase, userId, shipping);
+  } catch {
+    console.error("Checkout address save failed unexpectedly.", { userId });
+    return false;
+  }
+}
 
 async function respondForExistingOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -404,6 +472,12 @@ export async function POST(request: Request) {
   }
 
   const orderId = createdOrderId as string;
+  if (!isGiftOrder && (parsed.data as CheckoutInput).save_address) {
+    const shipping = (parsed.data as CheckoutInput).shipping;
+    after(async () => {
+      await saveAddressFromCheckout(supabase, user.id, shipping);
+    });
+  }
 
   try {
     const payment = await initiateFlutterwavePayment({

@@ -1,46 +1,8 @@
 import { z } from "zod";
+import { NIGERIAN_STATES, type NigerianState } from "@/lib/constants";
 
-export const NIGERIAN_STATES = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "FCT - Abuja",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
-] as const;
-
-export type NigerianState = (typeof NIGERIAN_STATES)[number];
+export { NIGERIAN_STATES } from "@/lib/constants";
+export type { NigerianState } from "@/lib/constants";
 
 export const paymentPreferenceSchema = z.enum([
   "card",
@@ -103,6 +65,7 @@ export const checkoutSchema = z.object({
   cart_items: z.array(checkoutCartItemSchema).min(1, "Cart is empty"),
   shipping: checkoutShippingSchema,
   preferred_payment: paymentPreferenceSchema.optional(),
+  save_address: z.boolean().default(false),
   // Which flow this order is, and nothing about which wishlist it belongs
   // to. `wishlist_item_id` used to be accepted here and came from
   // localStorage: a signed in buyer could name any wishlist item they
@@ -158,6 +121,7 @@ export const giftCheckoutFormSchema = z.object({
 export const checkoutFormSchema = z.object({
   shipping: checkoutShippingSchema,
   preferred_payment: paymentPreferenceSchema.default("card"),
+  save_address: z.boolean().default(false),
 });
 
 export type CheckoutInput = z.output<typeof checkoutSchema>;

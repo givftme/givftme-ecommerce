@@ -10,7 +10,8 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 |---|---|
 | `../../lib/api/response.ts` | `readJson` and `jsonError` helpers |
 | `../../lib/wishlist/server.ts` | Shared API authentication and wishlist ownership helpers |
-| `addresses/route.ts`, `addresses/[id]/route.ts` | Owner-scoped address book CRUD and default promotion |
+| `addresses/route.ts`, `addresses/[id]/route.ts` | Owner-scoped address book CRUD and default changes |
+| `account/addresses/route.ts`, `account/addresses/[id]/route.ts`, `account/addresses/[id]/set-default/route.ts` | Account-scoped address book API contract and explicit default promotion |
 | `orders/route.ts` | Authenticated order history tabs and pagination |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |
@@ -37,6 +38,10 @@ Checkout and external purchase marking remain separate flows. You can consult ro
 Account APIs authenticate inside each handler. Address rows are protected by
 their own RLS policy; keep user ownership in every query. `/api/orders` accepts
 `tab=active|completed|cancelled` and a one-based `page` value.
+
+The address book's account UI uses `/api/account/addresses`; the original
+`/api/addresses` endpoints remain as compatibility routes. Deleting a default
+address leaves the user with no default until they explicitly choose one.
 
 ## Related context
 
