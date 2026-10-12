@@ -41,7 +41,7 @@ This is being built by a single solo developer over a 4-month window. Every arch
 
 - Why decisions were made the way they were → `PRD.md`
 - Invariants that must never be violated → `BUSINESS_RULES.md`
-- How the system fits together → `architecture/ARCHITECTURE.md`
-- Database structure → `architecture/DATABASE_SCHEMA.md`
-- Visual design rules → `design/DESIGN_SYSTEM.md`
+- Feature details → `feature-specs/`
+- Database changes → the root `gifvtme_migration_*.sql` files
+- Visual design rules and shared UI patterns → `../AGENTS.md` and `../ui-registry.md`
 - Current build status → `ROADMAP.md`

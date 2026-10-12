@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { CheckoutShippingValues } from "@/lib/checkout/validation";
 
 export interface SavedAddress extends CheckoutShippingValues {
@@ -11,6 +12,7 @@ export interface SavedAddress extends CheckoutShippingValues {
 interface AddressSelectorProps {
   addresses: SavedAddress[];
   onSelect: (address: SavedAddress) => void;
+  onEnterNewAddress: () => void;
   defaultAddressId?: string;
   disabled?: boolean;
 }
@@ -18,9 +20,12 @@ interface AddressSelectorProps {
 export function AddressSelector({
   addresses,
   onSelect,
+  onEnterNewAddress,
   defaultAddressId,
   disabled,
 }: AddressSelectorProps) {
+  const [selectedAddressId, setSelectedAddressId] = useState(defaultAddressId || "");
+
   if (addresses.length === 0) {
     return null;
   }
@@ -31,13 +36,14 @@ export function AddressSelector({
         <span className="text-xs font-medium text-ink">Use a saved address</span>
         <select
           disabled={disabled}
-          defaultValue={defaultAddressId || ""}
+          value={selectedAddressId}
           onChange={(event) => {
             const address = addresses.find(
               (item) => item.id === event.currentTarget.value
             );
 
             if (address) {
+              setSelectedAddressId(address.id);
               onSelect(address);
             }
           }}
@@ -58,6 +64,8 @@ export function AddressSelector({
         type="button"
         className="mt-3 text-sm font-medium text-brand hover:underline"
         onClick={() => {
+          setSelectedAddressId("");
+          onEnterNewAddress();
           const form = document.getElementById("checkout-shipping-form");
           form?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}

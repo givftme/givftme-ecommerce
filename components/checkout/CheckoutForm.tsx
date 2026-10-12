@@ -209,6 +209,26 @@ export function CheckoutForm({
     );
   };
 
+  const handleEnterNewAddress = () => {
+    form.setValue(
+      "shipping",
+      {
+        first_name: "",
+        last_name: "",
+        email: initialEmail,
+        phone: "",
+        street_address: "",
+        apartment: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        delivery_instructions: "",
+      },
+      { shouldDirty: true },
+    );
+    form.clearErrors("shipping");
+  };
+
   const handlePaymentChange = (method: PaymentPreference) => {
     form.setValue("preferred_payment", method, {
       shouldDirty: true,
@@ -359,6 +379,7 @@ export function CheckoutForm({
               <AddressSelector
                 addresses={savedAddresses}
                 onSelect={applyAddress}
+                onEnterNewAddress={handleEnterNewAddress}
                 defaultAddressId={defaultAddress?.id}
                 disabled={submitting || !isHydrated}
               />

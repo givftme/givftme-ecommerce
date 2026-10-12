@@ -33,6 +33,12 @@ function getPendingPaymentThreshold(now: Date) {
   return new Date(now.getTime() - PENDING_PAYMENT_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 }
 
+function getQueryStatuses(group: OrderStatusGroup): OrderStatus[] {
+  return group === "cancelled"
+    ? [...STATUS_GROUPS.cancelled, "pending_payment"]
+    : STATUS_GROUPS[group];
+}
+
 export async function getOrderPageForUser(
   supabase: SupabaseClient,
   userId: string,
@@ -44,7 +50,7 @@ export async function getOrderPageForUser(
   let query = supabase.from("orders")
     .select(ORDER_CARD_SELECT, { count: "exact" })
     .eq("buyer_id", userId)
-    .in("status", STATUS_GROUPS[group]);
+    .in("status", getQueryStatuses(group));
 
   if (group === "active") {
     query = query.or(`status.neq.pending_payment,created_at.gte.${threshold}`);
@@ -119,7 +125,7 @@ export async function getOrderCountsForUser(
     let query = supabase.from("orders")
       .select("id", { count: "exact", head: true })
       .eq("buyer_id", userId)
-      .in("status", STATUS_GROUPS[group]);
+      .in("status", getQueryStatuses(group));
     if (group === "active") query = query.or(`status.neq.pending_payment,created_at.gte.${threshold}`);
     if (group === "cancelled") query = query.or(`status.neq.pending_payment,created_at.lt.${threshold}`);
     const { count, error } = await query;

@@ -64,6 +64,9 @@ BEGIN
     RETURN false;
   END IF;
 
+  -- Serialize default changes for this user, including when no default row exists yet.
+  PERFORM pg_advisory_xact_lock(hashtextextended(auth.uid()::text, 0));
+
   PERFORM 1 FROM public.addresses
   WHERE id = target_address_id AND user_id = auth.uid();
   IF NOT FOUND THEN

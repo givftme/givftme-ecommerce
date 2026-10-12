@@ -9,7 +9,7 @@ This file is the entry point for any AI coding agent working in this repository.
 3. `context/BUSINESS_RULES.md` — hard invariants, check before touching purchase/pricing/order/auth logic
 4. `context/ROADMAP.md` — current build status, so you know what's actually done vs not started
 
-Then the relevant deeper file depending on the task: `architecture/` for system/data/API questions, `design/` for UI questions, `engineering/` for code-level conventions.
+Then read the relevant feature spec in `context/feature-specs/` and the closest scoped guide: `app/AGENTS.md`, `app/api/AGENTS.md`, `components/AGENTS.md`, `lib/AGENTS.md`, or `sanity/AGENTS.md`. `ui-registry.md` records selected UI patterns. This checkout has no standalone architecture, design, or engineering guides.
 
 ## Non-negotiable scope boundaries
 
@@ -25,7 +25,7 @@ If a task description seems to imply one of these, stop and flag the conflict ra
 
 ## The two things to never get wrong
 
-**1. `wishlist_items.origin`** (`external` | `catalog`) determines which of two completely separate transaction flows an item follows. Before writing any code touching purchases, checkout, or pricing, confirm which flow you're in. See `context/architecture/ARCHITECTURE.md` for the full flow breakdown.
+**1. `wishlist_items.origin`** (`external` | `catalog`) determines which of two completely separate transaction flows an item follows. Before writing any code touching purchases, checkout, or pricing, confirm which flow you're in. See `context/PROJECT_OVERVIEW.md` and `context/BUSINESS_RULES.md` for the flow breakdown.
 
 **2. Price is always fetched server-side.** `getActivePrice()` in `lib/sanity/pricing.ts` is the single source of truth for any catalog item price — at checkout, at cart render, and at order creation. Never trust a client-provided price. Never use a wishlist snapshot price at checkout time.
 
@@ -53,10 +53,10 @@ These flows are permanently separate. Never mix them in one cart, one checkout, 
 
 ## Working conventions
 
-- Check `context/architecture/FOLDER_STRUCTURE.md` before creating a new file.
-- Check `context/design/COMPONENT_LIBRARY.md` before building a new component — extend existing ones, never build separate mobile/desktop component files (one responsive component per concept).
-- Check `context/architecture/API_ROUTES.md` before building a new API route, and update that file when you add or change one.
-- Follow `context/engineering/CODING_STANDARDS.md` for TypeScript, import paths, server/client component splits, and naming.
+- Check the nearest scoped `AGENTS.md` and existing code before creating a new file; current folder conventions are reflected in the source tree.
+- Check `components/AGENTS.md`, `ui-registry.md`, and existing components before building a component — extend existing ones, never build separate mobile/desktop component files (one responsive component per concept).
+- Check `app/api/AGENTS.md` and existing handlers before building an API route; update its route inventory when you add or change a route.
+- Follow this guide and the nearest scoped `AGENTS.md` for TypeScript, import paths, server/client component splits, and naming.
 - All prices in Naira, formatted via `formatPrice()` in `lib/utils.ts`.
 - All GROQ queries in `lib/sanity/queries.ts` — never inline in a page or component.
 - Use `cn()` from `lib/utils.ts` for all conditional class merging.
@@ -107,22 +107,7 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 
 ## Feature specs location
 
-All feature specs are in `context/features/`. See `context/features/INDEX.md` for the full list with statuses. 21 features total across 12 modules.
-
-| Module | Folder |
-|---|---|
-| Identity | `01-identity/` |
-| Wishlist Core | `02-wishlist-core/` |
-| Sharing & Giving | `03-sharing-giving/` |
-| Reminders | `04-reminders/` |
-| Thank You | `05-thank-you/` |
-| Gift Museum & Catalog | `06-museum-catalog/` |
-| Commerce | `07-commerce/` |
-| Fulfillment | `08-fulfillment/` |
-| Reviews | `09-reviews/` |
-| Flash Sales | `10-flash-sales/` |
-| Account | `11-account/` |
-| Gift Pooling | `12-gift-pooling/` |
+Feature specs are in `context/feature-specs/`. The files currently present are `19_ACCOUNT_MANAGEMENT_SPEC.md`, `20_aDDRESS_BOOK.md`, and `21-GIFT-POOLING.md`; this checkout has no feature index.
 
 ## When you're unsure
 
@@ -132,6 +117,6 @@ Prefer asking a clarifying question over making an assumption when the ambiguity
 
 If you complete a feature: update `context/ROADMAP.md`.
 If you make a new architectural or product decision: add it to `context/PRD.md` or `context/BUSINESS_RULES.md`.
-If you add an API route, component, or env variable: update the corresponding doc (`API_ROUTES.md`, `COMPONENT_LIBRARY.md`, `ENV_VARIABLES.md`).
+If you add an API route, update the route inventory in `app/api/AGENTS.md`. For component guidance, update `components/AGENTS.md` or `ui-registry.md` when the documented patterns or inventory change. For environment variables, update `.env.local.example` and the configuration notes in `README.md`.
 
 These files are meant to stay accurate — stale documentation is as harmful as no documentation.
