@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { ThemeSelector } from "./ThemeSelector";
 
 describe("ThemeSelector", () => {
-  it("offers accessible system, light, and dark appearance choices", () => {
+  it("offers an accessible appearance control with system, light, and dark choices", () => {
     const markup = renderToStaticMarkup(
       createElement(
         ThemeProvider,
@@ -14,9 +14,11 @@ describe("ThemeSelector", () => {
       ),
     );
 
-    expect(markup).toContain('aria-label="Appearance"');
-    expect(markup).toMatch(/<option value="system"(?: selected="")?>System<\/option>/);
-    expect(markup).toMatch(/<option value="light"(?: selected="")?>Light<\/option>/);
-    expect(markup).toMatch(/<option value="dark"(?: selected="")?>Dark<\/option>/);
+    expect(markup).toContain('aria-label="Appearance: System"');
+    expect(markup).toContain('role="group" aria-label="Appearance"');
+    expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain(">Light</span>");
+    expect(markup).toContain(">Dark</span>");
+    expect(markup).toContain(">System</span>");
   });
 });
