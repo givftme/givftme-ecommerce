@@ -103,7 +103,7 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 | `POST /api/reminders` | Every 15 min | Send due reminder emails |
 | `POST /api/thank-you/process` | Every 5 min | Send pending auto thank-you emails |
 | `POST /api/orders/notify` | Every 5 min | Send order status emails |
-| `POST /api/pools/notifications` | Every 5 min | Retry pending pool cash-out emails |
+| `POST /api/pools/notifications` | Daily at 06:45 UTC | Retry pending pool cash-out emails |
 | `POST /api/occasions/archive` | Daily | Archive occasions 7+ days past their date |
 
 ## Feature specs location
