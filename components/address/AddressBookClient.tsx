@@ -233,7 +233,9 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
                     {address.label ? <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted">{address.label}</span> : null}
                     {address.is_default && <span className="rounded-full bg-brand-light px-3 py-1 text-xs font-semibold text-brand">Default</span>}
                   </div>
-                  <h2 className="mt-3 text-sm font-semibold text-ink">{address.first_name} {address.last_name}</h2>
+                  <h2 className="mt-3 text-sm font-semibold text-ink">
+                    {[address.first_name, address.last_name].filter(Boolean).join(" ")}
+                  </h2>
                   <div className="mt-1 text-sm leading-6 text-muted">
                     {formatAddress(address).map((line) => <p key={line}>{line}</p>)}
                   </div>
@@ -244,16 +246,16 @@ export function AddressBookClient({ initialAddresses }: { initialAddresses: Save
                     <summary aria-label={`Actions for ${address.label || "saved"} address`} className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-muted hover:bg-surface hover:text-ink focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">
                       <MoreVertical aria-hidden="true" className="h-5 w-5" />
                     </summary>
-                    <div role="menu" className="absolute right-0 top-11 z-10 min-w-44 rounded-xl border border-stone-100 bg-white p-1 shadow-lg">
-                      <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openEditSheet(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
+                    <div className="absolute right-0 top-11 z-10 min-w-44 rounded-xl border border-stone-100 bg-white p-1 shadow-lg">
+                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openEditSheet(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
                         <Pencil aria-hidden="true" className="h-4 w-4" />Edit
                       </button>
                       {!address.is_default && (
-                        <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); void setDefault(address); }} className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
+                        <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); void setDefault(address); }} className="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm text-ink hover:bg-surface">
                           Set as default
                         </button>
                       )}
-                      <button type="button" role="menuitem" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setDeleteTarget(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-red-700 hover:bg-red-50">
+                      <button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setDeleteTarget(address); }} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm text-red-700 hover:bg-red-50">
                         <Trash2 aria-hidden="true" className="h-4 w-4" />Delete
                       </button>
                     </div>

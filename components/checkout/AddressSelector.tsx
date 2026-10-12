@@ -60,7 +60,10 @@ export function AddressSelector({
           </option>
           {addresses.map((address) => (
             <option key={address.id} value={address.id}>
-              {address.label || `${address.first_name} ${address.last_name}`} — {address.street_address}, {address.city}
+              {address.label ||
+                [address.first_name, address.last_name].filter(Boolean).join(" ")}
+              {" — "}
+              {address.street_address}, {address.city}
             </option>
           ))}
           <option value={enterNewAddressValue}>Enter a new address ↓</option>

@@ -26,6 +26,7 @@ export function AddressForm<TFieldValues extends FieldValues>({
   control,
   fieldName,
   phoneRequired = false,
+  lastNameOptional = false,
   showNameFields = true,
   addressLine1Label = "Street address",
   addressLine2Label = "Apt, suite, unit",
@@ -33,6 +34,7 @@ export function AddressForm<TFieldValues extends FieldValues>({
   control: Control<TFieldValues>;
   fieldName: (field: AddressFieldName) => FieldPath<TFieldValues>;
   phoneRequired?: boolean;
+  lastNameOptional?: boolean;
   showNameFields?: boolean;
   addressLine1Label?: string;
   addressLine2Label?: string;
@@ -45,7 +47,11 @@ export function AddressForm<TFieldValues extends FieldValues>({
             <FormItem><FormLabel>First name</FormLabel><Input autoComplete="given-name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
           )} />
           <FormField control={control} name={fieldName("last_name")} render={({ field }) => (
-            <FormItem><FormLabel>Last name</FormLabel><Input autoComplete="family-name" {...field} value={field.value ?? ""} /><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel>{lastNameOptional ? "Last name (optional)" : "Last name"}</FormLabel>
+              <Input autoComplete="family-name" {...field} value={field.value ?? ""} />
+              <FormMessage />
+            </FormItem>
           )} />
         </div>
       ) : null}

@@ -17,4 +17,5 @@ implemented in this change without inferring status for unrelated modules.
 - Apply `gifvtme_migration_033_account_addresses.sql` and
   `gifvtme_migration_034_address_book_state_label.sql` to add the RLS-protected
   address table, default address handling, supporting indexes, and the canonical
-  FCT state label.
+  FCT state label. Apply `gifvtme_migration_035_checkout_address_save_idempotency.sql`
+  to deduplicate saved checkout addresses by order when payment is retried.

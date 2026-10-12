@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { NIGERIAN_STATES, type NigerianState } from "@/lib/constants";
+import { nigerianPhoneSchema } from "@/lib/validation/nigerian-phone";
 
 export const ALLOWED_AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
@@ -12,11 +13,7 @@ export const DELETE_CONFIRMATION_TEXT = "DELETE";
 
 export const profileSchema = z.object({
   full_name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
-  phone: z
-    .string()
-    .regex(/^(\+234|0)[789][01]\d{8}$/, "Enter a valid Nigerian phone number")
-    .optional()
-    .or(z.literal("")),
+  phone: nigerianPhoneSchema.optional().or(z.literal("")),
   default_thank_you_msg: z.string().max(300, "Keep it under 300 characters").optional().or(z.literal("")),
 });
 
@@ -30,13 +27,13 @@ const nigerianStateSchema = z.string().refine(
 export const addressSchema = z.object({
   label: z.string().trim().max(50).transform((value) => value || "Home").default("Home"),
   first_name: z.string().trim().min(1, "First name is required").max(100),
-  last_name: z.string().trim().min(1, "Last name is required").max(100),
-  phone: z.string().trim().min(7, "Phone number is required").max(20),
+  last_name: z.string().trim().max(100).default(""),
+  phone: nigerianPhoneSchema,
   street_address: z.string().trim().min(5, "Enter your full street address").max(200),
   apt_suite_unit: z.string().trim().max(200).optional().or(z.literal("")),
   city: z.string().trim().min(2, "City is required").max(100),
   state: nigerianStateSchema,
-  postal_code: z.string().trim().optional().or(z.literal("")),
+  postal_code: z.string().trim().max(20).optional().or(z.literal("")),
   delivery_instructions: z.string().trim().max(500, "Keep this under 500 characters").optional().or(z.literal("")),
   is_default: z.boolean().default(false),
   is_default_billing: z.boolean().default(false),

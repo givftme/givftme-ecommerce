@@ -107,7 +107,7 @@ function getDefaultValues({
   return {
     shipping: {
       first_name: defaultAddress?.first_name || initialFirstName,
-      last_name: defaultAddress?.last_name || initialLastName,
+      last_name: defaultAddress ? defaultAddress.last_name : initialLastName,
       email: initialEmail,
       phone: defaultAddress?.phone || "",
       street_address: defaultAddress?.street_address || "",
@@ -389,7 +389,12 @@ export function CheckoutForm({
 
               <div className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
                 <div className="space-y-4">
-                  <AddressForm control={form.control} fieldName={(field) => checkoutAddressFieldNames[field]} phoneRequired />
+                  <AddressForm
+                    control={form.control}
+                    fieldName={(field) => checkoutAddressFieldNames[field]}
+                    phoneRequired
+                    lastNameOptional
+                  />
                   <FormField
                     control={form.control}
                     name="shipping.email"
