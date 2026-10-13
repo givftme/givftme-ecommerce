@@ -100,12 +100,24 @@ interface SlotProps {
   children?: ReactNode;
 }
 
-export function Eyebrow({ className, children, tone = "red" }: SlotProps & { tone?: "red" | "brand" }) {
+const EYEBROW_TONES = {
+  red: "text-red",
+  brand: "text-brand",
+  // For eyebrows on filled or always-dark panels.
+  white: "text-white",
+  amber: "text-amber",
+} as const;
+
+export function Eyebrow({
+  className,
+  children,
+  tone = "red",
+}: SlotProps & { tone?: keyof typeof EYEBROW_TONES }) {
   return (
     <span
       className={cx(
         "inline-flex items-center gap-2 text-[13.5px] font-medium",
-        tone === "brand" ? "text-brand" : "text-red",
+        EYEBROW_TONES[tone],
         className,
       )}
     >

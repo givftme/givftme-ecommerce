@@ -29,6 +29,7 @@ const perks = [
 const footerLinks = [
   { label: "Shop", href: "/shop" },
   { label: "Wishlist", href: "/wishlists" },
+  { label: "For Business", href: "/business" },
   { label: "Contact Us", href: "/contact-us" },
   { label: "About Us", href: "/about-us" },
 ];

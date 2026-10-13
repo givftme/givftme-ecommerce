@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
-import { Icon, Reveal, SectionHead, Wrap } from "@/components/ui/primitives";
+import { Icon, Reveal, SectionHead, Wrap, cx } from "@/components/ui/primitives";
 
-interface Question {
+export interface Question {
   q: string;
   a: string;
 }
@@ -37,20 +37,31 @@ const QUESTIONS: Question[] = [
   },
 ];
 
-export default function Faq() {
+export default function Faq({
+  heading = "Quick answers",
+  questions = QUESTIONS,
+  headingClassName,
+}: {
+  heading?: string;
+  questions?: Question[];
+  headingClassName?: string;
+} = {}) {
   return (
     <section id="faq" aria-labelledby="faq-heading" className="pb-24 max-sm:pb-16">
       <Wrap>
         <Reveal>
           <SectionHead center className="mb-11 max-sm:mb-7">
-            <h2 id="faq-heading" className="text-[clamp(32px,4.4vw,54px)]">
-              Quick answers
+            <h2
+              id="faq-heading"
+              className={cx("text-[clamp(32px,4.4vw,54px)]", headingClassName)}
+            >
+              {heading}
             </h2>
           </SectionHead>
         </Reveal>
 
         <Reveal className="mx-auto max-w-195">
-          {QUESTIONS.map(({ q, a }) => (
+          {questions.map(({ q, a }) => (
             // A shared `name` makes these an exclusive accordion natively, with
             // no state and no client component.
             <details key={q} name="faq" className="group border-b border-line">

@@ -13,7 +13,7 @@ import { cx, type PolymorphicProps } from "@/components/ui/primitives";
 const BTN_BASE =
   "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-transparent font-medium transition-[transform,background-color,box-shadow,border-color] duration-200 active:scale-[0.97]";
 
-export type BtnTone = "brand" | "red" | "line" | "ink";
+export type BtnTone = "brand" | "red" | "line" | "ink" | "white";
 export type BtnSize = "md" | "sm";
 
 const BTN_TONES: Record<BtnTone, string> = {
@@ -21,6 +21,8 @@ const BTN_TONES: Record<BtnTone, string> = {
   red: "bg-red text-white shadow-soft hover:bg-red-600",
   line: "border-line bg-card text-ink hover:border-ink",
   ink: "bg-ink-deep text-white",
+  // For CTAs sitting on a filled brand surface.
+  white: "bg-white text-primary hover:bg-white/90",
 };
 
 const BTN_SIZES: Record<BtnSize, string> = {

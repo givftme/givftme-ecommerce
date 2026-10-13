@@ -26,7 +26,17 @@ features without inferring status for unrelated modules.
   surface tokens, accessible navigation controls, and responsive styling across
   the existing routes and shared components.
 
+- **Business page** (`/business`): corporate gifting landing page with a 3D brand
+  studio (cake pack, gift box, gift card), occasion details, plans, a gift card
+  and yearly budget estimator, a corporate calendar, and an Experience Centre
+  brief form. Lead capture only: no checkout, pricing or database writes.
+
 ## Operational follow-up
+
+- Fill in `CONTACT` in `app/business/_components/content.ts` (WhatsApp, email,
+  phone and an `enquiryEndpoint`) and the bracketed plan prices and FAQ answers.
+  Until `enquiryEndpoint` is set, the business brief form shows its thank-you
+  without sending the brief anywhere.
 
 - Apply `gifvtme_migration_033_account_addresses.sql` and
   `gifvtme_migration_034_address_book_state_label.sql` to add the RLS-protected

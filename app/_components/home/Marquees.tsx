@@ -40,7 +40,7 @@ const OCCASIONS: Occasion[] = [
  * loop is seamless. Items use a trailing margin rather than flex `gap` so both
  * copies are exactly the same width, which keeps the seam from jumping.
  */
-function Track({
+export function Track({
   items,
   reversed = false,
 }: {

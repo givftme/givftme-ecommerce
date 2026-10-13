@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Building2,
   CalendarHeart,
   ChevronDown,
   ChevronUp,
@@ -36,6 +37,7 @@ const navLinks: { label: string; href: string; icon: LucideIcon }[] = [
   { label: "Shop", href: "/shop", icon: ShoppingBag },
   { label: "Save Special Dates", href: "/dates", icon: CalendarHeart },
   { label: "Wishlist", href: "/wishlists", icon: ListChecks },
+  { label: "For Business", href: "/business", icon: Building2 },
   // { label: "Contact Us", href: "/contact-us", icon: Mail },
   // { label: "About Us", href: "/about-us", icon: Info },
 ];
