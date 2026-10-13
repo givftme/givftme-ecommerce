@@ -70,7 +70,7 @@ const VISIBILITY_ICONS: Record<WishlistVisibility, LucideIcon> = {
 
 // Catalogue first: it is the primary add path (see EmptyWishlist).
 const ADD_OPTIONS: Array<{ mode: AddItemMode; label: string; icon: LucideIcon }> = [
-  { mode: "catalog", label: "From Gifvtme shop", icon: Store },
+  { mode: "catalog", label: "From Givftme shop", icon: Store },
   { mode: "url", label: "Paste a link", icon: Link2 },
   { mode: "manual", label: "Write it", icon: PencilLine },
 ];

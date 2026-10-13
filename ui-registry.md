@@ -159,7 +159,7 @@ Last updated: 2026-09-24
 | Accent usage     | source icon (store, link or manual), `Badge` success for gifted                           |
 
 **Pattern notes:**
-Rows stay compact for scanning and repeated edits. The source line shows the Gifvtme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets: move up (only when `onMoveUp` is passed; saves immediately), edit and delete. The occasion detail page shares this card without move up.
+Rows stay compact for scanning and repeated edits. The source line shows the Givftme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets: move up (only when `onMoveUp` is passed; saves immediately), edit and delete. The occasion detail page shares this card without move up.
 
 ### Wishlist Sheets
 

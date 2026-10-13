@@ -1,4 +1,4 @@
-# Gifvtme — Build Status
+# Givftme — Build Status
 
 This checkout did not include a prior roadmap. This file records implemented
 features without inferring status for unrelated modules.
@@ -15,6 +15,12 @@ features without inferring status for unrelated modules.
   authenticated Flutterwave contributions with idempotent reservations, live
   progress, public pool pages, receiver/creator management, receipt and status
   emails, and manual payout tracking.
+- **Metadata & Open Graph images** (`feature-specs/22-METADATA-AND-OG-IMAGES.md`):
+  a "%s — Givftme" title template with canonical URLs, Open Graph and Twitter tags
+  on public pages, noindex on auth, dashboard, account, cart, checkout and
+  transactional gift pages, Sanity-driven product, occasion and collection
+  metadata, and edge-rendered preview images at `/api/og/wishlist/[token]` and
+  `/api/og/pool/[token]` that fall back to `/og-default.jpg`.
 - **Application design system**: app-wide light, dark, and system appearance,
   Inter interface typography with Belleza display headings, semantic color and
   surface tokens, accessible navigation controls, and responsive styling across

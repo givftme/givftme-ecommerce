@@ -1,6 +1,6 @@
-# Gifvtme
+# Givftme
 
-Gifvtme is a Next.js 16 app for occasion wishlists, external affiliate gifts, and Gifvtme catalog checkout. Supabase owns user and transactional data; Sanity owns catalog and editorial content.
+Givftme is a Next.js 16 app for occasion wishlists, external affiliate gifts, and Givftme catalog checkout. Supabase owns user and transactional data; Sanity owns catalog and editorial content.
 
 ## Getting Started
 

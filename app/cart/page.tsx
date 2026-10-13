@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import { CartPageClient } from "@/components/cart/CartPageClient";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { createClient } from "@/lib/supabase/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Your Cart", robots: NO_INDEX };
 
 export default async function CartPage() {
   const supabase = await createClient();

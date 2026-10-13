@@ -690,7 +690,7 @@ Body: Pool: [title]
 - Automated bank payouts via Flutterwave Transfers API (eliminates manual ops step).
 - Pledge-first mode: contributors reserve a slot, pay closer to the occasion date.
 - Pool expiry date (auto-cash-out on occasion date if not fully funded).
-- Anonymous contributions (no Gifvtme account required — just pay and enter a name).
+- Anonymous contributions (no Givftme account required — just pay and enter a name).
 - Co-organiser role (giver-created pool, receiver added as co-admin without spoiling the surprise).
 - Contribution tiers ("Buy them dinner" ₦5k / "Help with the laptop" ₦20k / "Go all out" ₦50k).
 - Social sharing of pool milestone (e.g. "50% funded — help us get there!").

@@ -1,6 +1,6 @@
 import { AuthForm } from "@/components/auth/AuthForm";
 
-export const metadata = { title: "Create an account | Givftme" };
+export const metadata = { title: "Create an account" };
 
 function getParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;

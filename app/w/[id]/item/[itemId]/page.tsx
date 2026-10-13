@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Gift, ShoppingCart } from "lucide-react";
@@ -23,6 +24,9 @@ import {
   getSharedWishlistItem,
 } from "@/lib/wishlist/shared";
 import { formatPrice } from "@/lib/utils";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Gift Details", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +117,7 @@ export default async function SharedWishlistItemPage({
             )}
             <span className="absolute left-3 top-3 rounded-full bg-card px-3 py-1 text-xs font-medium text-muted shadow-sm">
               {item.origin === "catalog"
-                ? "Gifvtme store"
+                ? "Givftme store"
                 : `From ${domain || "store"}`}
             </span>
           </div>

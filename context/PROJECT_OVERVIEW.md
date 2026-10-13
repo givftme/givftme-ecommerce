@@ -1,12 +1,12 @@
-# Gifvtme — Project Overview
+# Givftme — Project Overview
 
-Read this file first. It orients you to what Gifvtme is before you touch any code.
+Read this file first. It orients you to what Givftme is before you touch any code.
 
-## What Gifvtme is
+## What Givftme is
 
-Gifvtme is a gifting platform, a gift museum, and an e-commerce platform, built as one product. It is a single coherent experience with three separate transaction flows. Keep each flow isolated in its own payment and purchase records.
+Givftme is a gifting platform, a gift museum, and an e-commerce platform, built as one product. It is a single coherent experience with three separate transaction flows. Keep each flow isolated in its own payment and purchase records.
 
-In one sentence: people create wishlists for life occasions (birthdays, weddings, anniversaries), share them with friends and family, and those friends either buy the gift from wherever it's listed online (an affiliate redirect, no money touches Gifvtme) or buy it from Gifvtme's own curated dropshipping catalog (a full checkout, Gifvtme handles payment and fulfillment coordination).
+In one sentence: people create wishlists for life occasions (birthdays, weddings, anniversaries), share them with friends and family, and those friends either buy the gift from wherever it's listed online (an affiliate redirect, no money touches Givftme) or buy it from Givftme's own curated dropshipping catalog (a full checkout, Givftme handles payment and fulfillment coordination).
 
 ## The three user types
 
@@ -20,19 +20,19 @@ In one sentence: people create wishlists for life occasions (birthdays, weddings
 
 Every wishlist item has an `origin` field: `external` or `catalog`. This single field determines which of two completely separate code paths an item follows:
 
-- **External origin**: item was scraped from a URL anywhere on the internet via Microlink. No price is enforced by Gifvtme. Purchase happens via affiliate redirect to the original store. No Flutterwave, no order record, just a `purchases` row marking it claimed.
-- **Catalog origin**: item exists in Gifvtme's own Sanity-managed product catalog, sourced via dropshipping suppliers (Spocket/CJDropshipping). Purchase happens through Gifvtme's own checkout, paid via Flutterwave, fulfilled manually by the internal team, tracked through a full `orders` → `order_items` → `order_status_history` lifecycle.
+- **External origin**: item was scraped from a URL anywhere on the internet via Microlink. No price is enforced by Givftme. Purchase happens via affiliate redirect to the original store. No Flutterwave, no order record, just a `purchases` row marking it claimed.
+- **Catalog origin**: item exists in Givftme's own Sanity-managed product catalog, sourced via dropshipping suppliers (Spocket/CJDropshipping). Purchase happens through Givftme's own checkout, paid via Flutterwave, fulfilled manually by the internal team, tracked through a full `orders` → `order_items` → `order_status_history` lifecycle.
 
 If you are touching purchase logic, checkout logic, or pricing logic, you must know which of these two paths you're in. Mixing them is the most likely way to introduce a serious bug in this codebase.
 
 ## v1 scope (what exists or is being built right now)
 
-Wishlist creation (evergreen + occasion-specific, pulling from each other), URL scraping, affiliate redirects, the Gifvtme product catalog and gift museum (occasion → collection → product), flash sales, cart and checkout via Flutterwave, manual order tracking via Retool, reminders (two flows, 14-day and 3-day notice), automated + personal thank-you messages, reviews from verified purchasers only, three-tier wishlist sharing (private/friends-family/public), and authenticated gift-pool contributions with manual cash payouts.
+Wishlist creation (evergreen + occasion-specific, pulling from each other), URL scraping, affiliate redirects, the Givftme product catalog and gift museum (occasion → collection → product), flash sales, cart and checkout via Flutterwave, manual order tracking via Retool, reminders (two flows, 14-day and 3-day notice), automated + personal thank-you messages, reviews from verified purchasers only, three-tier wishlist sharing (private/friends-family/public), and authenticated gift-pool contributions with manual cash payouts.
 
 ## The three transaction flows
 
-- **External/affiliate:** the giver buys from the retailer. Gifvtme records a confirmed purchase and never processes the item's payment.
-- **Catalog/commerce:** the giver pays Gifvtme through checkout. The order and its item-price snapshots are handled in the commerce tables.
+- **External/affiliate:** the giver buys from the retailer. Givftme records a confirmed purchase and never processes the item's payment.
+- **Catalog/commerce:** the giver pays Givftme through checkout. The order and its item-price snapshots are handled in the commerce tables.
 - **Gift pooling:** authenticated contributors pay immediately through Flutterwave into a pool. Pool contributions and payouts are separate from `purchases` and `orders`; item pools are procured by ops, while general pools and receiver cash-outs are paid manually.
 
 ## Explicitly NOT in v1 (do not build these without being asked)

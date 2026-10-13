@@ -156,6 +156,29 @@ export function normalizeProductFull(product: RawProduct): ProductFullData {
   };
 }
 
+type PortableTextSpan = { _type?: string; text?: unknown };
+type PortableTextBlock = { _type?: string; children?: PortableTextSpan[] };
+
+/** Flattens Portable Text blocks to plain text, dropping images and marks. */
+export function portableTextToPlainText(blocks: unknown): string {
+  if (!Array.isArray(blocks)) {
+    return "";
+  }
+
+  return (blocks as PortableTextBlock[])
+    .filter((block) => block?._type === "block" && Array.isArray(block.children))
+    .map((block) =>
+      (block.children ?? [])
+        .map((child) => (typeof child?.text === "string" ? child.text : ""))
+        .join("")
+        .trim()
+    )
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function normalizeOccasion(occasion: Partial<MuseumOccasion>) {
   return {
     id: occasion.id || "",

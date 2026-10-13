@@ -31,10 +31,10 @@ export async function sendPoolContributionReceiptEmail(input: {
     : `Your contribution to "${poolTitle}" was received`;
   const percentage = targetAmount > 0 ? Math.min(100, Math.round(amountRaised / targetAmount * 100)) : 0;
   const text = refundRequired
-    ? `Your payment of ${formatPrice(amount)} was captured after the pool closed. The Gifvtme team has been asked to refund it manually. View the pool: ${poolUrl}`
+    ? `Your payment of ${formatPrice(amount)} was captured after the pool closed. The Givftme team has been asked to refund it manually. View the pool: ${poolUrl}`
     : `You contributed ${formatPrice(amount)} to ${poolTitle}. Pool progress: ${formatPrice(amountRaised)} of ${formatPrice(targetAmount)} (${percentage}% funded). ${contributorCount} people have contributed. View the pool: ${poolUrl}`;
   const details = refundRequired
-    ? `<p>Your payment of ${escapeHtml(formatPrice(amount))} was captured after the pool closed. The Gifvtme team has been asked to refund it manually.</p>`
+    ? `<p>Your payment of ${escapeHtml(formatPrice(amount))} was captured after the pool closed. The Givftme team has been asked to refund it manually.</p>`
     : `<p>You contributed <strong>${escapeHtml(formatPrice(amount))}</strong> to <strong>${escapeHtml(poolTitle)}</strong>.</p><p>Pool progress: ${escapeHtml(formatPrice(amountRaised))} of ${escapeHtml(formatPrice(targetAmount))} (${percentage}% funded). ${contributorCount} people have contributed.</p>`;
   const html = `<div style="font-family: Inter, Arial, sans-serif; color: #000000; line-height: 1.6;">${details}<p><a href="${poolUrl}" style="color: #C50404;">View the pool</a></p></div>`;
   return sendOrderStatusEmail({ to, subject, text, html, idempotencyKey: `pool-contribution:${contributionId}:receipt` });
@@ -51,7 +51,7 @@ export async function sendPoolFullyFundedEmail(input: {
 }) {
   const { to, poolTitle, targetAmount, contributorCount, poolUrl, isItemPool, poolId } = input;
   const nextStep = isItemPool
-    ? "The Gifvtme team will start procuring your gift shortly."
+    ? "The Givftme team will start procuring your gift shortly."
     : `${formatPrice(targetAmount)} will be transferred to you soon.`;
   const subject = `🎉 Your gift pool "${poolTitle}" is fully funded!`;
   const text = `${poolTitle} has reached its target of ${formatPrice(targetAmount)}. ${contributorCount} people contributed. ${nextStep} View your pool: ${poolUrl}`;

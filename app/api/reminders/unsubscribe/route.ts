@@ -6,7 +6,7 @@ function htmlPage(message: string, status: number) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Gifvtme</title>
+    <title>Givftme</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
   <body style="font-family: Inter, Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #FAF7F2; color: #1A1A1A;">
@@ -23,7 +23,7 @@ function htmlConfirmationPage(requestUrl: string) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Gifvtme</title>
+    <title>Givftme</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
   <body style="font-family: Inter, Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #FAF7F2; color: #1A1A1A;">

@@ -132,7 +132,7 @@ export function PurchaseConfirmationClient({
         </section>
 
         <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted">
-          Your payment details stay on {domain} - Gifvtme only records that this
+          Your payment details stay on {domain} - Givftme only records that this
           item has been claimed.
         </div>
 

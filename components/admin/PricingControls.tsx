@@ -176,7 +176,7 @@ export function PricingControls({ initial }: { initial: PolicyPage | null }) {
     <main className="min-h-dvh bg-surface text-ink">
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-5 md:px-8">
-          <Link href="/" className="font-display text-2xl text-brand">Gifvtme</Link>
+          <Link href="/" className="font-display text-2xl text-brand">Givftme</Link>
           <nav aria-label="Admin navigation" className="flex flex-wrap gap-4 text-sm">
             <Link href="/admin/gift-candidates" className="text-muted hover:underline">Gift candidates</Link>
             <Link href="/admin/pricing" aria-current="page" className="font-semibold text-brand">Gift pricing</Link>

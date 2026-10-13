@@ -22,7 +22,7 @@ export function GiftPriceEstimate({
           <p className={compact ? "text-xs text-muted" : "text-sm text-muted"}>
             {compact
               ? "Delivery awaits confirmation."
-              : "Delivery awaits confirmation. The gift and final total must be confirmed before you can pay through Gifvtme."}
+              : "Delivery awaits confirmation. The gift and final total must be confirmed before you can pay through Givftme."}
           </p>
         </>
       ) : (

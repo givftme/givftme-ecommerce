@@ -105,7 +105,7 @@ export async function initiateFlutterwavePayment({
         ...(customer.phone ? { phonenumber: customer.phone } : {}),
       },
       customizations: {
-        title: "Gifvtme",
+        title: "Givftme",
         // The provider rejected "Order #..." with Cloudflare 403 in testing.
         description: isPoolPayment
           ? "Gift pool contribution"

@@ -57,7 +57,7 @@ function ItemSource({ item }: { item: WishlistItem }) {
     return (
       <span className="inline-flex items-center gap-1">
         <Store className="h-3.5 w-3.5" aria-hidden="true" />
-        Gifvtme store
+        Givftme store
       </span>
     );
   }

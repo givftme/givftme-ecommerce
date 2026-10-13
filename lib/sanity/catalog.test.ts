@@ -3,6 +3,7 @@ import {
   getProductDisplayPrice,
   isFlashSaleActive,
   isSearchableQuery,
+  portableTextToPlainText,
   sanitizeSearchQuery,
 } from "./catalog";
 
@@ -115,5 +116,28 @@ describe("isSearchableQuery", () => {
   it("accepts queries of 2 or more characters", () => {
     expect(isSearchableQuery("ab")).toBe(true);
     expect(isSearchableQuery("candle")).toBe(true);
+  });
+});
+
+describe("portableTextToPlainText", () => {
+  it("joins block text and skips non-text blocks", () => {
+    expect(
+      portableTextToPlainText([
+        {
+          _type: "block",
+          children: [
+            { _type: "span", text: "Hand-poured " },
+            { _type: "span", text: "soy candle." },
+          ],
+        },
+        { _type: "image", asset: { _ref: "image-abc" } },
+        { _type: "block", children: [{ _type: "span", text: "  Burns   for 40 hours. " }] },
+      ])
+    ).toBe("Hand-poured soy candle. Burns for 40 hours.");
+  });
+
+  it("returns an empty string for missing content", () => {
+    expect(portableTextToPlainText(null)).toBe("");
+    expect(portableTextToPlainText([])).toBe("");
   });
 });

@@ -181,7 +181,7 @@ function ImportantDateFormBody({
           <span className="text-xs font-medium text-ink">Their wishlist link</span>
           <Input
             {...form.register("linked_wishlist_url")}
-            placeholder="Optional — paste their Gifvtme wishlist link"
+            placeholder="Optional — paste their Givftme wishlist link"
           />
           {form.formState.errors.linked_wishlist_url && (
             <span className="text-xs font-medium text-brand">

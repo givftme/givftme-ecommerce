@@ -15,6 +15,8 @@ This directory contains reusable domain logic, validation, result types, and ser
 | `sanity/queries.ts` | Storefront GROQ queries |
 | `flutterwave/getActivePrice.ts` | Authoritative checkout price calculation |
 | `reminders/constants.ts` | Reminder windows and supported channels |
+| `seo/metadata.ts` | Shared page metadata builder, brand defaults, and noindex robots |
+| `og/` | Link-preview image data loading, formatting, and rendering helpers |
 
 ## Conventions
 

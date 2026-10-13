@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Zap } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
@@ -7,6 +8,14 @@ import { loadMuseumProducts } from "@/lib/gift-museum/shop";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
 import type { ProductCardData } from "@/lib/sanity/types";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Shop All Gifts",
+  description:
+    "Browse hundreds of curated gift ideas for every occasion, budget, and personality — all in one place.",
+  path: "/shop",
+});
 
 export const revalidate = 60;
 
@@ -37,7 +46,7 @@ export default async function ShopPage() {
         <header className="mb-8 max-w-2xl">
           <h1 className="text-3xl font-bold text-ink lg:text-4xl">Shop</h1>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Browse catalog gifts and fetched gift ideas approved for the Gifvtme museum.
+            Browse catalog gifts and fetched gift ideas approved for the Givftme museum.
           </p>
         </header>
 

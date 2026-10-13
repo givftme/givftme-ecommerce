@@ -48,7 +48,7 @@ export function ExternalGiftDetail({ product }: ExternalGiftDetailProps) {
             <div className="mt-5">
               <PriceDisplay price={product.price} size="lg" />
               <p className="mt-2 text-xs leading-5 text-muted">
-                Estimated Museum price. Final purchase is handled outside Gifvtme.
+                Estimated Museum price. Final purchase is handled outside Givftme.
               </p>
             </div>
           ) : null}

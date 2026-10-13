@@ -1,10 +1,10 @@
-# Gifvtme — Agent Instructions
+# Givftme — Agent Instructions
 
 This file is the entry point for any AI coding agent working in this repository. Read it before making changes.
 
 ## Read order
 
-1. `context/PROJECT_OVERVIEW.md` — what Gifvtme is, the three-transaction-flow architecture, v1 scope boundaries
+1. `context/PROJECT_OVERVIEW.md` — what Givftme is, the three-transaction-flow architecture, v1 scope boundaries
 2. `context/PRD.md` — why decisions were made, so you don't relitigate settled debates
 3. `context/BUSINESS_RULES.md` — hard invariants, check before touching purchase/pricing/order/auth logic
 4. `context/ROADMAP.md` — current build status, so you know what's actually done vs not started
@@ -31,7 +31,7 @@ If a task description seems to imply one of these, stop and flag the conflict ra
 
 ## The three transaction flows
 
-- **Flow A — External/Affiliate:** receiver adds scraped item → giver redirected to retailer via `affiliate_url` → giver confirms purchase on Gifvtme → `purchases` row created → `on_purchase_created` trigger marks item claimed + queues thank-you.
+- **Flow A — External/Affiliate:** receiver adds scraped item → giver redirected to retailer via `affiliate_url` → giver confirms purchase on Givftme → `purchases` row created → `on_purchase_created` trigger marks item claimed + queues thank-you.
 - **Flow B — Catalog/Commerce:** receiver adds catalog item → giver adds to cart → `POST /api/checkout` re-fetches Sanity prices → Flutterwave payment → webhook confirms → `orders` row at `confirmed` → ops team fulfils via Retool.
 - **Flow C — Gift Pooling:** receiver or giver creates a pool → contributors pay immediately via Flutterwave → webhook increments `group_gift_pools.amount_raised` atomically → when fully funded, ops team procures (item pool) or receiver cashes out (general pool or any time).
 
