@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { PageWrapper } from "@/components/layout/PageWrapper";
@@ -7,6 +8,8 @@ import { normalizeCollection, normalizeOccasion } from "@/lib/sanity/catalog";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { OCCASION_PAGE_QUERY } from "@/lib/sanity/queries";
 import type { MuseumCollection, MuseumOccasion } from "@/lib/sanity/types";
+import { buildPageMetadata, truncateDescription } from "@/lib/seo/metadata";
+import { sanityOgImage } from "@/lib/seo/sanity";
 
 export const revalidate = 60;
 
@@ -14,11 +17,38 @@ interface OccasionPageData extends Partial<MuseumOccasion> {
   collections?: Partial<MuseumCollection>[];
 }
 
-export default async function OccasionPage({
-  params,
-}: {
+type OccasionPageProps = {
   params: Promise<{ slug: string }>;
-}) {
+};
+
+export async function generateMetadata({
+  params,
+}: OccasionPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const rawOccasion = await sanityFetch<OccasionPageData | null>(
+    OCCASION_PAGE_QUERY,
+    { slug }
+  );
+
+  if (!rawOccasion) {
+    return { title: "Occasion not found", robots: { index: false } };
+  }
+
+  const occasion = normalizeOccasion(rawOccasion);
+  const title = `${occasion.title.trim()} Gift Ideas`;
+
+  return buildPageMetadata({
+    title,
+    description: truncateDescription(
+      occasion.description ||
+        `Browse curated ${occasion.title.trim().toLowerCase()} gift ideas on Givftme.`
+    ),
+    path: `/occasions/${slug}`,
+    image: sanityOgImage(occasion.coverImageUrl, title),
+  });
+}
+
+export default async function OccasionPage({ params }: OccasionPageProps) {
   const { slug } = await params;
   const rawOccasion = await sanityFetch<OccasionPageData | null>(
     OCCASION_PAGE_QUERY,

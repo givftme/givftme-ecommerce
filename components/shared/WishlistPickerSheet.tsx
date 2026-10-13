@@ -84,7 +84,7 @@ export function WishlistPickerSheet({
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // An owner who came here from a specific wishlist's "Browse Gifvtme" action
+  // An owner who came here from a specific wishlist's "Browse Givftme" action
   // should land back on that wishlist, not be asked to choose again. The id is
   // only honoured when it matches one of the viewer's own wishlists, and the
   // items API re-checks ownership regardless.

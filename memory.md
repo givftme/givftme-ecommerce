@@ -45,4 +45,4 @@ Last updated: 2026-08-19
 ## Open questions
 
 - Whether `/api/reminders` and `/api/thank-you/process` (both serial loops, `BATCH_LIMIT=50`, neither has a `maxDuration` override) should get the same Hobby-plan duration-risk fix already applied to `/api/orders/notify` — same likely root cause, still not checked.
-- Whether the "Gifvtme" vs "Givftme" naming inconsistency (open since multiple prior sessions) has ever been addressed — still not touched.
+- Whether the "Givftme" vs "Givftme" naming inconsistency (open since multiple prior sessions) has ever been addressed — still not touched.

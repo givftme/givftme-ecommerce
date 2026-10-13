@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GiftClaimedSuccess } from "@/components/wishlist/GiftClaimedSuccess";
 import { getDisplayName } from "@/lib/wishlist/display";
@@ -5,6 +6,9 @@ import {
   getSharedWishlist,
   getSharedWishlistItem,
 } from "@/lib/wishlist/shared";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Gift Claimed", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 

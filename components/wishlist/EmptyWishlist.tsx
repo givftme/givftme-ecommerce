@@ -60,7 +60,7 @@ export function EmptyWishlist({
       <p className="max-w-xs text-sm leading-6 text-muted">
         {allGifted
           ? "Add a new wish whenever something catches your eye."
-          : "Start with the Gifvtme store, or save something you found elsewhere."}
+          : "Start with the Givftme store, or save something you found elsewhere."}
       </p>
 
       {/* Source order is deliberate: the catalogue is the primary path, with
@@ -73,7 +73,7 @@ export function EmptyWishlist({
         )}
       >
         <Store className="h-4 w-4 shrink-0" />
-        {allGifted ? "Browse Gifvtme" : "Browse Gifvtme - add your first gift"}
+        {allGifted ? "Browse Givftme" : "Browse Givftme - add your first gift"}
       </Link>
 
       <div className="mt-1 flex flex-col items-center gap-1 sm:flex-row sm:gap-3">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
@@ -13,6 +14,13 @@ import {
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { OCCASIONS_QUERY, PRODUCT_SEARCH_QUERY } from "@/lib/sanity/queries";
 import type { MuseumOccasion, ProductCardData } from "@/lib/sanity/types";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Search Results",
+  description: "Find the perfect gift on Givftme.",
+  path: "/search",
+});
 
 export const revalidate = 60;
 

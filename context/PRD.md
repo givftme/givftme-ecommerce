@@ -1,4 +1,4 @@
-# Gifvtme — Product Requirements & Decision Log
+# Givftme — Product Requirements & Decision Log
 
 This file captures product decisions and, critically, the reasoning behind them. If a task seems to contradict something here, stop and flag it rather than silently overriding a decision — these were debated deliberately.
 
@@ -12,7 +12,7 @@ Receiver-first was chosen because the receiver has an ongoing relationship with 
 
 ## Wishlist model
 
-**Decision: items can be added from anywhere on the internet, not just Gifvtme's own catalog.** This was non-negotiable for user experience — restricting Sarah to one store's catalog would make the product far less useful.
+**Decision: items can be added from anywhere on the internet, not just Givftme's own catalog.** This was non-negotiable for user experience — restricting Sarah to one store's catalog would make the product far less useful.
 
 **Decision: two wishlist types — evergreen (permanent) and occasion-specific (time-bound) — and occasions can pull from the evergreen pool plus have exclusive items (Option C from the original scoping conversation).** This was chosen over two simpler alternatives (fully separate lists, or one master list with occasions as filtered views) because it gives Sarah the most natural mental model: a running wishlist she maintains, with specific events able to borrow from it.
 
@@ -20,17 +20,17 @@ Receiver-first was chosen because the receiver has an ongoing relationship with 
 
 ## Transaction model
 
-**Decision: affiliate redirect for external items, full Gifvtme checkout for catalog items — these are two permanently separate flows, never merged into one cart.**
+**Decision: affiliate redirect for external items, full Givftme checkout for catalog items — these are two permanently separate flows, never merged into one cart.**
 
-Originally in-house fulfillment for everything was considered and rejected — becoming a merchant of record for every external product on the internet would require automating checkout on third-party sites (most retailers actively block this, e.g. Amazon bans scripted checkout) and would make Gifvtme legally responsible for delivery problems on products it never touched. The affiliate model was chosen instead: redirect to the original store, mark the item claimed on return, earn commission where affiliate programs exist.
+Originally in-house fulfillment for everything was considered and rejected — becoming a merchant of record for every external product on the internet would require automating checkout on third-party sites (most retailers actively block this, e.g. Amazon bans scripted checkout) and would make Givftme legally responsible for delivery problems on products it never touched. The affiliate model was chosen instead: redirect to the original store, mark the item claimed on return, earn commission where affiliate programs exist.
 
-Catalog items are different — Gifvtme curates and owns the relationship with the product (via dropshipping suppliers), so a full checkout with Flutterwave is appropriate there.
+Catalog items are different — Givftme curates and owns the relationship with the product (via dropshipping suppliers), so a full checkout with Flutterwave is appropriate there.
 
 **Decision: a customer can buy multiple catalog products in one order (proper cart + checkout), but external and catalog items can never be combined in a single checkout.** Mixing them would require either faking a price/payment for external items or building dual-path checkout logic — not worth the complexity for the UX gain.
 
 ## Catalog & gift museum
 
-**Decision: products are curated and owned by Gifvtme, not a multi-seller marketplace.** This was chosen for brand control — quality and curation define the "gift museum" positioning, which a marketplace model would dilute.
+**Decision: products are curated and owned by Givftme, not a multi-seller marketplace.** This was chosen for brand control — quality and curation define the "gift museum" positioning, which a marketplace model would dilute.
 
 **Decision: dropshipping via pre-vetted supplier networks (Spocket/CJDropshipping), not direct inventory ownership.** Keeps capital risk low for a solo-developer v1.
 
@@ -49,6 +49,10 @@ Catalog items are different — Gifvtme curates and owns the relationship with t
 ## Sharing & permissions
 
 **Decision: three visibility tiers (private, friends & family, public) plus a single price-visibility toggle — explicitly NOT item-level permissions.** Item-level permission control (different visibility per item per viewer) was considered and rejected as a "permissions matrix" — too complex to build, test, and for Sarah to actually manage day to day. The three-tier model covers the realistic use cases without that overhead.
+
+**Decision: link previews see a wishlist exactly as a signed-out visitor would.** Shared wishlist metadata and the `/api/og/wishlist/[token]` image resolve the share key through `gifvtme_get_shared_wishlist` with an anonymous, cookieless client. Private lists, and non-public lists opened by UUID rather than by invite token, get generic metadata and the brand image, so a crawler never sees the receiver's name or items. Public metadata uses a "%s — Givftme" title template.
+
+**Decision: the brand is spelled "Givftme".** All user-facing text, emails, metadata, the domain (`givftme.com`), the `@givftme` handle and `utm_source` tags use it. The older "gifvtme" spelling survives only in identifiers that cannot be renamed without a migration or user impact: `gifvtme_*` database functions, migration file names, the `gifvtme.*` Postgres session settings, and the browser storage keys `gifvtme.catalog-cart` and `gifvtme:pool-contribution-attempt:*` (renaming those would empty saved carts and break payment-retry idempotency). The default share image is the illustrated "Never miss the moments that matter" artwork at `public/og-default.jpg` (not the plain red card spec 22 describes); it is wired through the root metadata rather than a file-based `opengraph-image`, because the OG routes also serve it as their fallback. OG images draw inline SVG illustrations instead of emoji so rendering never depends on an external emoji CDN.
 
 ## Group gifting
 
@@ -72,7 +76,7 @@ Catalog items are different — Gifvtme curates and owns the relationship with t
 
 **Decision: flash sales are in v1 scope** — time-limited discounts on catalog products, requiring a sale price, start time, and end time on the product/variant model.
 
-**Decision: reviews are collected directly on Gifvtme, gated to verified purchasers only.** Pulling supplier reviews was considered and rejected — reviews need to reflect the Gifvtme experience (including fulfillment quality) and verified-purchase gating is the only way to prevent fake/incentivized reviews.
+**Decision: reviews are collected directly on Givftme, gated to verified purchasers only.** Pulling supplier reviews was considered and rejected — reviews need to reflect the Givftme experience (including fulfillment quality) and verified-purchase gating is the only way to prevent fake/incentivized reviews.
 
 ## Currency
 

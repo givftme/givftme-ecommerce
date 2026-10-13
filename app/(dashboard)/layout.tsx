@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ensureEvergreenWishlist, requireDashboardUser } from "@/lib/wishlist/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Dashboard", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { FlashSaleBanner } from "@/components/flash-sale/FlashSaleBanner";
 import { Hero } from "@/app/_components/home/Hero";
@@ -26,6 +27,14 @@ import Wishlist from "./_components/home/Wishlist";
 import Museum from "./_components/home/Museum";
 import Pool from "./_components/home/Pool";
 import Moment from "./_components/home/Moments";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "The Gift Museum",
+  description:
+    "Discover curated gift ideas for every occasion. Create your wishlist, share it with loved ones, and make gifting joyful for everyone.",
+  path: "/",
+});
 
 export const revalidate = 60;
 

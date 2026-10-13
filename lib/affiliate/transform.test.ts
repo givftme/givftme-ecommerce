@@ -19,7 +19,7 @@ describe("buildAffiliateUrl", () => {
     const result = buildAffiliateUrl("https://jumia.com.ng/product");
 
     expect(result.network).toBe("jumia");
-    expect(result.affiliateUrl).toContain("utm_source=gifvtme");
+    expect(result.affiliateUrl).toContain("utm_source=givftme");
   });
 
   it("tags amazon URLs with the affiliate id when configured", () => {
@@ -48,7 +48,7 @@ describe("buildAffiliateUrl", () => {
     const result = buildAffiliateUrl("https://www.example.com/product");
 
     expect(result.network).toBe("generic");
-    expect(result.affiliateUrl).toContain("utm_source=gifvtme");
+    expect(result.affiliateUrl).toContain("utm_source=givftme");
   });
 
   it("strips a www. prefix before matching the host", () => {

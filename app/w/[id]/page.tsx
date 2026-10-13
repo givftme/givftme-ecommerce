@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SharedWishlistClient } from "@/components/wishlist/SharedWishlistClient";
 import { SharedWishlistNotice } from "@/components/wishlist/SharedWishlistNotice";
+import { DEFAULT_OG_IMAGE, NO_INDEX, SITE_NAME, TWITTER_HANDLE } from "@/lib/seo/metadata";
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import { getSharedWishlist } from "@/lib/wishlist/shared";
 import { getSharedGiftEstimate } from "@/lib/pricing/shared";
@@ -21,28 +22,60 @@ export async function generateMetadata({
   const { id } = await params;
   const { wishlist, status } = await getSharedWishlist(id);
 
-  if (status !== "ok" || !wishlist) {
-    return { title: "Shared wishlist · Givftme" };
+  // Private lists and unknown links never reveal the receiver's name.
+  if (status !== "ok" || !wishlist || wishlist.visibility === "private") {
+    return {
+      title: "Wishlist",
+      description: "View this wishlist on Givftme.",
+      robots: NO_INDEX,
+      openGraph: {
+        title: "Wishlist — Givftme",
+        description: "View this wishlist on Givftme.",
+        siteName: SITE_NAME,
+        type: "website",
+        images: [DEFAULT_OG_IMAGE],
+      },
+      twitter: {
+        card: "summary_large_image",
+      site: TWITTER_HANDLE,
+        images: [DEFAULT_OG_IMAGE.url],
+      },
+    };
   }
 
   const receiverName = getDisplayName(wishlist.owner.full_name);
-  const occasionLabel = wishlist.occasion
-    ? getOccasionLabel(wishlist.occasion.title)
-    : null;
-  const title = occasionLabel
-    ? `${receiverName}'s Wishlist for ${occasionLabel}`
+  const occasionTitle = wishlist.occasion?.title.trim() || null;
+  const title = occasionTitle
+    ? `${receiverName}'s ${occasionTitle} Wishlist`
     : `${receiverName}'s Wishlist`;
-  const description = occasionLabel
-    ? `Help ${receiverName} celebrate their ${occasionLabel} — view their wishlist on Givftme.`
-    : `See what ${receiverName} is wishing for on Givftme.`;
+  const total = wishlist.items.length;
+  const available = wishlist.items.filter((item) => item.status === "available").length;
+  const description = occasionTitle
+    ? `Help ${receiverName} celebrate their ${occasionTitle} — ${total} wishes, ${available} still available.`
+    : `${receiverName} has ${total} gift wishes, ${available} still available. View their wishlist on Givftme.`;
+  const fullTitle = `${title} — ${SITE_NAME}`;
+  const ogImageUrl = `/api/og/wishlist/${id}`;
 
   return {
     title,
     description,
-    robots:
-      wishlist.visibility === "public"
-        ? undefined
-        : { index: false, follow: false },
+    alternates: { canonical: `/w/${id}` },
+    robots: wishlist.visibility === "public" ? undefined : NO_INDEX,
+    openGraph: {
+      title: fullTitle,
+      description,
+      url: `/w/${id}`,
+      siteName: SITE_NAME,
+      type: "website",
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: TWITTER_HANDLE,
+      title: fullTitle,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 

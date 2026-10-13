@@ -1,6 +1,6 @@
 import { AuthForm } from "@/components/auth/AuthForm";
 
-export const metadata = { title: "Log in | Givftme" };
+export const metadata = { title: "Log in" };
 
 const authErrors: Record<string, string> = {
   oauth: "Couldn't connect to Google. Please try again.",

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { GiftCheckoutForm } from "@/components/checkout/GiftCheckoutForm";
 import { withRedirect } from "@/lib/auth/redirect";
@@ -7,6 +8,9 @@ import type { GiftCheckoutContext } from "@/lib/gift/types";
 import { createClient } from "@/lib/supabase/server";
 import { getDisplayName } from "@/lib/wishlist/display";
 import { getSharedWishlist, getSharedWishlistItem } from "@/lib/wishlist/shared";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Gift Checkout", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 

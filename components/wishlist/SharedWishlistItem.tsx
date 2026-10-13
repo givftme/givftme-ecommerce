@@ -121,7 +121,7 @@ export function SharedWishlistItem({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-medium text-muted">
               {item.origin === "catalog"
-                ? "Gifvtme store"
+                ? "Givftme store"
                 : `From ${domain || "store"}`}
             </span>
             {!claimed && !unavailable && (

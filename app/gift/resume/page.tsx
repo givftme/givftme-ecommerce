@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,6 +19,9 @@ import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Resuming Your Gift", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +129,7 @@ function MissingReference() {
             href="/"
             className="mt-7 flex h-12 w-full items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
           >
-            Go to Gifvtme
+            Go to Givftme
           </Link>
         </div>
       </div>

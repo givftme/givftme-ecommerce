@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Belleza } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { DEFAULT_OG_IMAGE, SITE_NAME, TWITTER_HANDLE } from "@/lib/seo/metadata";
 import "./globals.css";
 
 const inter = Inter({
@@ -16,26 +17,22 @@ const belleza = Belleza({
   display: "swap",
 });
 
-const description =
-  "Discover Givftme, the gifting platform that helps you remember important moments, create wishlists, find thoughtful gifts, and celebrate the people who matter.";
-
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Givftme",
-    template: "%s | Givftme",
+    default: "Givftme — The Gift Museum",
+    template: "%s — Givftme",
   },
-  description,
+  description:
+    "Curate your wishlist, share it with loved ones, and never receive the wrong gift again. Browse the Givftme gift museum for every occasion.",
   openGraph: {
-    title: "Givftme",
-    description,
-    siteName: "Givftme",
+    siteName: SITE_NAME,
     type: "website",
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Givftme",
-    description,
+    site: TWITTER_HANDLE,
   },
 };
 

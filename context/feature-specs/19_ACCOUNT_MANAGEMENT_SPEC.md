@@ -1,6 +1,6 @@
 # Feature Spec: Account Management
 
-**Project:** Gifvtme
+**Project:** Givftme
 **Module:** 11 — Account Management
 **Priority:** Important
 **Depends on:** Auth flow complete. Cart & Checkout complete (addresses used at checkout). Order Tracking complete (order list feeds from existing orders). Supabase migrations 001–003 running.

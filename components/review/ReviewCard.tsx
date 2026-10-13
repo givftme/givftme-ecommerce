@@ -41,7 +41,7 @@ export function ReviewCard({
           )}
           <div>
             <p className="text-sm font-semibold text-ink">
-              {review.reviewerName || "Gifvtme customer"}
+              {review.reviewerName || "Givftme customer"}
             </p>
             {review.createdAt ? (
               <p className="text-xs text-muted">{formatRelativeTime(review.createdAt)}</p>

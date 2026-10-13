@@ -157,7 +157,7 @@ export function PoolPageClient({
   const chosenAmount = useWatch({ control: contributionForm.control, name: "amount" }) || 0;
   const cappedAmount = Math.min(chosenAmount || 0, remaining);
   const poolUrl = typeof window === "undefined" ? `/pool/${pool.token}` : `${window.location.origin}/pool/${pool.token}`;
-  const displayOrganiser = initialData.creator.full_name || initialData.receiver.full_name || "a Gifvtme member";
+  const displayOrganiser = initialData.creator.full_name || initialData.receiver.full_name || "a Givftme member";
   const finalStatusMessage = statusMessage(status, !pool.wishlist_item_id);
   const canContribute = status === "open" && remaining > 0;
 
@@ -339,7 +339,7 @@ export function PoolPageClient({
       if (!response.ok) throw new Error(payload?.error || "Couldn't cash out this pool.");
       setCashoutOpen(false);
       setStatus("paid_out");
-      toast({ title: "Cash out requested. The Gifvtme team will process the transfer.", variant: "success" });
+      toast({ title: "Cash out requested. The Givftme team will process the transfer.", variant: "success" });
       router.refresh();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Couldn't cash out this pool.");
@@ -403,7 +403,7 @@ export function PoolPageClient({
           )}
           {contributionReturn.refundRequired && contributionReturn.amount !== null && (
             <div role="status" className="rounded-2xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-              Your payment of {formatPrice(contributionReturn.amount)} was captured after this pool closed. The Gifvtme team has been asked to refund it manually.
+              Your payment of {formatPrice(contributionReturn.amount)} was captured after this pool closed. The Givftme team has been asked to refund it manually.
             </div>
           )}
           {contributionReturn.status === "pending_payment" && (
@@ -454,7 +454,7 @@ export function PoolPageClient({
                     {contributor.avatar_url
                       ? <img src={contributor.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
                       : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-light text-xs font-semibold text-brand">{getInitials(contributor.full_name)}</span>}
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{contributor.full_name || "Gifvtme member"}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{contributor.full_name || "Givftme member"}</span>
                     <span className="text-sm font-semibold text-brand">{formatPrice(contributor.amount)}</span>
                   </li>
                 ))}
@@ -500,7 +500,7 @@ export function PoolPageClient({
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted">The Gifvtme team processes cash transfers manually. Contributions are non-refundable unless a pool is cancelled before contributions are completed.</p>
+              <p className="text-xs text-muted">The Givftme team processes cash transfers manually. Contributions are non-refundable unless a pool is cancelled before contributions are completed.</p>
             </section>
           )}
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -7,6 +8,9 @@ import {
   getSharedWishlist,
   getSharedWishlistItem,
 } from "@/lib/wishlist/shared";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Confirm Your Gift", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 

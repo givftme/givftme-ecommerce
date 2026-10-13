@@ -56,7 +56,7 @@ function ScreenCountdown() {
   return (
     <>
       <div className={APP_BAR}>
-        <Image src="/logo.png" alt="Gifvtme" width={66} height={22} className="h-[22px] w-auto" />
+        <Image src="/logo.png" alt="Givftme" width={66} height={22} className="h-[22px] w-auto" />
         <Icon as={Bell} />
       </div>
       <div className={APP_BODY}>
@@ -196,7 +196,7 @@ function ScreenOneTap() {
   return (
     <>
       <div className={APP_BAR}>
-        <Image src="/logo.png" alt="Gifvtme" width={66} height={22} className="h-[22px] w-auto" />
+        <Image src="/logo.png" alt="Givftme" width={66} height={22} className="h-[22px] w-auto" />
         <Pill tone="orange">
           <Icon as={Clock} size={16} />1 day left
         </Pill>

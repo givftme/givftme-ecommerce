@@ -1,12 +1,12 @@
-# Gifvtme — Business Rules
+# Givftme — Business Rules
 
 This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this file is meant to be checked mechanically: before changing purchase, pricing, auth, or order logic, scan this list and verify nothing here is being broken.
 
 ## Purchases & duplication
 
 1. **An item can only be purchased once.** Enforced at the database level via the `one_purchase_per_item` unique constraint on `purchases.wishlist_item_id`. Application code must treat a second purchase attempt on the same item as an error state, not silently allow it, even if the UI hasn't refreshed yet.
-2. **A user must have a Gifvtme account before marking any wishlist item as purchased**, regardless of whether the item is external or catalog origin. This is required to support the thank-you message system — there is no anonymous purchase-marking path.
-3. **Marking an external item "purchased" never involves Gifvtme processing any payment.** The `purchases` table only records that a redirect happened and the user confirmed completion — it is not a financial transaction record.
+2. **A user must have a Givftme account before marking any wishlist item as purchased**, regardless of whether the item is external or catalog origin. This is required to support the thank-you message system — there is no anonymous purchase-marking path.
+3. **Marking an external item "purchased" never involves Givftme processing any payment.** The `purchases` table only records that a redirect happened and the user confirmed completion — it is not a financial transaction record.
 
 ## Item origin (external vs catalog)
 

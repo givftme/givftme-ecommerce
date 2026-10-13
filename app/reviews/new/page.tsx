@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +11,9 @@ import { getExistingReview, isVerifiedPurchaser } from "@/lib/reviews/server";
 import { trackEvent } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import type { ProductFullData } from "@/lib/sanity/types";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Write a Review", robots: NO_INDEX };
 
 export default async function NewReviewPage({
   searchParams,

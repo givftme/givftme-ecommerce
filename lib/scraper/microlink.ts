@@ -185,7 +185,7 @@ async function fetchHtmlMetadata(productUrl: string): Promise<Partial<ScrapedPro
       headers: {
         Accept: "text/html,application/xhtml+xml",
         "User-Agent":
-          "Mozilla/5.0 (compatible; GifvtmeBot/1.0; +https://givftme.vercel.app)",
+          "Mozilla/5.0 (compatible; GivftmeBot/1.0; +https://givftme.vercel.app)",
       },
     });
 

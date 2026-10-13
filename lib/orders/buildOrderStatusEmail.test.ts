@@ -3,7 +3,7 @@ import { buildOrderStatusEmail } from "./buildOrderStatusEmail";
 
 const base = {
   orderId: "11111111-2222-3333-4444-555566667777",
-  orderUrl: "https://gifvtme.com/account/orders/11111111-2222-3333-4444-555566667777",
+  orderUrl: "https://givftme.com/account/orders/11111111-2222-3333-4444-555566667777",
 };
 
 describe("buildOrderStatusEmail", () => {

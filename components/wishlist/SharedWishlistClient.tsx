@@ -320,7 +320,7 @@ export function SharedWishlistClient({
               }
               className="block text-xs font-medium text-muted hover:text-brand"
             >
-              Powered by Gifvtme · gifvtme.com
+              Powered by Givftme · givftme.com
             </Link>
           )}
           {showCreateOwnCta && (

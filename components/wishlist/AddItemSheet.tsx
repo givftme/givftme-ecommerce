@@ -43,7 +43,7 @@ import { uploadWishlistImage } from "@/components/wishlist/uploadWishlistImage";
 const FETCH_SLOW_THRESHOLD_MS = 5000;
 
 /**
- * The owner's gift sources, in the order we present them. The Gifvtme
+ * The owner's gift sources, in the order we present them. The Givftme
  * catalogue leads; the external URL and manual paths stay available as
  * clearly labelled alternatives.
  */
@@ -486,10 +486,10 @@ export function AddItemSheet({
                     )}
                   >
                     <Store className="h-5 w-5" />
-                    Browse Gifvtme
+                    Browse Givftme
                   </Link>
                   <p className="mt-3 text-[13px] leading-5 text-muted">
-                    Pick a gift from the Gifvtme store and we&apos;ll save it
+                    Pick a gift from the Givftme store and we&apos;ll save it
                     straight to this wishlist.
                   </p>
 
@@ -532,7 +532,7 @@ export function AddItemSheet({
                       onClick={switchToCatalogTab}
                       className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors"
                     >
-                      Gifvtme
+                      Givftme
                     </button>
                   )}
                   <button

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Zap } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
@@ -9,6 +10,14 @@ import { getMaxFlashSaleDiscountPercent, normalizeProductCards } from "@/lib/san
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { FLASH_SALE_PRODUCTS_COUNT_QUERY, FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
 import type { ProductCardData } from "@/lib/sanity/types";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "⚡ Flash Sale",
+  description:
+    "Limited-time deals on handpicked gifts. These prices won't last — shop the Givftme flash sale before time runs out.",
+  path: "/flash-sale",
+});
 
 // Shorter than the standard 60s elsewhere — flash sale prices/availability
 // change fast enough that a fresher list matters more here.

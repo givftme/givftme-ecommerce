@@ -39,3 +39,19 @@ export function createServiceClient() {
     },
   });
 }
+
+/**
+ * Anonymous client with no session or cookies. Use it for requests made on
+ * behalf of nobody (link-preview crawlers) so RLS applies exactly as it does
+ * to a signed-out visitor.
+ */
+export function createPublicClient() {
+  const { url, anonKey } = getSupabasePublicEnv();
+
+  return createSupabaseClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
