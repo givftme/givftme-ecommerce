@@ -65,6 +65,7 @@ export interface DashboardPool extends GiftPool {
   receiver_name: string;
   creator_name: string;
   item_title: string | null;
+  item_image_url: string | null;
   contributor_count: number;
 }
 

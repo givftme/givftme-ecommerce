@@ -17,6 +17,7 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 | `checkout/CheckoutForm.tsx` | Checkout interaction and price change confirmation |
 | `pools/PoolPageClient.tsx`, `pools/PoolProgress.tsx` | Public pool contribution and management experience |
 | `pools/PoolCreationDialog.tsx` | Responsive item/general pool creation |
+| `pools/PoolShareActions.tsx` | Dashboard pool share and copy-link actions |
 
 ## Conventions
 

@@ -534,6 +534,16 @@ state immediate. The pool page is public to view; contributor details follow
 the pool's visibility setting. Management controls appear only to the creator
 and receiver, and the receiver alone edits the title.
 
+The `/dashboard/pools` overview (`app/(dashboard)/dashboard/pools/page.tsx`) opens
+with a `font-display` heading beside a decorative lucide gift-and-people
+illustration, a full-width `h-14` brand pill to create a pool, a three-step
+`bg-brand-light` explainer, a `bg-peach` share prompt and a closing
+`bg-brand-light` "different gift" prompt. Active pool cards show the signed item
+image, status badge, progress, a full-width ghost "View pool" action,
+`PoolShareActions` (native share with clipboard fallback) and a `bg-green-50`
+invite hint while the pool is open. Active pools preview three, with
+`?view=all` showing the rest.
+
 ### Homepage Museum, Wishlist and Pool
 
 File: app/_components/home/Museum.tsx, app/_components/home/Wishlist.tsx, app/_components/home/Pool.tsx
