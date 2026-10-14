@@ -17,6 +17,11 @@ This directory contains reusable domain logic, validation, result types, and ser
 | `reminders/constants.ts` | Reminder windows and supported channels |
 | `seo/metadata.ts` | Shared page metadata builder, brand defaults, and noindex robots |
 | `og/` | Link-preview image data loading, formatting, and rendering helpers |
+| `admin/roles.ts` | Admin roles, the screen permission matrix, action limits, and nav groups |
+| `admin/auth.ts` | `requireAdminScreen`, `requireAdminApi`, and the legacy `ADMIN_EMAILS` helpers |
+| `admin/data/` | Service-role reads and audited mutations behind each admin screen |
+| `admin/privacy.ts`, `admin/segments.ts` | Privacy rule helpers (50-person minimum, sensitive occasions, initials) and segment definitions |
+| `events/` | Event catalogue, request context (device/geo), server `recordEvent`, and the client `track()` |
 
 ## Conventions
 
@@ -29,6 +34,8 @@ You can use the browser client in interactive components and the cookie based se
 Pure helpers and validation tests live beside source files as `*.test.ts`. API tests live beside handlers as `route.test.ts`. You can run a focused suite from the repository root with `npm test -- lib/checkout/validation.test.ts`.
 
 ## Gotchas
+
+Admin aggregations run in SQL functions (`gifvtme_admin_*`, migration 041, service role only) because PostgREST caps responses at 1,000 rows; don't regroup raw event rows in TypeScript. Segment ids in `admin/segments.ts` must match the branches of `gifvtme_admin_segment_members()`.
 
 The Sanity client is in `../sanity/lib/client.ts`. This directory holds query projections, result types, and adapters instead.
 

@@ -14,7 +14,7 @@ Then read the relevant feature spec in `context/feature-specs/` and the closest 
 ## Non-negotiable scope boundaries
 
 Do not build, without an explicit instruction to do so in this specific session:
-- A custom admin dashboard (Retool is the intentional v1 operational interface)
+- Admin dashboard features beyond `context/feature-specs/23-ADMIN-DASHBOARD-SPEC.md` (the `/admin` dashboard exists; catalog editing stays in Sanity Studio)
 - An in-app wallet or stored customer balance
 - A social feed
 - Automated supplier API integration (order forwarding is manual in v1)
@@ -48,7 +48,7 @@ These flows are permanently separate. Never mix them in one cart, one checkout, 
 - **CMS:** Sanity. All GROQ queries in `lib/sanity/queries.ts` — never inline. Use `getActivePrice()` from `lib/sanity/pricing.ts` for all pricing.
 - **Payments:** Flutterwave (NGN only). Webhook signature must be verified before any state change.
 - **Email:** Resend. `RESEND_API_KEY` and `RESEND_FROM_EMAIL` env vars.
-- **Ops:** Retool connected directly to Supabase via service role. No custom admin UI.
+- **Ops:** the role-gated admin dashboard at `/admin/*` (`lib/admin/`, `components/admin/`); Retool remains connected to Supabase via service role.
 - **Hosting:** Vercel.
 
 ## Working conventions
@@ -95,6 +95,9 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 | `reviews` | Verified-purchase only. `one_review_per_user_per_product` UNIQUE constraint. |
 | `wishlist_invites` | Friends & family access tokens + Flow 2 reminder opt-in. |
 | `order_status_history` | Append-only status log. `customer_notified` boolean. |
+| `events` | Append-only product event log the admin screens read. Written by `lib/events/server.ts`, `POST /api/events`, and two DB triggers. |
+| `admin_actions` | Audit row for every admin page view and mutation. |
+| `business_enquiries` | `/business` brief form submissions. `status` = `new` \| `contacted` \| `qualified` \| `won` \| `lost`. |
 
 ## Cron routes (all protected by `Authorization: Bearer ${CRON_SECRET}`)
 
@@ -108,7 +111,7 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 
 ## Feature specs location
 
-Feature specs are in `context/feature-specs/`. The files currently present are `19_ACCOUNT_MANAGEMENT_SPEC.md`, `20_aDDRESS_BOOK.md`, and `21-GIFT-POOLING.md`; this checkout has no feature index.
+Feature specs are in `context/feature-specs/`. The files currently present are `19_ACCOUNT_MANAGEMENT_SPEC.md`, `20_aDDRESS_BOOK.md`, `21-GIFT-POOLING.md`, `22-METADATA-AND-OG-IMAGES.md`, and `23-ADMIN-DASHBOARD-SPEC.md`; this checkout has no feature index.
 
 ## When you're unsure
 

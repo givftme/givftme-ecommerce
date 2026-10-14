@@ -6,6 +6,7 @@ import { Globe, Loader2, Lock, Trash2, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
+import { track } from "@/lib/events/track";
 import { Button } from "@/components/ui/Button";
 import {
   Form,
@@ -419,11 +420,16 @@ export function ShareSettingsSheet({
               </p>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <CopyLinkButton value={shareUrl} disabled={!shareUrl} />
+              <CopyLinkButton
+                value={shareUrl}
+                disabled={!shareUrl}
+                onCopied={() => void track("wishlist_shared", { wishlist_id: wishlistId, destination: "copy", visibility })}
+              />
               <a
                 href={whatsappHref || undefined}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => void track("wishlist_shared", { wishlist_id: wishlistId, destination: "whatsapp", visibility })}
                 className={cn(
                   "inline-flex h-11 items-center justify-center rounded-full border-[1.5px] border-brand px-6 text-sm font-medium text-brand transition-colors hover:bg-brand-light",
                   !shareUrl && "pointer-events-none opacity-50"

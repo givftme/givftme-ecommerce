@@ -31,7 +31,25 @@ features without inferring status for unrelated modules.
   and yearly budget estimator, a corporate calendar, and an Experience Centre
   brief form. Lead capture only: no checkout, pricing or database writes.
 
+- **Admin dashboard** (`feature-specs/23-ADMIN-DASHBOARD-SPEC.md`): role-gated
+  `/admin` with all 15 screens (Pulse, Growth & Cohorts, Calendar Engine,
+  Wishlists & Sharing, Pools and payouts queue, Demand, Orders with status
+  updates, Corporate, Diaspora, Segments & Exports, Money, People, Reviews,
+  Enquiries, Reminder Failures), the append-only `events` log wired into the
+  catalogue's call sites, the `admin_actions` audit trail, and the `/business`
+  brief form now saving to `business_enquiries`.
+
 ## Operational follow-up
+
+- Apply `gifvtme_migration_041_admin_dashboard.sql` and grant the first team role
+  in the Supabase SQL editor. People listed in `ADMIN_EMAILS` also need a role to
+  reach `/admin/gift-candidates` and `/admin/pricing`, because the proxy now gates
+  all of `/admin`.
+- Check the nine provisional lifecycle segments (`lib/admin/segments.ts`) against
+  `Givftme-07-Admin-and-Data-Layer.docx`, which isn't in this repository.
+- Not built from the spec: the Diaspora map (tables and bars only), the Segments
+  "Message" button (shown disabled as the spec marks it future), and gift card,
+  business plan, and Plus data, which have no data model yet.
 
 - Fill in `CONTACT` in `app/business/_components/content.ts` (WhatsApp, email,
   phone and an `enquiryEndpoint`) and the bracketed plan prices and FAQ answers.

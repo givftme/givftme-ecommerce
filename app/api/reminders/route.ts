@@ -6,6 +6,7 @@ import {
   type DueReminderRow,
 } from "@/lib/reminders/buildReminderEmail";
 import { sendReminderEmail } from "@/lib/email/resend";
+import { recordEvent } from "@/lib/events/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -231,6 +232,17 @@ async function processDueReminder(
     return "failed";
   }
 
+  await recordEvent({
+    event: "reminder_sent",
+    userId: reminder.user_id,
+    props: {
+      channel: reminder.channel,
+      days_before: reminder.days_before,
+      message_id: reminder.id,
+      flow: reminder.reminder_type === "invitee" ? "invite_opt_in" : "important_dates",
+    },
+  }, supabase);
+
   const advancePending = needsRecurringAdvance(reminder);
   const importantDate = first(reminder.important_dates);
   const expectedAdvanceDate =
@@ -284,6 +296,7 @@ async function incrementFailure(
       retry_count: newRetryCount,
       permanently_failed: newRetryCount >= MAX_RETRIES,
       claimed_at: null,
+      last_attempted_at: new Date().toISOString(),
     })
     .eq("id", reminder.id);
 

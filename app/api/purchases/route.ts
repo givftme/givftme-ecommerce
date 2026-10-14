@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api/response";
-import { createClient } from "@/lib/supabase/server";
+import { recordReminderActioned, recordRequestEvent } from "@/lib/events/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
 import { purchaseConfirmationSchema } from "@/lib/wishlist/validation";
 
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
   const { data: poolItem, error: poolItemError } = await supabase
     .from("wishlist_items")
-    .select("gifting_type")
+    .select("gifting_type, wishlist_id, price")
     .eq("id", row.id)
     .maybeSingle();
 
@@ -72,6 +73,20 @@ export async function POST(request: Request) {
   if (error) {
     return jsonError("Couldn't confirm. Try again.", 500);
   }
+
+  await recordRequestEvent({
+    event: "item_claimed",
+    userId: user.id,
+    props: {
+      purchase_id: purchase.id,
+      item_id: row.id,
+      wishlist_id: poolItem?.wishlist_id ?? null,
+      value: poolItem?.price ?? null,
+      is_pooled: false,
+      origin: "external",
+    },
+  });
+  await recordReminderActioned(createServiceClient(), user.id, { purchase_id: purchase.id });
 
   return NextResponse.json({ purchase }, { status: 201 });
 }

@@ -21,6 +21,18 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `og/wishlist/[token]/route.tsx`, `og/pool/[token]/route.tsx` | Public, edge-rendered 1200×630 link-preview PNGs for shared wishlists and gift pools |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |
+| `events/route.ts` | Public client event intake: whitelisted `CLIENT_EVENTS` only, sets `gv_anon`/`gv_sid` cookies, always 200 |
+| `events/open/[id]/route.ts` | Reminder email open pixel; records `reminder_opened` for a sent reminder, always returns the GIF |
+| `business/enquiry/route.ts` | Public `/business` brief submission into `business_enquiries` |
+| `admin/pulse/route.ts` | Pulse KPIs, operations strip, and the needs-a-human counts |
+| `admin/growth/funnel/route.ts`, `admin/growth/cohorts/route.ts` | Activation funnel and weekly cohort retention (`?weeks=`) |
+| `admin/segments/[id]/route.ts`, `admin/segments/[id]/export/route.ts` | Segment count plus 10-row preview; CSV export (headers only under 50 people) |
+| `admin/orders/route.ts`, `admin/orders/[id]/status/route.ts` | Filtered orders list; PATCH a status change (operations/admin only, post-payment transitions only) |
+| `admin/pools/payouts/route.ts`, `admin/pools/payouts/[id]/route.ts` | Payout queue; PATCH `processing` or `completed` with transfer details (operations/finance/admin) |
+| `admin/people/route.ts`, `admin/people/[id]/route.ts`, `admin/people/[id]/export/route.ts` | People search; GET the person record or DELETE the account (DELETE + reason); ZIP data export |
+| `admin/reviews/[id]/route.ts` | DELETE a review |
+| `admin/enquiries/[id]/route.ts` | PATCH enquiry status, assignee (team members only), or notes |
+| `admin/reminders/[id]/retry/route.ts`, `admin/reminders/[id]/dismiss/route.ts` | Reset a permanently failed reminder for the next cron run, or hide it from the queue |
 | `../../vercel.json` | Configured cron paths and schedules |
 
 ## Conventions
@@ -33,7 +45,9 @@ Wishlist owner checks intentionally return 404 for both missing and nonowned IDs
 
 Existing dynamic handlers await `context.params`. Route tests sit beside handlers as `route.test.ts` and call exported methods with Request objects. You can mock external services as the checkout tests do without contacting live systems.
 
-Admin handlers under `admin/` authorize with `getAdminApiUser()` from `lib/admin/auth.ts`, which returns null unless the session email is listed in `ADMIN_EMAILS`.
+Dashboard handlers under `admin/` authorize with `requireAdminApi(screen, { action, audit })` from `lib/admin/auth.ts`: 401 without a session, 403 when the role can't open the screen or perform the action, and an `admin_actions` row for reads that pass `audit`. Mutations log their own outcome inside `lib/admin/data/*`. Validate dynamic ids with `isUuid()` and request bodies with `lib/admin/validation.ts`. The older `admin/gift-candidates` and `admin/pricing` handlers still use `getAdminApiUser()`, which checks `ADMIN_EMAILS`.
+
+Record product events with `recordEvent()` / `recordRequestEvent()` from `lib/events/server.ts` (customer pages use `recordRequestEventAfter()` so the write happens after the response). They never throw, so they can sit on any success path. `user_signed_up` and `order_delivered` come from database triggers, not handlers.
 
 ## Gotchas
 

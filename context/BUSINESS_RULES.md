@@ -37,12 +37,20 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 16. **A pool contribution requires an authenticated account and an immediate Flutterwave payment in NGN.** There is no pledge mode, wallet, or stored customer balance.
 17. **Pool capacity is reserved and confirmed atomically in Postgres.** A webhook must verify Flutterwave's signature and match contribution amount/currency before confirmation. Captured payments that arrive after closure are marked for a manual refund in Retool; never add them to `amount_raised`.
 18. **An item marked for group gifting cannot be claimed or bought through the individual external/catalog flows.** Only the pool procurement operation may mark an item pool's wishlist item purchased.
-19. **Manual cash payouts are tracked in `pool_payouts`.** Retool is the operational interface; do not add a custom admin dashboard or automated bank transfer in v1.
+19. **Manual cash payouts are tracked in `pool_payouts`.** Ops record each completed transfer (bank, account, reference) from the admin Pools screen or Retool; do not add automated bank transfer in v1.
 
 ## Reminders
 
 20. **A user must explicitly opt in before being enrolled in Flow 2 reminders (friend reminded about someone else's occasion).** Never auto-enroll an invitee just because they were invited to a wishlist.
 21. **Reminder timing is fixed at 14 days and 3 days before the occasion date.** Don't introduce additional reminder intervals without this being a deliberate product decision (see `PRD.md` for context).
+
+## Admin dashboard
+
+29. **Every admin route and page authorizes by role, server-side.** `proxy.ts` keeps users without a role out of `/admin`, but each page calls `requireAdminScreen()` and each `/api/admin/*` handler calls `requireAdminApi()` against the matrix in `lib/admin/roles.ts`. A role is granted only from the Supabase dashboard or the service role; a database trigger rejects any change to `users.role` from a customer session.
+30. **Every admin page view and mutation writes an `admin_actions` row** (privacy rule 4), via `logAdminAction()`.
+31. **The `events` table is append-only.** No updates or deletes, enforced by RLS and a trigger; the only permitted update is the foreign key detaching rows from a deleted account. Browsers may report only the events in `CLIENT_EVENTS` through `POST /api/events`; everything else is recorded server-side.
+32. **Privacy rules are enforced in code.** A segment export describing fewer than 50 people contains no rows; remembrance and sympathy dates never enter a segment; claims on a person's own items are shown only as counts, never attributed to givers; ranked tables show receivers as initials.
+33. **Admin status changes never set `pending_payment`, `payment_failed`, or `confirmed`.** Those belong to the Flutterwave webhook.
 
 ## Currency & locale
 
@@ -55,7 +63,7 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 
 ## Scope boundaries (see also PROJECT_OVERVIEW.md)
 
-25. **Do not build a custom admin dashboard.** Retool is the intentional v1 operational interface.
+25. **The admin dashboard (`/admin/*`) is the only custom internal UI.** Its scope is `feature-specs/23-ADMIN-DASHBOARD-SPEC.md`; Retool remains available. Do not extend it into catalog editing (Sanity owns that) or automated supplier/bank actions without an explicit decision.
 26. **Do not build a wallet or stored balance feature.** Pool funds remain tied to their specific pool until procurement or manual payout; they never become an available customer balance.
 27. **Do not build a social feed.** Out of scope entirely for v1.
 28. **Do not build automated supplier API integration.** Order forwarding to suppliers is a manual, human-driven step in v1.

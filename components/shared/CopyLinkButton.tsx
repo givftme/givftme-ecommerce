@@ -13,9 +13,11 @@ gsap.registerPlugin(useGSAP);
 export function CopyLinkButton({
   value,
   disabled = false,
+  onCopied,
 }: {
   value: string;
   disabled?: boolean;
+  onCopied?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const copiedRef = useRef<HTMLSpanElement>(null);
@@ -51,6 +53,7 @@ export function CopyLinkButton({
       await navigator.clipboard.writeText(value);
       setCopied(true);
       trackEvent("wishlist.link.copied");
+      onCopied?.();
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       toast({ title: "Couldn't copy link. Try again.", variant: "danger" });

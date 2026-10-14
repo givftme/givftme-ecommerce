@@ -6,6 +6,8 @@ import {
   ImportantDateInputError,
 } from "@/lib/important-dates/server";
 import { importantDateSchema } from "@/lib/important-dates/validation";
+import { daysBetween } from "@/lib/events/context";
+import { recordRequestEvent } from "@/lib/events/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
 
@@ -42,6 +44,18 @@ export async function POST(request: Request) {
 
   try {
     const date = await createImportantDate({ supabase, userId: user.id, input: parsed.data });
+    await recordRequestEvent({
+      event: "date_saved",
+      userId: user.id,
+      props: {
+        date_id: date?.id,
+        occasion: parsed.data.occasion_type,
+        // Dates are saved by the person's name; no relationship is collected.
+        relationship: null,
+        days_until: daysBetween(new Date(), new Date(`${parsed.data.date}T12:00:00+01:00`)),
+        has_gift_note: Boolean(parsed.data.linked_wishlist_url),
+      },
+    });
     return NextResponse.json({ date }, { status: 201 });
   } catch (error) {
     console.error("Couldn't create important date.", error);

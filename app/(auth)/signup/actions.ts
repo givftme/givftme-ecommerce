@@ -1,6 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
 import { getAppUrl, validateAuthEnv } from "@/lib/env";
+import { eventContextFromHeaders, referrerListIdFromPath } from "@/lib/events/context";
 import { getSafeRedirect } from "@/lib/auth/redirect";
 import {
   type AuthActionResult,
@@ -28,6 +30,9 @@ export async function signupAction(
   const redirectTo = getSafeRedirect(values.redirectTo, "/login");
   const emailRedirectTo = new URL("/callback", getAppUrl());
   emailRedirectTo.searchParams.set("redirect", redirectTo);
+  // Read by the user_signed_up trigger (gifvtme_migration_041) for attribution.
+  const referrerListId = referrerListIdFromPath(redirectTo);
+  const signupCity = eventContextFromHeaders(await headers()).city;
 
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -35,6 +40,9 @@ export async function signupAction(
     options: {
       data: {
         full_name: fullName,
+        signup_channel: referrerListId ? "wishlist" : "direct",
+        ...(referrerListId ? { referrer_list_id: referrerListId } : {}),
+        ...(signupCity ? { signup_city: signupCity } : {}),
       },
       emailRedirectTo: emailRedirectTo.toString(),
     },

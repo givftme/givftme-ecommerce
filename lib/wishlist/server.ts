@@ -1,3 +1,4 @@
+import { recordEvent } from "@/lib/events/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { withRedirect } from "@/lib/auth/redirect";
@@ -96,10 +97,16 @@ export async function ensureEvergreenWishlist(
     .single();
 
   if (!createError) {
-    return assertEvergreenWishlist(
+    const wishlist = assertEvergreenWishlist(
       created as EvergreenWishlist | null,
       "Could not create a valid evergreen wishlist.",
     );
+    await recordEvent({
+      event: "wishlist_created",
+      userId,
+      props: { wishlist_id: wishlist.id, type: "evergreen", item_count: 0 },
+    });
+    return wishlist;
   }
 
   if (createError?.code === "23505") {

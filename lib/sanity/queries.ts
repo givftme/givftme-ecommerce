@@ -283,7 +283,8 @@ export const CART_PRICES_QUERY = defineQuery(/* groq */ `
     "supplier": supplier-> { _id, name },
     supplierProductId,
     "collectionIds": collections[]._ref,
-    "occasionTypes": collections[]->occasion->occasionType
+    "occasionTypes": collections[]->occasion->occasionType,
+    category
   }
 `);
 
@@ -308,4 +309,9 @@ export const CART_FALLBACK_RECOMMENDATIONS_QUERY = defineQuery(/* groq */ `
   | order(featured desc, _createdAt desc) [0...$limit] {
     ${PRODUCT_CARD_FRAGMENT}
   }
+`);
+
+// Admin Reviews screen: product titles for the reviewed product ids.
+export const ADMIN_PRODUCT_TITLES_QUERY = defineQuery(/* groq */ `
+  *[_type == "product" && _id in $ids] { _id, title }
 `);

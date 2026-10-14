@@ -6,6 +6,7 @@ import { DEFAULT_OG_IMAGE, NO_INDEX, SITE_NAME, TWITTER_HANDLE } from "@/lib/seo
 import { getDisplayName, getOccasionLabel } from "@/lib/wishlist/display";
 import { getSharedWishlist } from "@/lib/wishlist/shared";
 import { getSharedGiftEstimate } from "@/lib/pricing/shared";
+import { currentReferrerHost, currentRequestEventFields, recordRequestEventAfter } from "@/lib/events/server";
 import type { GiftEstimate } from "@/lib/pricing/types";
 
 export const dynamic = "force-dynamic";
@@ -118,6 +119,21 @@ export default async function SharedWishlistPage({
   }
 
   const wishlistWithPoolState = wishlist;
+
+  // Owners previewing their own list aren't an open.
+  if (!wishlist.viewer_is_owner) {
+    const [{ anonId }, referrer] = await Promise.all([currentRequestEventFields(), currentReferrerHost()]);
+    await recordRequestEventAfter({
+      event: "wishlist_opened",
+      userId: user?.id ?? null,
+      props: {
+        wishlist_id: wishlist.id,
+        is_new_visitor: !anonId && !user,
+        referrer,
+        via_invite: Boolean(wishlist.invite),
+      },
+    });
+  }
 
   const estimates: Record<string, GiftEstimate | null> = {};
   // Each estimate makes sequential reads; cap the page's database concurrency.

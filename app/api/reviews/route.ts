@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordRequestEvent } from "@/lib/events/server";
 import { jsonError, readJson } from "@/lib/api/response";
 import { createOrUpdateReview, getReviewsPage } from "@/lib/reviews/server";
 import { reviewSchema } from "@/lib/reviews/validation";
@@ -25,6 +26,16 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return jsonError(result.error, result.status);
   }
+
+  await recordRequestEvent({
+    event: "review_submitted",
+    userId: user.id,
+    props: {
+      catalog_product_id: parsed.data.catalog_product_id,
+      rating: parsed.data.rating,
+      has_body: Boolean(parsed.data.body?.trim()),
+    },
+  });
 
   return NextResponse.json({ review: result.review }, { status: 201 });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordRequestEvent } from "@/lib/events/server";
 import { readJson, jsonError } from "@/lib/api/response";
 import {
   createOccasionWithWishlist,
@@ -46,6 +47,17 @@ export async function POST(request: Request) {
       input: parsed.data,
     });
 
+    await recordRequestEvent({
+      event: "wishlist_created",
+      userId: user.id,
+      props: {
+        wishlist_id: result.wishlist_id,
+        occasion_id: result.occasion_id,
+        type: "occasion",
+        occasion_type: parsed.data.occasion_type,
+        item_count: new Set(parsed.data.pulled_item_ids).size + parsed.data.exclusive_items.length,
+      },
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     if (

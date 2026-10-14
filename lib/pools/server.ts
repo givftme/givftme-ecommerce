@@ -182,7 +182,6 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
   if (firstError) throw firstError;
 
   const wishlistById = new Map(((wishlistsResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.title ?? "Wishlist")]));
-  const profileById = new Map(((profilesResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.full_name ?? "Gifvtme member")]));
   const itemRows = (itemsResult.data ?? []) as UnknownRow[];
   const itemById = new Map(itemRows.map((row) => [String(row.id), String(row.title ?? "Gift")]));
   const receiverByItemId = new Map(pools.flatMap((pool) => pool.wishlist_item_id ? [[pool.wishlist_item_id, pool.receiver_id] as const] : []));
@@ -192,7 +191,6 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
   }));
   const itemImageById = new Map(signedItems.map((item) => [item.id, item.image_url]));
   const profileById = new Map(((profilesResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.full_name ?? "Givftme member")]));
-  const itemById = new Map(((itemsResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.title ?? "Gift")]));
   const contributorCountByPoolId = new Map(
     ((progressResult.data ?? []) as UnknownRow[]).map((row) => [
       String(row.pool_id), asNumber(row.contributor_count),

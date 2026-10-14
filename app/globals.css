@@ -615,3 +615,31 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* -----------------------------------------
+   ADMIN CHART PALETTE
+   Categorical slots 1–6 in fixed order, validated (dataviz validator) on the
+   card surface in both themes. Light slots 3–5 sit under 3:1, so admin charts
+   always show their values as text beside the marks. `--viz-heat` is the one
+   hue for sequential magnitude (cohort retention).
+----------------------------------------- */
+
+:root {
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-heat: #15803d;
+}
+
+.dark {
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-3: #199e70;
+  --viz-4: #c98500;
+  --viz-5: #d55181;
+  --viz-6: #008300;
+  --viz-heat: #22c55e;
+}

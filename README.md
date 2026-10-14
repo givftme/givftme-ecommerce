@@ -27,6 +27,15 @@ Fill in the required local variables:
 
 Optional local integrations include Microlink, Resend, cron, and affiliate IDs. You can find configuration names in [.env.local.example](.env.local.example) and inspect each integration's environment checks for its requirements.
 
+## Admin dashboard
+
+Apply `gifvtme_migration_041_admin_dashboard.sql`, then grant the first team role
+from the Supabase SQL editor, for example
+`UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';`. Roles are
+`support`, `operations`, `growth`, `finance`, and `admin`; the dashboard is at
+`/admin`. No new environment variables are needed. Analytics screens fill in as
+events accrue from the migration date onward.
+
 Gift Fetch and the admin candidate queue also use `ADMIN_EMAILS`,
 `EXCHANGERATE_API_KEY`, `SANITY_WRITE_TOKEN`, `FETCH_MARKUP_PERCENT`,
 `FETCH_DELIVERY_BUFFER_NGN`, and `FETCH_ROUNDING_NGN`. `SANITY_WRITE_TOKEN`

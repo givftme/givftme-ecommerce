@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { priceBand } from "@/lib/events/context";
+import { recordRequestEvent } from "@/lib/events/server";
 import { buildAffiliateUrl } from "@/lib/affiliate/transform";
 import { readJson, jsonError } from "@/lib/api/response";
 import { getActivePrice, isFlashSaleWindowActive } from "@/lib/flutterwave/getActivePrice";
@@ -23,6 +25,7 @@ interface WishlistItemsRouteContext {
 
 interface CatalogPriceProduct extends SanityCheckoutProduct {
   imageUrl?: string | null;
+  category?: string | null;
 }
 
 // No combination_key is collected at wishlist-add time, so variant products
@@ -247,6 +250,20 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
       insert.data as { image_url: string | null }
     );
 
+    await recordRequestEvent({
+      event: "wishlist_item_added",
+      userId: user.id,
+      props: {
+        item_id: insert.data.id,
+        wishlist_id: id,
+        origin: "catalog",
+        source: "catalog",
+        price_set: true,
+        category: product.category ?? null,
+        price_band: priceBand(catalogPrice),
+      },
+    });
+
     return NextResponse.json({ item }, { status: 201 });
   }
 
@@ -357,6 +374,21 @@ export async function POST(request: Request, context: WishlistItemsRouteContext)
     user.id,
     insert.data as { image_url: string | null }
   );
+
+  await recordRequestEvent({
+    event: "wishlist_item_added",
+    userId: user.id,
+    props: {
+      item_id: insert.data.id,
+      wishlist_id: id,
+      origin: "external",
+      // A currency comes back only from the link scraper.
+      source: data.scraped_currency ? "scraped" : "manual",
+      price_set: data.price != null,
+      category: null,
+      price_band: priceBand(data.price),
+    },
+  });
 
   return NextResponse.json({ item }, { status: 201 });
 }
