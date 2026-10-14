@@ -196,7 +196,7 @@ export async function POST(request: Request, context: ContributeRouteContext) {
       amount: reservation.amount,
       customer: {
         email: user.email,
-        name: profile?.full_name || user.user_metadata?.full_name || "Gifvtme contributor",
+        name: profile?.full_name || user.user_metadata?.full_name || "Givftme contributor",
         phone: profile?.phone ?? undefined,
       },
     });

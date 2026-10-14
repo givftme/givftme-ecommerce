@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/Button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
@@ -54,16 +54,19 @@ export function PoolCreationDialog({
       contributors_visible: true,
     },
   });
-  const title = form.watch("title") ?? "";
-  const targetAmount = form.watch("target_amount");
-  const minimum = form.watch("min_contribution");
-  const message = form.watch("message") ?? "";
+  const title = useWatch({ control: form.control, name: "title" }) ?? "";
+  const targetAmount = useWatch({ control: form.control, name: "target_amount" });
+  const minimum = useWatch({ control: form.control, name: "min_contribution" });
+  const message = useWatch({ control: form.control, name: "message" }) ?? "";
   const error = form.formState.errors.root?.server?.message;
   const { reset } = form;
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) setStep(1);
+    onOpenChange(nextOpen);
+  };
 
   useEffect(() => {
     if (!open) return;
-    setStep(1);
     reset({
       wishlist_id: wishlistId,
       wishlist_item_id: selectedItem?.id,
@@ -106,7 +109,7 @@ export function PoolCreationDialog({
         throw new Error(payload?.error || "Couldn't create this pool. Try again.");
       }
 
-      onOpenChange(false);
+      handleOpenChange(false);
       router.push(`/pool/${payload.pool.token}`);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Couldn't create this pool. Try again.";
@@ -119,7 +122,7 @@ export function PoolCreationDialog({
   const parsedMinimum = minimum ?? 1500;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="top-auto bottom-0 left-0 w-full max-w-none translate-x-0 translate-y-0 rounded-b-none rounded-t-2xl p-5 md:left-1/2 md:top-1/2 md:bottom-auto md:w-[calc(100%-2rem)] md:max-w-lg md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:p-6">
         <DialogHeader>
           <DialogTitle>{step === 1 ? "Create a gift pool" : "Review your pool"}</DialogTitle>
@@ -174,18 +177,18 @@ export function PoolCreationDialog({
               </label>
             </>
           ) : (
-            <div className="rounded-2xl border border-stone-100 bg-surface p-4">
+            <div className="rounded-2xl border border-line bg-surface p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">{selectedItem ? `For: ${selectedItem.title}` : `General gift fund for ${receiverName}`}</p>
               <h3 className="mt-2 text-base font-semibold text-ink">{title}</h3>
               <dl className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between gap-3"><dt className="text-muted">Target</dt><dd className="font-semibold text-ink">{formatPrice(parsedTarget)}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="text-muted">Minimum contribution</dt><dd className="font-semibold text-ink">{formatPrice(parsedMinimum)}</dd></div>
-                {message.trim() && <div className="border-t border-stone-200 pt-2"><dt className="text-muted">Message</dt><dd className="mt-1 italic text-ink">{message.trim()}</dd></div>}
+                {message.trim() && <div className="border-t border-line pt-2"><dt className="text-muted">Message</dt><dd className="mt-1 italic text-ink">{message.trim()}</dd></div>}
               </dl>
             </div>
           )}
 
-          {error && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm text-brand">{error}</p>}
+          {error && <p role="alert" className="rounded-xl bg-brand-light px-3 py-2 text-sm text-brand">{error}</p>}
 
           <div className="flex gap-3 pt-1">
             {step === 2 && <Button type="button" variant="ghost" fullWidth onClick={() => setStep(1)}>Back</Button>}

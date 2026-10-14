@@ -61,7 +61,7 @@ export async function resolveLinkedWishlistId(
 
   if (!shareId) {
     throw new ImportantDateInputError(
-      "That doesn't look like a Gifvtme wishlist link.",
+      "That doesn't look like a Givftme wishlist link.",
     );
   }
 

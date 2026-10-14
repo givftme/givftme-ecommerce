@@ -188,7 +188,7 @@ export function SharedWishlistClient({
 
       <div className="mx-auto w-full max-w-7xl px-0 md:px-6 md:py-8 lg:px-8">
         {wishlist.viewer_is_owner && (
-          <div className="mx-4 mt-4 rounded-2xl border border-stone-100 bg-white p-4 text-sm shadow-sm md:mx-0 md:mb-5 md:mt-0">
+          <div className="mx-4 mt-4 rounded-2xl border border-line bg-card p-4 text-sm shadow-sm md:mx-0 md:mb-5 md:mt-0">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <p className="font-medium text-ink">
                 You&apos;re viewing your wishlist as others see it
@@ -230,7 +230,7 @@ export function SharedWishlistClient({
             </div>
           </aside>
 
-          <section className="min-w-0 bg-white md:rounded-2xl md:border md:border-stone-100 md:p-5 md:shadow-sm">
+          <section className="min-w-0 bg-card md:rounded-2xl md:border md:border-line md:p-5 md:shadow-sm">
             {canOrganizePool && (
               <div className="mx-4 mt-4 flex flex-col gap-3 rounded-2xl bg-brand-light p-4 sm:flex-row sm:items-center sm:justify-between md:mx-0 md:mt-0 md:mb-5">
                 <div>
@@ -250,7 +250,7 @@ export function SharedWishlistClient({
               </div>
             )}
 
-            <div className="overflow-x-auto border-b border-stone-100 bg-white px-4 py-3 md:rounded-t-2xl md:px-0 md:pt-0">
+            <div className="overflow-x-auto border-b border-line bg-card px-4 py-3 md:rounded-t-2xl md:px-0 md:pt-0">
               <div className="flex min-w-max gap-2">
                 {filters.map((item) => {
                   const count =
@@ -274,7 +274,7 @@ export function SharedWishlistClient({
                       className={cn(
                         "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                         active
-                          ? "bg-brand text-white"
+                          ? "bg-primary text-primary-foreground"
                           : "bg-surface text-muted hover:bg-brand-light hover:text-brand"
                       )}
                     >
@@ -320,7 +320,7 @@ export function SharedWishlistClient({
               }
               className="block text-xs font-medium text-muted hover:text-brand"
             >
-              Powered by Gifvtme · gifvtme.com
+              Powered by Givftme · givftme.com
             </Link>
           )}
           {showCreateOwnCta && (
@@ -340,7 +340,7 @@ export function SharedWishlistClient({
       </div>
 
       {canRemind && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-100 bg-white p-4 md:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card p-4 md:hidden">
           <Button
             type="button"
             variant="ghost"

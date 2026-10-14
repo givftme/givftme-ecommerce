@@ -106,7 +106,7 @@ function PolicyForm({ policy, refresh }: { policy: PricingPolicy; refresh: () =>
   }
 
   return (
-    <section aria-labelledby={id + "-title"} className="rounded-2xl border border-line bg-white p-5 md:p-6">
+    <section aria-labelledby={id + "-title"} className="rounded-2xl border border-line bg-card p-5 md:p-6">
       <div className="mb-5 space-y-2">
         <h2 id={id + "-title"} className="text-lg font-semibold text-ink">{POLICY_LABELS[policy.key]}</h2>
         <p className="text-sm text-muted">{policy.active_version
@@ -174,9 +174,9 @@ export function PricingControls({ initial }: { initial: PolicyPage | null }) {
 
   return (
     <main className="min-h-dvh bg-surface text-ink">
-      <header className="border-b border-line bg-white">
+      <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-5 md:px-8">
-          <Link href="/" className="font-display text-2xl text-brand">Gifvtme</Link>
+          <Link href="/" className="font-display text-2xl text-brand">Givftme</Link>
           <nav aria-label="Admin navigation" className="flex flex-wrap gap-4 text-sm">
             <Link href="/admin/gift-candidates" className="text-muted hover:underline">Gift candidates</Link>
             <Link href="/admin/pricing" aria-current="page" className="font-semibold text-brand">Gift pricing</Link>
@@ -189,13 +189,13 @@ export function PricingControls({ initial }: { initial: PolicyPage | null }) {
           <h1 className="font-display text-4xl">A clear price for every gift</h1>
           <p className="text-sm leading-6 text-muted">Set each rate, review its calculation, then publish. New estimates use the latest rate. Confirmed amounts keep their history.</p>
         </div>
-        {error && <div className="space-y-3 rounded-xl border border-line bg-white p-4">
+        {error && <div className="space-y-3 rounded-xl border border-line bg-card p-4">
           <p role="alert" className="text-sm text-brand">{error}</p>
           <Button variant="ghost" disabled={loading} onClick={() => void reload()}>Retry loading</Button>
         </div>}
         {page && <>
           <div className="grid items-start gap-5 lg:grid-cols-2">{page.policies.map((policy) => <PolicyForm key={policy.key} policy={policy} refresh={() => load()} />)}</div>
-          <section className="rounded-2xl border border-line bg-white p-5 md:p-6" aria-labelledby="pricing-history">
+          <section className="rounded-2xl border border-line bg-card p-5 md:p-6" aria-labelledby="pricing-history">
             <h2 id="pricing-history" className="text-xl font-semibold">Publication history</h2>
             <p className="mt-2 text-sm text-muted">Published versions remain available for explaining earlier amounts. Times are shown in Lagos time.</p>
             {page.history.length === 0 ? <p className="mt-5 text-sm text-muted">No rates have been published.</p> : <ol className="mt-5 divide-y divide-line">

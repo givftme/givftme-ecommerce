@@ -43,7 +43,7 @@ import { uploadWishlistImage } from "@/components/wishlist/uploadWishlistImage";
 const FETCH_SLOW_THRESHOLD_MS = 5000;
 
 /**
- * The owner's gift sources, in the order we present them. The Gifvtme
+ * The owner's gift sources, in the order we present them. The Givftme
  * catalogue leads; the external URL and manual paths stay available as
  * clearly labelled alternatives.
  */
@@ -426,9 +426,9 @@ export function AddItemSheet({
       >
         <SheetContent
           showClose={false}
-          className="inset-x-0 bottom-0 top-0 max-h-dvh overflow-y-auto rounded-none border-0 bg-white p-0 shadow-none md:bottom-auto md:left-1/2 md:top-1/2 md:max-h-[92dvh] md:max-w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-stone-100 md:shadow-lg lg:max-w-[600px]"
+          className="inset-x-0 bottom-0 top-0 max-h-dvh overflow-y-auto rounded-none border-0 bg-card p-0 shadow-none md:bottom-auto md:left-1/2 md:top-1/2 md:max-h-[92dvh] md:max-w-[520px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-line md:shadow-lg lg:max-w-[600px]"
         >
-          <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-white md:min-h-0 md:max-w-none">
+          <div className="mx-auto flex min-h-dvh w-full max-w-[390px] flex-col bg-card md:min-h-0 md:max-w-none">
             <header className="flex h-[92px] items-end justify-between px-4 pb-3 md:h-16 md:items-center md:px-6 md:pb-0">
               <button
                 type="button"
@@ -486,26 +486,26 @@ export function AddItemSheet({
                     )}
                   >
                     <Store className="h-5 w-5" />
-                    Browse Gifvtme
+                    Browse Givftme
                   </Link>
                   <p className="mt-3 text-[13px] leading-5 text-muted">
-                    Pick a gift from the Gifvtme store and we&apos;ll save it
+                    Pick a gift from the Givftme store and we&apos;ll save it
                     straight to this wishlist.
                   </p>
 
                   <div className="mt-6 flex items-center gap-3">
-                    <span className="h-px flex-1 bg-stone-100" />
+                    <span className="h-px flex-1 bg-surface" />
                     <span className="text-xs font-medium uppercase tracking-wide text-muted">
                       Or add from elsewhere
                     </span>
-                    <span className="h-px flex-1 bg-stone-100" />
+                    <span className="h-px flex-1 bg-surface" />
                   </div>
 
                   <div className="mt-4 grid gap-3">
                     <button
                       type="button"
                       onClick={switchToUrlTab}
-                      className="w-full rounded-xl border border-stone-200 px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
+                      className="w-full rounded-xl border border-line px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
                     >
                       Paste a product link
                       <span className="mt-0.5 block text-xs font-normal text-muted">
@@ -515,7 +515,7 @@ export function AddItemSheet({
                     <button
                       type="button"
                       onClick={switchToManualTab}
-                      className="w-full rounded-xl border border-stone-200 px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
+                      className="w-full rounded-xl border border-line px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-brand/40 hover:bg-brand-light"
                     >
                       Add manually
                       <span className="mt-0.5 block text-xs font-normal text-muted">
@@ -532,7 +532,7 @@ export function AddItemSheet({
                       onClick={switchToCatalogTab}
                       className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-muted transition-colors"
                     >
-                      Gifvtme
+                      Givftme
                     </button>
                   )}
                   <button
@@ -540,7 +540,7 @@ export function AddItemSheet({
                     onClick={switchToUrlTab}
                     className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                       activeTab === "url"
-                        ? "bg-white text-ink shadow-sm"
+                        ? "bg-card text-ink shadow-sm"
                         : "text-muted"
                     }`}
                   >
@@ -551,7 +551,7 @@ export function AddItemSheet({
                     onClick={switchToManualTab}
                     className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                       activeTab === "manual"
-                        ? "bg-white text-ink shadow-sm"
+                        ? "bg-card text-ink shadow-sm"
                         : "text-muted"
                     }`}
                   >
@@ -568,7 +568,7 @@ export function AddItemSheet({
                       type="url"
                       {...form.register("product_url")}
                       placeholder="Paste a product URL"
-                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                      className="h-[52px] rounded-xl border-line px-4 text-sm placeholder:text-muted/60"
                     />
                     {form.formState.errors.product_url && (
                       <span className="mt-1 block text-xs font-medium text-brand">
@@ -647,7 +647,7 @@ export function AddItemSheet({
                         type="url"
                         {...form.register("product_url")}
                         placeholder="Product URL"
-                        className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                        className="h-[52px] rounded-xl border-line px-4 text-sm placeholder:text-muted/60"
                       />
                       {form.formState.errors.product_url && (
                         <span className="mt-1 block text-xs font-medium text-brand">
@@ -662,7 +662,7 @@ export function AddItemSheet({
                     <Input
                       {...form.register("title")}
                       placeholder="Name"
-                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                      className="h-[52px] rounded-xl border-line px-4 text-sm placeholder:text-muted/60"
                     />
                     {form.formState.errors.title && (
                       <span className="mt-1 block text-xs font-medium text-brand">
@@ -673,7 +673,7 @@ export function AddItemSheet({
 
                   <div className="mt-8">
                     <p className="text-sm text-ink">Upload a picture</p>
-                    <div className="mt-2 rounded-xl border border-dashed border-[#c9d5e5] bg-white p-4">
+                    <div className="mt-2 rounded-xl border border-dashed border-line bg-card p-4">
                       <input
                         id="wishlist-screen-image-upload"
                         type="file"
@@ -697,7 +697,7 @@ export function AddItemSheet({
                               className="h-6 w-6 text-ink"
                               strokeWidth={1.7}
                             />
-                            <span className="mt-2 text-sm text-[#a9a9a9]">
+                            <span className="mt-2 text-sm text-muted">
                               Click{" "}
                               <span className="font-semibold text-brand">
                                 here
@@ -715,14 +715,14 @@ export function AddItemSheet({
                     </div>
                   </div>
 
-                  <div className="mt-9 inline-flex h-10 w-[138px] items-center justify-between rounded-lg border border-stone-200 bg-white px-5">
+                  <div className="mt-9 inline-flex h-10 w-[138px] items-center justify-between rounded-lg border border-line bg-card px-5">
                     <button
                       type="button"
                       aria-label="Decrease quantity"
                       onClick={() =>
                         setQuantity((current) => Math.max(0, current - 1))
                       }
-                      className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
+                      className="flex h-8 w-8 items-center justify-center text-accent-foreground"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -733,7 +733,7 @@ export function AddItemSheet({
                       type="button"
                       aria-label="Increase quantity"
                       onClick={() => setQuantity((current) => current + 1)}
-                      className="flex h-8 w-8 items-center justify-center text-[#9b4100]"
+                      className="flex h-8 w-8 items-center justify-center text-accent-foreground"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -752,10 +752,10 @@ export function AddItemSheet({
                             : Number.parseFloat(String(value)),
                       })}
                       placeholder="Price"
-                      className="h-[52px] rounded-xl border-[#c9d5e5] px-4 text-sm placeholder:text-[#cbd6e6]"
+                      className="h-[52px] rounded-xl border-line px-4 text-sm placeholder:text-muted/60"
                     />
                     {isForeignCurrency && (
-                      <span className="mt-1 block text-xs font-medium text-amber-600">
+                      <span className="mt-1 block text-xs font-medium text-warning">
                         ⚠ Scraped price may be in a foreign currency (
                         {watchedCurrency}) — verify before saving.
                       </span>
@@ -768,7 +768,7 @@ export function AddItemSheet({
                       {...form.register("description")}
                       maxLength={500}
                       placeholder="Description"
-                      className="min-h-[116px] rounded-xl border-[#c9d5e5] px-4 py-4 text-sm placeholder:text-[#cbd6e6]"
+                      className="min-h-[116px] rounded-xl border-line px-4 py-4 text-sm placeholder:text-muted/60"
                     />
                   </label>
 
@@ -781,7 +781,7 @@ export function AddItemSheet({
                         onClick={() =>
                           setAllowGroupPayment((current) => !current)
                         }
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-brand text-white"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-primary-foreground"
                       >
                         {allowGroupPayment && (
                           <Check className="h-5 w-5" strokeWidth={3} />

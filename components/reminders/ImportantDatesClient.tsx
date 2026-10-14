@@ -100,10 +100,10 @@ export function ImportantDatesClient({ initialDates }: { initialDates: Important
         </div>
       </header>
 
-      <section className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+      <section className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
         {dates.length === 0 ? (
           <div className="rounded-2xl bg-surface px-4 py-10 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-card">
               <CalendarHeart className="h-8 w-8 text-brand" strokeWidth={1.7} />
             </div>
             <h2 className="mt-5 text-lg font-semibold text-ink">

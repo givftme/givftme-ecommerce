@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AccountShell } from "@/components/account/AccountShell";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "My Account", robots: NO_INDEX };
 
 export default async function AccountLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient();

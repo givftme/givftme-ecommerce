@@ -189,7 +189,7 @@ export function GiftCheckoutForm({
           Send this gift to {receiverName}
         </h1>
 
-        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-line bg-card p-4 shadow-sm">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface">
             {context.product_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -199,7 +199,7 @@ export function GiftCheckoutForm({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <Gift className="h-7 w-7 text-stone-300" strokeWidth={1.5} />
+              <Gift className="h-7 w-7 text-muted/40" strokeWidth={1.5} />
             )}
           </div>
           <div className="min-w-0 flex-1">
@@ -218,7 +218,7 @@ export function GiftCheckoutForm({
           the apartment, the phone and any delivery notes stay on the
           server (spec AC-22).
         */}
-        <div className="mt-4 flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm">
+        <div className="mt-4 flex items-start gap-3 rounded-2xl bg-card p-4 shadow-sm">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
           <div className="text-sm leading-6 text-muted">
             {context.has_destination ? (
@@ -243,7 +243,7 @@ export function GiftCheckoutForm({
             onSubmit={form.handleSubmit(onSubmit)}
             noValidate
           >
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="rounded-2xl bg-card p-5 shadow-sm">
               <h2 className="text-base font-semibold text-ink">
                 Your details
               </h2>
@@ -299,7 +299,7 @@ export function GiftCheckoutForm({
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <div className="rounded-2xl bg-card p-5 shadow-sm">
               <h2 className="text-base font-semibold text-ink">
                 Add a note (optional)
               </h2>
@@ -332,7 +332,7 @@ export function GiftCheckoutForm({
             {globalError && (
               <p
                 role="alert"
-                className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700"
+                className="rounded-2xl border border-danger/20 bg-brand-light p-4 text-sm font-medium text-danger"
               >
                 {globalError}
               </p>

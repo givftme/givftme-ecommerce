@@ -49,7 +49,7 @@ export function PoolProgress({
   }, { scope: root, dependencies: [circumference, offset, percentage] });
 
   return (
-    <div ref={root} className="rounded-2xl bg-white p-5 shadow-sm sm:p-7">
+    <div ref={root} className="rounded-2xl bg-card p-5 shadow-sm sm:p-7">
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-7">
         <div className="relative h-44 w-44 shrink-0">
           <svg viewBox="0 0 160 160" className="h-full w-full -rotate-90" aria-hidden="true">

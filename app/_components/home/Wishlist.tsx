@@ -166,7 +166,7 @@ export default function Wishlist() {
           <form
             onSubmit={addItem}
             noValidate
-            className="flex max-w-[460px] gap-2 rounded-full border border-line bg-white p-1.5 shadow-soft focus-within:ring-2 focus-within:ring-brand"
+            className="flex max-w-[460px] gap-2 rounded-full border border-line bg-card p-1.5 shadow-soft focus-within:ring-2 focus-within:ring-brand"
           >
             <label htmlFor="paste-input" className="sr-only">
               Paste a product link
@@ -207,7 +207,7 @@ export default function Wishlist() {
           <ul className="flex flex-col gap-3">
             {FEATURES.map(({ icon, label }) => (
               <li key={label} className="flex items-center gap-3 text-sm">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-white text-brand">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-line bg-card text-brand">
                   <Icon as={icon} />
                 </span>
                 {label}
@@ -222,7 +222,7 @@ export default function Wishlist() {
           </div>
         </Reveal>
         <Reveal delay={0.15} className="min-w-0">
-          <div className="mx-auto w-full max-w-[460px] overflow-hidden rounded-3xl bg-white shadow-float">
+          <div className="mx-auto w-full max-w-[460px] overflow-hidden rounded-3xl bg-card shadow-float">
             <div className="relative h-40 bg-peach">
               <SmartImage
                 src="/images/hero-carousel-image-01.png"
@@ -290,7 +290,7 @@ export default function Wishlist() {
                     ) : item.action === "chip" ? (
                       <a
                         href="#pool"
-                        className={cx(ACTION, "border-line bg-white text-ink")}
+                        className={cx(ACTION, "border-line bg-card text-ink")}
                       >
                         Try pooling
                       </a>
@@ -316,8 +316,8 @@ export default function Wishlist() {
                           ACTION,
                           "cursor-pointer",
                           item.giving
-                            ? "border-green-50 bg-green-50 text-green"
-                            : "border-ink bg-ink text-white",
+                            ? "border-success/20 bg-success/10 text-success"
+                            : "border-ink-deep bg-ink-deep text-white",
                         )}
                       >
                         {item.giving && <Icon as={Check} size={14} />}

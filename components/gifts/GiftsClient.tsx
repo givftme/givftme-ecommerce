@@ -63,7 +63,7 @@ export function GiftsClient({
         </p>
       </header>
 
-      <div className="mt-5 inline-flex rounded-full bg-white p-1 shadow-sm">
+      <div className="mt-5 inline-flex rounded-full bg-card p-1 shadow-sm">
         {TABS.map((option) => (
           <button
             key={option.id}
@@ -71,7 +71,7 @@ export function GiftsClient({
             onClick={() => setTab(option.id)}
             className={cn(
               "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-              tab === option.id ? "bg-brand text-white" : "text-muted hover:text-ink"
+              tab === option.id ? "bg-primary text-primary-foreground" : "text-muted hover:text-ink"
             )}
           >
             {option.label}
@@ -81,7 +81,7 @@ export function GiftsClient({
 
       <section className="mt-4">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-stone-100 bg-white px-4 py-10 text-center shadow-sm">
+          <div className="rounded-2xl border border-line bg-card px-4 py-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface">
               <GiftIcon className="h-8 w-8 text-brand" strokeWidth={1.7} />
             </div>

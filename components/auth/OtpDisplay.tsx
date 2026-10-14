@@ -67,7 +67,7 @@ export function OtpDisplay({
               "flex h-11 w-11 items-center justify-center rounded-full border text-lg font-semibold transition-colors",
               digit
                 ? "border-brand bg-brand-light text-brand"
-                : "border-stone-200 bg-white text-stone-300"
+                : "border-line bg-card text-muted/40"
             )}
           >
             {digit || ""}

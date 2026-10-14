@@ -401,7 +401,7 @@ export function buildExternalGiftUrl(item: WishlistItem) {
 
   try {
     const url = new URL(destination);
-    url.searchParams.set("utm_source", "gifvtme");
+    url.searchParams.set("utm_source", "givftme");
     url.searchParams.set("utm_medium", "wishlist");
     url.searchParams.set("utm_campaign", "gift_claim");
 

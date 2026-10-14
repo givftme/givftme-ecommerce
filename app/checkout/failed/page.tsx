@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { PaymentFailedScreen } from "@/components/order/PaymentFailedScreen";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Checkout", robots: NO_INDEX };
 
 interface FailedPageProps {
   searchParams: Promise<{

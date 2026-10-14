@@ -68,11 +68,11 @@ export function Icon({
 export type PillTone = "brand" | "red" | "orange" | "green" | "blue";
 
 const PILL_TONES: Record<PillTone, string> = {
-  brand: "bg-brand text-white",
+  brand: "bg-primary text-primary-foreground",
   red: "bg-red text-white",
-  orange: "bg-[#fff1e4] text-[#c4520a]",
-  green: "bg-green-50 text-green",
-  blue: "bg-blue-50 text-blue",
+  orange: "bg-peach text-accent-foreground",
+  green: "bg-success/10 text-success",
+  blue: "bg-blue/10 text-blue",
 };
 
 export function Pill({
@@ -100,12 +100,24 @@ interface SlotProps {
   children?: ReactNode;
 }
 
-export function Eyebrow({ className, children, tone = "red" }: SlotProps & { tone?: "red" | "brand" }) {
+const EYEBROW_TONES = {
+  red: "text-red",
+  brand: "text-brand",
+  // For eyebrows on filled or always-dark panels.
+  white: "text-white",
+  amber: "text-amber",
+} as const;
+
+export function Eyebrow({
+  className,
+  children,
+  tone = "red",
+}: SlotProps & { tone?: keyof typeof EYEBROW_TONES }) {
   return (
     <span
       className={cx(
         "inline-flex items-center gap-2 text-[13.5px] font-medium",
-        tone === "brand" ? "text-brand" : "text-red",
+        EYEBROW_TONES[tone],
         className,
       )}
     >
@@ -118,7 +130,7 @@ export function Badge({ className, children }: SlotProps) {
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-2 rounded-full bg-red-50 px-3.5 py-[7px] text-[13px] font-medium text-red-600",
+        "inline-flex items-center gap-2 rounded-full bg-brand-light px-3.5 py-[7px] text-[13px] font-medium text-danger",
         className,
       )}
     >

@@ -28,10 +28,10 @@ function numericValue(value: number | null) {
 }
 
 function statusTone(status: CandidateStatus) {
-  if (status === "published") return "bg-emerald-50 text-emerald-700";
-  if (status === "approved") return "bg-orange-50 text-orange-700";
-  if (status === "rejected") return "bg-stone-100 text-stone-600";
-  if (status === "needs_edit") return "bg-amber-50 text-amber-700";
+  if (status === "published") return "bg-success/10 text-success";
+  if (status === "approved") return "bg-peach text-accent-foreground";
+  if (status === "rejected") return "bg-surface text-muted";
+  if (status === "needs_edit") return "bg-warning/10 text-warning";
   return "bg-brand-light text-brand";
 }
 
@@ -116,8 +116,8 @@ export function GiftCandidateQueue({ initialCandidates }: GiftCandidateQueueProp
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f7f9]">
-      <div className="sticky top-0 z-20 border-b border-stone-200/80 bg-[#f7f7f9]/90 backdrop-blur">
+    <div className="min-h-screen bg-surface">
+      <div className="sticky top-0 z-20 border-b border-line/80 bg-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-brand">
@@ -137,8 +137,8 @@ export function GiftCandidateQueue({ initialCandidates }: GiftCandidateQueueProp
                 className={cn(
                   "rounded-full px-4 py-2 text-sm font-semibold capitalize transition-colors",
                   filter === status
-                    ? "bg-ink text-white"
-                    : "bg-white text-muted hover:text-ink"
+                    ? "bg-ink-deep text-white"
+                    : "bg-card text-muted hover:text-ink"
                 )}
               >
                 {status.replace("_", " ")}
@@ -150,7 +150,7 @@ export function GiftCandidateQueue({ initialCandidates }: GiftCandidateQueueProp
 
       <main className="mx-auto grid max-w-7xl gap-5 px-4 py-6 lg:px-8">
         {visibleCandidates.length === 0 ? (
-          <div className="rounded-[2rem] border border-dashed border-stone-200 bg-white p-10 text-center text-sm text-muted">
+          <div className="rounded-[2rem] border border-dashed border-line bg-card p-10 text-center text-sm text-muted">
             No candidates in this filter.
           </div>
         ) : null}
@@ -192,7 +192,7 @@ function CandidateCard({
     candidate.converted_price_ngn;
 
   return (
-    <article className="grid gap-4 rounded-[2rem] border border-stone-100 bg-white p-4 shadow-sm lg:grid-cols-[180px_minmax(0,1fr)_320px]">
+    <article className="grid gap-4 rounded-[2rem] border border-line bg-card p-4 shadow-sm lg:grid-cols-[180px_minmax(0,1fr)_320px]">
       <div className="relative aspect-square overflow-hidden rounded-[1.5rem] bg-surface">
         {candidate.image_url ? (
           <Image
@@ -214,13 +214,13 @@ function CandidateCard({
           <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", statusTone(candidate.status))}>
             {candidate.status.replace("_", " ")}
           </span>
-          <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+          <span className="rounded-full bg-peach px-3 py-1 text-xs font-semibold text-accent-foreground">
             {candidate.merchant_label || candidate.merchant}
           </span>
-          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-muted">
+          <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
             Demand {candidate.demand_count}
           </span>
-          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-muted">
+          <span className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-muted">
             {candidate.scrape_confidence} confidence
           </span>
         </div>
@@ -264,13 +264,13 @@ function CandidateCard({
         </dl>
       </div>
 
-      <div className="space-y-3 rounded-[1.5rem] bg-[#f7f7f9] p-3">
+      <div className="space-y-3 rounded-[1.5rem] bg-surface p-3">
         <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-muted">
           Publish mode
           <select
             value={publishMode}
             onChange={(event) => setPublishMode(event.target.value as PublishMode)}
-            className="mt-1 h-10 w-full rounded-full border border-stone-200 bg-white px-3 text-sm normal-case tracking-normal text-ink"
+            className="mt-1 h-10 w-full rounded-full border border-line bg-card px-3 text-sm normal-case tracking-normal text-ink"
           >
             <option value="external_redirect">External wishlist only</option>
             <option value="catalog_checkout">Promote to catalog draft</option>
@@ -283,7 +283,7 @@ function CandidateCard({
             value={recommendedPrice}
             onChange={(event) => setRecommendedPrice(event.target.value)}
             inputMode="numeric"
-            className="mt-1 h-10 w-full rounded-full border border-stone-200 bg-white px-3 text-sm normal-case tracking-normal text-ink"
+            className="mt-1 h-10 w-full rounded-full border border-line bg-card px-3 text-sm normal-case tracking-normal text-ink"
           />
         </label>
 
@@ -293,7 +293,7 @@ function CandidateCard({
             value={adminPrice}
             onChange={(event) => setAdminPrice(event.target.value)}
             inputMode="numeric"
-            className="mt-1 h-10 w-full rounded-full border border-stone-200 bg-white px-3 text-sm normal-case tracking-normal text-ink"
+            className="mt-1 h-10 w-full rounded-full border border-line bg-card px-3 text-sm normal-case tracking-normal text-ink"
           />
         </label>
 
@@ -303,7 +303,7 @@ function CandidateCard({
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             rows={3}
-            className="mt-1 w-full rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-ink"
+            className="mt-1 w-full rounded-2xl border border-line bg-card px-3 py-2 text-sm normal-case tracking-normal text-ink"
           />
         </label>
 
@@ -364,7 +364,7 @@ function CandidateCard({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-[#f7f7f9] p-3">
+    <div className="rounded-2xl bg-surface p-3">
       <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-muted">
         {label}
       </dt>

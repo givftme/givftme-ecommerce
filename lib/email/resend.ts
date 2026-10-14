@@ -23,7 +23,7 @@ function getConfiguredFromEmail() {
     return null;
   }
 
-  return from.includes("<") ? from : `Gifvtme <${from}>`;
+  return from.includes("<") ? from : `Givftme <${from}>`;
 }
 
 function escapeHtml(value: string) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -18,6 +19,9 @@ import { sanityFetch } from "@/lib/sanity/fetch";
 import { CART_PRICES_QUERY } from "@/lib/sanity/queries";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedApiUser } from "@/lib/wishlist/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Resuming Your Gift", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +78,7 @@ function ResumeMessage({
 
   return (
     <main className="min-h-dvh bg-surface pb-10">
-      <div className="mx-auto min-h-dvh max-w-lg bg-white px-4 py-10 md:mt-10 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-8 md:shadow-sm">
+      <div className="mx-auto min-h-dvh max-w-lg bg-card px-4 py-10 md:mt-10 md:min-h-0 md:rounded-2xl md:border md:border-line md:p-8 md:shadow-sm">
         <div className="flex flex-col items-center text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface">
             <Icon className="h-7 w-7 text-brand" strokeWidth={1.5} />
@@ -87,14 +91,14 @@ function ResumeMessage({
           <div className="mt-7 flex w-full flex-col gap-3">
             <Link
               href={primaryHref}
-              className="flex h-12 w-full items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+              className="flex h-12 w-full items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
             >
               {primaryLabel}
             </Link>
             {secondaryHref && secondaryLabel && (
               <Link
                 href={secondaryHref}
-                className="flex h-12 w-full items-center justify-center rounded-full border border-stone-200 px-6 text-sm font-semibold text-ink transition-colors hover:bg-surface"
+                className="flex h-12 w-full items-center justify-center rounded-full border border-line px-6 text-sm font-semibold text-ink transition-colors hover:bg-surface"
               >
                 {secondaryLabel}
               </Link>
@@ -109,7 +113,7 @@ function ResumeMessage({
 function MissingReference() {
   return (
     <main className="min-h-dvh bg-surface pb-10">
-      <div className="mx-auto min-h-dvh max-w-lg bg-white px-4 py-10 md:mt-10 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-8 md:shadow-sm">
+      <div className="mx-auto min-h-dvh max-w-lg bg-card px-4 py-10 md:mt-10 md:min-h-0 md:rounded-2xl md:border md:border-line md:p-8 md:shadow-sm">
         <div className="flex flex-col items-center text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface">
             <Gift className="h-7 w-7 text-brand" strokeWidth={1.5} />
@@ -123,9 +127,9 @@ function MissingReference() {
           </p>
           <Link
             href="/"
-            className="mt-7 flex h-12 w-full items-center justify-center rounded-full bg-brand px-6 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+            className="mt-7 flex h-12 w-full items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
           >
-            Go to Gifvtme
+            Go to Givftme
           </Link>
         </div>
       </div>

@@ -28,18 +28,18 @@ interface Giver {
 
 const SEED_GIVERS: Giver[] = [
   { initials: "KA", style: "bg-brand-light text-brand" },
-  { initials: "BO", style: "bg-peach text-orange-800" },
-  { initials: "NE", style: "bg-blue-50 text-blue" },
-  { initials: "FE", style: "bg-green-50 text-green" },
+  { initials: "BO", style: "bg-peach text-accent-foreground" },
+  { initials: "NE", style: "bg-blue/10 text-blue" },
+  { initials: "FE", style: "bg-success/10 text-success" },
   { quiet: true },
 ];
 
 const NEW_NAMES = ["IK", "SO", "DA", "TO", "CH", "YE"];
 const NEW_PALETTE = [
   "bg-brand-light text-brand",
-  "bg-peach text-orange-800",
-  "bg-green-50 text-green",
-  "bg-blue-50 text-blue",
+  "bg-peach text-accent-foreground",
+  "bg-success/10 text-success",
+  "bg-blue/10 text-blue",
 ];
 
 const STEPS = [
@@ -104,7 +104,7 @@ export default function Pool() {
     <section
       id="pool"
       aria-labelledby="pool-heading"
-      className="relative scroll-mt-24 overflow-hidden bg-ink py-16 text-white sm:py-24"
+      className="relative scroll-mt-24 overflow-hidden bg-ink-deep py-16 text-white sm:py-24"
     >
       <Wrap className="relative grid grid-cols-2 items-center gap-10 lg:gap-16 max-lg:grid-cols-1">
         <Reveal className="flex min-w-0 flex-col gap-5">
@@ -140,9 +140,9 @@ export default function Pool() {
         <Reveal delay={0.15} className="min-w-0">
           <div
             ref={setWall}
-            className="relative flex flex-col gap-5 rounded-card-xl bg-white p-6 text-ink shadow-float max-sm:rounded-3xl max-sm:p-5"
+            className="relative flex flex-col gap-5 rounded-card-xl bg-card p-6 text-ink shadow-float max-sm:rounded-3xl max-sm:p-5"
           >
-            <span className="self-start rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue">
+            <span className="self-start rounded-full bg-blue/10 px-3 py-1 text-xs font-medium text-blue">
               Pool preview
             </span>
             <div className="flex items-center gap-3.5">
@@ -206,7 +206,7 @@ export default function Pool() {
                       : `Demo contributor ${giver.initials}`
                   }
                   className={cx(
-                    "grid size-10 place-items-center rounded-full border-2 border-white text-xs font-semibold ring-1 ring-line",
+                    "grid size-10 place-items-center rounded-full border-2 border-card text-xs font-semibold ring-1 ring-line",
                     giver.quiet ? "bg-soft text-muted" : giver.style,
                   )}
                 >
@@ -233,7 +233,7 @@ export default function Pool() {
                         "h-11 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40 rounded-2xl border text-sm font-medium",
                         amount === value
                           ? "border-brand bg-brand-light text-brand"
-                          : "border-line bg-white text-ink",
+                          : "border-line bg-card text-ink",
                       )}
                     >
                       {value === "rest" ? "The rest" : formatPrice(value)}

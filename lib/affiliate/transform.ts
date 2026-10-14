@@ -18,7 +18,7 @@ export function buildAffiliateUrl(productUrl: string): AffiliateTransformResult 
     return {
       affiliateUrl: affiliateId
         ? withSearchParam(url, "tag", affiliateId)
-        : withSearchParam(url, "utm_source", "gifvtme"),
+        : withSearchParam(url, "utm_source", "givftme"),
       network: "jumia",
     };
   }
@@ -29,7 +29,7 @@ export function buildAffiliateUrl(productUrl: string): AffiliateTransformResult 
     return {
       affiliateUrl: affiliateId
         ? withSearchParam(url, "tag", affiliateId)
-        : withSearchParam(url, "utm_source", "gifvtme"),
+        : withSearchParam(url, "utm_source", "givftme"),
       network: "amazon",
     };
   }
@@ -40,13 +40,13 @@ export function buildAffiliateUrl(productUrl: string): AffiliateTransformResult 
     return {
       affiliateUrl: affiliateId
         ? withSearchParam(url, "k_id", affiliateId)
-        : withSearchParam(url, "utm_source", "gifvtme"),
+        : withSearchParam(url, "utm_source", "givftme"),
       network: "konga",
     };
   }
 
   return {
-    affiliateUrl: withSearchParam(url, "utm_source", "gifvtme"),
+    affiliateUrl: withSearchParam(url, "utm_source", "givftme"),
     network: "generic",
   };
 }

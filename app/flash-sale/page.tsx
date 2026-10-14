@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Zap } from "lucide-react";
 import { PageWrapper } from "@/components/layout/PageWrapper";
@@ -9,6 +10,14 @@ import { getMaxFlashSaleDiscountPercent, normalizeProductCards } from "@/lib/san
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { FLASH_SALE_PRODUCTS_COUNT_QUERY, FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
 import type { ProductCardData } from "@/lib/sanity/types";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "⚡ Flash Sale",
+  description:
+    "Limited-time deals on handpicked gifts. These prices won't last — shop the Givftme flash sale before time runs out.",
+  path: "/flash-sale",
+});
 
 // Shorter than the standard 60s elsewhere — flash sale prices/availability
 // change fast enough that a fresher list matters more here.
@@ -31,9 +40,9 @@ export default async function FlashSalePage() {
         properties={{ active_product_count: totalProducts }}
       />
 
-      <section className="bg-brand text-white">
+      <section className="bg-primary text-primary-foreground">
         <div className="mx-auto max-w-7xl px-4 py-10 text-center lg:px-8">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-brand">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-card text-brand">
             <Zap className="h-6 w-6" fill="currentColor" />
           </span>
           <h1 className="mt-4 text-3xl font-bold lg:text-4xl">⚡ Flash Sale</h1>

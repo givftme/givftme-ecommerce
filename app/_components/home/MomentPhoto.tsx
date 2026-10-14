@@ -7,7 +7,7 @@ import { useInView } from "@/hooks/useInView";
 import { useReducedMotion } from "@/hooks/useMediaQuery";
 
 const NOTE_BASE =
-  "absolute flex max-w-[250px] items-center gap-2.5 rounded-[18px] bg-white px-3.5 py-3 text-[13px] leading-[1.35] text-ink shadow-float max-sm:max-w-[200px] max-sm:px-3 max-sm:py-2.5 max-sm:text-xs";
+  "absolute flex max-w-[250px] items-center gap-2.5 rounded-[18px] bg-card px-3.5 py-3 text-[13px] leading-[1.35] text-ink shadow-float max-sm:max-w-[200px] max-sm:px-3 max-sm:py-2.5 max-sm:text-xs";
 
 interface Note {
   icon: LucideIcon;
@@ -22,7 +22,7 @@ interface Note {
 const NOTES: Note[] = [
   {
     icon: Truck,
-    tone: "bg-green-50 text-green",
+    tone: "bg-success/10 text-success",
     title: "Delivered on the day",
     body: "10:42 am · Surulere",
     position: "top-4 left-4 max-sm:top-2.5 max-sm:left-2.5",
@@ -30,7 +30,7 @@ const NOTES: Note[] = [
   },
   {
     icon: Camera,
-    tone: "bg-red-50 text-red",
+    tone: "bg-brand-light text-red",
     title: "It’s with her.",
     body: "Here’s the photo from the door.",
     position: "right-4 bottom-4 max-sm:right-2.5 max-sm:bottom-2.5",

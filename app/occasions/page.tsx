@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { MuseumOccasionGrid } from "@/components/occasion/MuseumOccasionGrid";
 import { normalizeOccasion } from "@/lib/sanity/catalog";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { OCCASIONS_QUERY } from "@/lib/sanity/queries";
 import type { MuseumOccasion } from "@/lib/sanity/types";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "Gift Ideas by Occasion",
+  description:
+    "From birthdays to weddings — browse gift ideas curated for every special moment.",
+  path: "/occasions",
+});
 
 export const revalidate = 60;
 

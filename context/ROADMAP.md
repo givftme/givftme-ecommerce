@@ -1,7 +1,7 @@
-# Gifvtme — Build Status
+# Givftme — Build Status
 
-This checkout did not include a prior roadmap. This file records the feature
-implemented in this change without inferring status for unrelated modules.
+This checkout did not include a prior roadmap. This file records implemented
+features without inferring status for unrelated modules.
 
 ## Implemented
 
@@ -15,8 +15,28 @@ implemented in this change without inferring status for unrelated modules.
   authenticated Flutterwave contributions with idempotent reservations, live
   progress, public pool pages, receiver/creator management, receipt and status
   emails, and manual payout tracking.
+- **Metadata & Open Graph images** (`feature-specs/22-METADATA-AND-OG-IMAGES.md`):
+  a "%s — Givftme" title template with canonical URLs, Open Graph and Twitter tags
+  on public pages, noindex on auth, dashboard, account, cart, checkout and
+  transactional gift pages, Sanity-driven product, occasion and collection
+  metadata, and edge-rendered preview images at `/api/og/wishlist/[token]` and
+  `/api/og/pool/[token]` that fall back to `/og-default.jpg`.
+- **Application design system**: app-wide light, dark, and system appearance,
+  Inter interface typography with Belleza display headings, semantic color and
+  surface tokens, accessible navigation controls, and responsive styling across
+  the existing routes and shared components.
+
+- **Business page** (`/business`): corporate gifting landing page with a 3D brand
+  studio (cake pack, gift box, gift card), occasion details, plans, a gift card
+  and yearly budget estimator, a corporate calendar, and an Experience Centre
+  brief form. Lead capture only: no checkout, pricing or database writes.
 
 ## Operational follow-up
+
+- Fill in `CONTACT` in `app/business/_components/content.ts` (WhatsApp, email,
+  phone and an `enquiryEndpoint`) and the bracketed plan prices and FAQ answers.
+  Until `enquiryEndpoint` is set, the business brief form shows its thank-you
+  without sending the brief anywhere.
 
 - Apply `gifvtme_migration_033_account_addresses.sql` and
   `gifvtme_migration_034_address_book_state_label.sql` to add the RLS-protected

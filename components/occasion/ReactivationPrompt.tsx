@@ -92,7 +92,7 @@ export function ReactivationPrompt({
   return (
     <section
       ref={ref}
-      className="overflow-hidden rounded-2xl border border-stone-100 bg-white p-5 shadow-sm"
+      className="overflow-hidden rounded-2xl border border-line bg-card p-5 shadow-sm"
     >
       <h2 className="text-lg font-semibold text-ink">
         These gifts were purchased for your {occasionLabel}
@@ -112,7 +112,7 @@ export function ReactivationPrompt({
           return (
             <label
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-stone-100 p-3"
+              className="flex items-center gap-3 rounded-xl border border-line p-3"
             >
               {item.image_url ? (
                 <img
@@ -122,7 +122,7 @@ export function ReactivationPrompt({
                 />
               ) : (
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-surface">
-                  <Gift className="h-5 w-5 text-stone-300" strokeWidth={1.5} />
+                  <Gift className="h-5 w-5 text-muted/40" strokeWidth={1.5} />
                 </div>
               )}
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
@@ -134,7 +134,7 @@ export function ReactivationPrompt({
                   type="checkbox"
                   checked={selectedIds.includes(masterItemId)}
                   onChange={() => toggle(masterItemId)}
-                  className="h-5 w-5 rounded border-stone-300 accent-brand"
+                  className="h-5 w-5 rounded border-line accent-brand"
                 />
               </span>
             </label>

@@ -186,7 +186,7 @@ export function ReviewsList({
       />
 
       {reviews.length === 0 ? (
-        <p className="rounded-2xl border border-stone-100 bg-white p-6 text-center text-sm text-muted">
+        <p className="rounded-2xl border border-line bg-card p-6 text-center text-sm text-muted">
           No reviews yet. Be the first to share your experience!
         </p>
       ) : (

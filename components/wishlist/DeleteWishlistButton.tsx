@@ -81,7 +81,7 @@ export function DeleteWishlistButton({
           aria-label={`Delete ${wishlistTitle}`}
           onClick={() => setOpen(true)}
           className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line bg-white text-muted transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-line bg-card text-muted transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
             className
           )}
         >

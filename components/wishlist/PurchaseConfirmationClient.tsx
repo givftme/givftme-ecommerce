@@ -93,7 +93,7 @@ export function PurchaseConfirmationClient({
   return (
     <>
       <div className="space-y-6">
-        <section className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-line bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
             {item.image_url ? (
               <img
@@ -132,12 +132,12 @@ export function PurchaseConfirmationClient({
         </section>
 
         <div className="rounded-xl bg-surface p-4 text-sm leading-6 text-muted">
-          Your payment details stay on {domain} - Gifvtme only records that this
+          Your payment details stay on {domain} - Givftme only records that this
           item has been claimed.
         </div>
 
         {raceMessage && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-700">
+          <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm font-medium text-warning">
             {raceMessage}
           </div>
         )}

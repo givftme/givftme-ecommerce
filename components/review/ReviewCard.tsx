@@ -23,7 +23,7 @@ export function ReviewCard({
   const isAuthor = Boolean(currentUserId) && review.userId === currentUserId;
 
   return (
-    <article className="rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+    <article className="rounded-2xl border border-line bg-card p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
           {review.reviewerAvatarUrl ? (
@@ -41,7 +41,7 @@ export function ReviewCard({
           )}
           <div>
             <p className="text-sm font-semibold text-ink">
-              {review.reviewerName || "Gifvtme customer"}
+              {review.reviewerName || "Givftme customer"}
             </p>
             {review.createdAt ? (
               <p className="text-xs text-muted">{formatRelativeTime(review.createdAt)}</p>
@@ -78,7 +78,7 @@ export function ReviewCard({
       ) : null}
 
       {isAuthor ? (
-        <div className="mt-4 flex gap-4 border-t border-stone-100 pt-3 text-xs font-semibold">
+        <div className="mt-4 flex gap-4 border-t border-line pt-3 text-xs font-semibold">
           <Link
             href={`/reviews/new?product_id=${encodeURIComponent(productId)}`}
             className="text-brand hover:text-brand/80"
@@ -88,7 +88,7 @@ export function ReviewCard({
           <button
             type="button"
             onClick={() => onDelete(review)}
-            className="text-red-600 hover:text-red-700"
+            className="text-danger hover:text-danger"
           >
             Delete
           </button>

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Gift, ShoppingCart } from "lucide-react";
@@ -23,6 +24,9 @@ import {
   getSharedWishlistItem,
 } from "@/lib/wishlist/shared";
 import { formatPrice } from "@/lib/utils";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Gift Details", robots: NO_INDEX };
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +79,7 @@ export default async function SharedWishlistItemPage({
 
   return (
     <main className="min-h-dvh bg-surface pb-10">
-      <div className="mx-auto min-h-dvh max-w-3xl bg-white px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-stone-100 md:p-6 md:shadow-sm">
+      <div className="mx-auto min-h-dvh max-w-3xl bg-card px-4 py-5 md:mt-6 md:min-h-0 md:rounded-2xl md:border md:border-line md:p-6 md:shadow-sm">
         <header className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center">
           <Link
             href={`/w/${id}`}
@@ -109,11 +113,11 @@ export default async function SharedWishlistItemPage({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <Gift className="h-14 w-14 text-stone-300" strokeWidth={1.5} />
+              <Gift className="h-14 w-14 text-muted/40" strokeWidth={1.5} />
             )}
-            <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-medium text-muted shadow-sm">
+            <span className="absolute left-3 top-3 rounded-full bg-card px-3 py-1 text-xs font-medium text-muted shadow-sm">
               {item.origin === "catalog"
-                ? "Gifvtme store"
+                ? "Givftme store"
                 : `From ${domain || "store"}`}
             </span>
           </div>
@@ -134,7 +138,7 @@ export default async function SharedWishlistItemPage({
           </div>
 
           {item.origin === "catalog" && (
-            <p className="text-sm font-medium text-amber-700">Limited</p>
+            <p className="text-sm font-medium text-warning">Limited</p>
           )}
 
           {item.description && (

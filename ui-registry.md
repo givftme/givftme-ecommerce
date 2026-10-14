@@ -1,3 +1,13 @@
+## Application appearance
+
+`app/globals.css` owns the light and dark semantic tokens and the Inter/Belleza
+font variables. `app/layout.tsx` loads those fonts with `next/font/google` and
+wraps routes in `next-themes`; the public `Navbar` exposes
+`components/layout/ThemeSelector.tsx` for System, Light, and Dark preferences.
+Use semantic utilities such as `bg-background`, `bg-card`, `text-foreground`,
+`border-border`, and `bg-primary` for theme-aware surfaces and controls. Use
+Inter for interface text and Belleza only for editorial display headings.
+
 ## Gift pricing
 
 `components/admin/PricingControls.tsx` supplies `/admin/pricing` with four policy
@@ -149,7 +159,7 @@ Last updated: 2026-09-24
 | Accent usage     | source icon (store, link or manual), `Badge` success for gifted                           |
 
 **Pattern notes:**
-Rows stay compact for scanning and repeated edits. The source line shows the Gifvtme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets: move up (only when `onMoveUp` is passed; saves immediately), edit and delete. The occasion detail page shares this card without move up.
+Rows stay compact for scanning and repeated edits. The source line shows the Givftme store, the link domain, or "Added by you" with a matching icon. Icon buttons are 40px touch targets: move up (only when `onMoveUp` is passed; saves immediately), edit and delete. The occasion detail page shares this card without move up.
 
 ### Wishlist Sheets
 
@@ -553,3 +563,20 @@ Last updated: 2026-09-22
 Homepage red accents use `brand`, `brand-light`, and `brand-dark` from `app/globals.css`. Shared `Btn`, `Pill`, and `Eyebrow` expose an explicit `brand` tone.
 
 Museum uses the shared catalog grid for product actions. Wishlist and Pool previews carry explicit demo labels. Keep demo sharing distinct from saved wishlist sharing, keep actions visible on touch screens, and announce changing progress and validation errors.
+
+### Business Page
+
+File: app/business/page.tsx, app/business/_components/
+Last updated: 2026-10-13
+
+| Property | Class |
+| --- | --- |
+| Background | sections `bg-card` / `bg-soft`, always-dark panels `bg-ink-deep text-white`, planner `bg-brand-gradient`, studio stage peach radial (`peach` → `peach-deep`) |
+| Border | `border-line`, selected controls `border-brand bg-brand-light` or filled `bg-primary` |
+| Radius | panels `rounded-card-xl`, cards `rounded-card-lg`, controls `rounded-full` or `rounded-xl` |
+| Primary text | hero `h1` in Inter with a `font-display italic` accent word (as on the home hero), section and card headings `font-display` with `clamp()` sizes, numeric readouts Inter `font-semibold tabular-nums` |
+| Secondary text | `text-muted`, on dark panels `text-white/75` |
+| Spacing | sections `py-24 max-sm:py-16`, panels `p-11`/`p-12` down to `px-4.5` on phones |
+| Shadow | floating previews `shadow-float`, chips `shadow-soft` |
+
+Section CTAs use `BriefLink`, which scrolls to the Experience Centre and adds its occasion, note or team size to the brief through `BusinessContext`. The studio and the gift card preview share the visitor's brand name and colour; text on that colour picks light or dark ink at runtime (`color.ts`). The visitor's swatch colours are data, not theme tokens. The 3D studio follows `HeroStage`: `three` is imported on mount, the scene pauses off screen, and the controls keep working with a text fallback when WebGL is unavailable.

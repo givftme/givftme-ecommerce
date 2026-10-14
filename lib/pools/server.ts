@@ -191,6 +191,8 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
     return signWishlistImage(service, receiverByItemId.get(itemId) ?? "", { id: itemId, image_url: asString(row.image_url) });
   }));
   const itemImageById = new Map(signedItems.map((item) => [item.id, item.image_url]));
+  const profileById = new Map(((profilesResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.full_name ?? "Givftme member")]));
+  const itemById = new Map(((itemsResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.title ?? "Gift")]));
   const contributorCountByPoolId = new Map(
     ((progressResult.data ?? []) as UnknownRow[]).map((row) => [
       String(row.pool_id), asNumber(row.contributor_count),
@@ -200,8 +202,8 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
   const dashboardPools: DashboardPool[] = pools.map((pool) => ({
     ...pool,
     wishlist_title: wishlistById.get(pool.wishlist_id) ?? "Wishlist",
-    receiver_name: profileById.get(pool.receiver_id) ?? "Gifvtme member",
-    creator_name: profileById.get(pool.created_by) ?? "Gifvtme member",
+    receiver_name: profileById.get(pool.receiver_id) ?? "Givftme member",
+    creator_name: profileById.get(pool.created_by) ?? "Givftme member",
     item_title: pool.wishlist_item_id ? itemById.get(pool.wishlist_item_id) ?? null : null,
     item_image_url: pool.wishlist_item_id ? itemImageById.get(pool.wishlist_item_id) ?? null : null,
     contributor_count: contributorCountByPoolId.get(pool.id) ?? 0,

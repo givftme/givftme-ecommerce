@@ -41,7 +41,7 @@ export function OrderTracking({ status }: { status: OrderStatus }) {
 
   if (!currentStep) {
     return (
-      <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-600">
+      <div className="rounded-2xl border border-danger/20 bg-brand-light px-4 py-3 text-center text-sm font-semibold text-danger">
         {status === "refunded" ? "Refunded" : "Cancelled"}
       </div>
     );
@@ -66,9 +66,9 @@ export function OrderTracking({ status }: { status: OrderStatus }) {
                 ref={isCurrent ? currentRef : undefined}
                 className={cn(
                   "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold",
-                  isComplete && "border-brand bg-brand text-white",
-                  isCurrent && "border-brand bg-white text-brand",
-                  !isComplete && !isCurrent && "border-stone-200 bg-white text-stone-300",
+                  isComplete && "border-primary bg-primary text-primary-foreground",
+                  isCurrent && "border-brand bg-card text-brand",
+                  !isComplete && !isCurrent && "border-line bg-card text-muted/40",
                 )}
               >
                 {isComplete ? <Check className="h-4 w-4" /> : index + 1}
@@ -76,7 +76,7 @@ export function OrderTracking({ status }: { status: OrderStatus }) {
               <span
                 className={cn(
                   "text-center text-xs font-medium leading-4",
-                  isComplete || isCurrent ? "text-ink" : "text-stone-300",
+                  isComplete || isCurrent ? "text-ink" : "text-muted/40",
                 )}
               >
                 {step.label}
@@ -86,7 +86,7 @@ export function OrderTracking({ status }: { status: OrderStatus }) {
               <div
                 className={cn(
                   "mt-4.5 h-0.5 flex-1",
-                  index < currentIndex ? "bg-brand" : "bg-stone-200",
+                  index < currentIndex ? "bg-brand" : "bg-line",
                 )}
               />
             )}

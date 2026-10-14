@@ -40,7 +40,7 @@ export function OccasionCategories({ occasions }: OccasionCategoriesProps) {
               <Link
                 key={occasion.slug}
                 href={`/occasions/${occasion.slug}`}
-                className="overflow-hidden rounded-xl border border-stone-200 bg-white text-center transition-colors hover:border-brand"
+                className="overflow-hidden rounded-xl border border-line bg-card text-center transition-colors hover:border-brand"
               >
                 <div className="relative aspect-square bg-surface">
                   {occasion.coverImageUrl ? (
@@ -53,7 +53,7 @@ export function OccasionCategories({ occasions }: OccasionCategoriesProps) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-3xl">
-                      {occasion.emoji || <PartyPopper className="h-7 w-7 text-stone-400" />}
+                      {occasion.emoji || <PartyPopper className="h-7 w-7 text-muted/70" />}
                     </div>
                   )}
                 </div>

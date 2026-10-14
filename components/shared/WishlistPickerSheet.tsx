@@ -84,7 +84,7 @@ export function WishlistPickerSheet({
   const { toast } = useToast();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // An owner who came here from a specific wishlist's "Browse Gifvtme" action
+  // An owner who came here from a specific wishlist's "Browse Givftme" action
   // should land back on that wishlist, not be asked to choose again. The id is
   // only honoured when it matches one of the viewer's own wishlists, and the
   // items API re-checks ownership regardless.
@@ -269,7 +269,7 @@ export function WishlistPickerSheet({
                   type="button"
                   onClick={() => addToWishlist(wishlist)}
                   disabled={isSavingId !== null}
-                  className="flex w-full items-center justify-between rounded-2xl border border-stone-100 bg-white p-4 text-left shadow-sm transition-colors hover:border-brand/40 disabled:opacity-60"
+                  className="flex w-full items-center justify-between rounded-2xl border border-line bg-card p-4 text-left shadow-sm transition-colors hover:border-brand/40 disabled:opacity-60"
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand">
@@ -300,7 +300,7 @@ export function WishlistPickerSheet({
             <Link
               href="/my-occasions/new"
               onClick={() => onOpenChange(false)}
-              className="mt-4 flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-stone-200 p-3 text-sm font-semibold text-brand transition-colors hover:border-brand/40"
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-line p-3 text-sm font-semibold text-brand transition-colors hover:border-brand/40"
             >
               <Plus className="h-4 w-4" />
               Create new occasion

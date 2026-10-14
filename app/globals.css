@@ -1,41 +1,98 @@
+
 @import "tailwindcss";
 
+/* -----------------------------------------
+   01. DARK MODE VARIANT
+----------------------------------------- */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* -----------------------------------------
+   02. THEME TOKENS
+----------------------------------------- */
+
 @theme {
+  /* Brand identity */
   --color-brand: #c50404;
   --color-brand-dark: #a80303;
   --color-brand-light: #fef2f2;
-  --color-ink: #000000;
-  /* Warm near-black behind full-bleed photography, so the frame reads as a
-     tinted plate rather than a hole while the image decodes. */
+
+  /* Base palette */
+  --color-ink: #111111;
   --color-ink-deep: #2a1a1a;
-  --color-muted: #4a4a4a;
+  --color-muted: #666666;
   --color-surface: #f7f7f7;
   --color-line: #e5e5e5;
   --color-soft: #f5f3f0;
   --color-peach: #fff4ec;
+  --color-peach-deep: #ffe8d6;
 
-  /* Bare accent names used by the home sections (bg-red, text-green, …).
-     Tailwind's numbered shades (red-50 etc.) are unaffected. */
+  /* Accent colors */
   --color-red: #e11d2e;
   --color-orange: #ff7a1a;
   --color-amber: #ffb020;
   --color-green: #15803d;
   --color-blue: #1d4ed8;
+  --color-purple: #6b3fd0;
+  --color-purple-light: #f4eeff;
 
-  /* Cards nested inside a card-xl panel step down one rung. */
-  --radius-card-lg: 24px;
-  --radius-card-xl: 32px;
-
-  --shadow-soft: 0 8px 24px -12px rgba(16, 16, 20, 0.18);
-  --shadow-float: 0 40px 80px -30px rgba(16, 16, 20, 0.45);
-
+  /* Font families */
   --font-sans: var(--font-inter);
   --font-display: var(--font-belleza-src);
 
+  /* Layout */
+  --container-content: 1200px;
+  --container-wide: 1440px;
+
+  /* Radius */
+  --radius-card-sm: 12px;
+  --radius-card-md: 16px;
+  --radius-card-lg: 24px;
+  --radius-card-xl: 32px;
+
+  /* Shadows */
+  --shadow-soft:
+    0 8px 24px -12px rgba(16, 16, 20, 0.18);
+
+  --shadow-float:
+    0 40px 80px -30px rgba(16, 16, 20, 0.45);
+
+  --shadow-card:
+    0 4px 20px rgba(0, 0, 0, 0.05);
+
+  /* Animations */
   --animate-scroll-x: scroll-x 40s linear infinite;
-  --animate-scroll-x-rev: scroll-x 40s linear infinite reverse;
+  --animate-scroll-x-rev:
+    scroll-x 40s linear infinite reverse;
   --animate-fill-x: fill-x linear forwards;
-  --animate-slide-in: slide-in 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in:
+    slide-in 450ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade-in: fade-in 400ms ease both;
+  --animate-line-up:
+    line-up 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-confetti:
+    confetti 1.4s cubic-bezier(0.15, 0.6, 0.4, 1) forwards;
+
+  @keyframes line-up {
+    from {
+      transform: translateY(105%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  /* Pieces set --cf-x, --cf-y and --cf-r inline (see hooks/useFeedback). */
+  @keyframes confetti {
+    from {
+      transform: translate(0, 0) rotate(0);
+      opacity: 1;
+    }
+    to {
+      transform: translate(var(--cf-x), var(--cf-y)) rotate(var(--cf-r));
+      opacity: 0;
+    }
+  }
 
   @keyframes fill-x {
     from {
@@ -55,7 +112,6 @@
     }
   }
 
-  /* Swaps a panel in once it replaces the form it was submitted from. */
   @keyframes slide-in {
     from {
       opacity: 0;
@@ -63,17 +119,440 @@
     }
     to {
       opacity: 1;
-      transform: none;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
     }
   }
 }
 
-body {
-  @apply bg-white text-ink font-sans;
+/* -----------------------------------------
+   03. SEMANTIC COLOR UTILITIES
+   These follow light/dark mode automatically.
+----------------------------------------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-panel: var(--panel);
+  --color-surface-raised: var(--surface-raised);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 }
 
-/* Scrollable rows (e.g. the mobile reminder pills) that keep touch/trackpad
-   scrolling but hide the scrollbar itself. */
+/* -----------------------------------------
+   04. LIGHT THEME
+----------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --background: #ffffff;
+  --foreground: #111111;
+
+  --card: #ffffff;
+  --card-foreground: #111111;
+
+  --panel: #f7f7f7;
+  --surface-raised: #ffffff;
+
+  --primary: #c50404;
+  --primary-hover: #a80303;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f5f3f0;
+  --secondary-foreground: #262626;
+
+  --accent: #fff4ec;
+  --accent-foreground: #8f320d;
+
+  --muted-foreground: #666666;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #c50404;
+
+  --success: #15803d;
+  --warning: #9a5800;
+  --danger: #c50404;
+
+  --page-gutter: clamp(1rem, 4vw, 3rem);
+  --section-spacing: clamp(4rem, 8vw, 7rem);
+}
+
+/* -----------------------------------------
+   05. DARK THEME
+----------------------------------------- */
+
+.dark {
+  color-scheme: dark;
+
+  --background: #111113;
+  --foreground: #f8f8f8;
+
+  --card: #202023;
+  --card-foreground: #f8f8f8;
+
+  --panel: #19191c;
+  --surface-raised: #29292d;
+
+  --primary: #bf2434;
+  --primary-hover: #d42b3b;
+  --primary-foreground: #ffffff;
+
+  --secondary: #29292d;
+  --secondary-foreground: #f5f5f5;
+
+  --accent: #352320;
+  --accent-foreground: #ffd1b5;
+
+  --muted-foreground: #b1b1b8;
+  --border: #38383e;
+  --input: #44444b;
+  --ring: #ff6a72;
+
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #ff6a72;
+
+  /* Compatibility with existing utilities. Brand red is bright enough for
+     text on dark surfaces; filled controls use the darker primary pair. */
+  --color-brand: #ff6a72;
+  --color-brand-dark: #d42b3b;
+  --color-brand-light: #352025;
+
+  --color-ink: #f8f8f8;
+  --color-ink-deep: #171719;
+  --color-muted: #b1b1b8;
+  --color-surface: #19191c;
+  --color-line: #38383e;
+  --color-soft: #252528;
+  --color-peach: #352320;
+  --color-peach-deep: #3d2520;
+
+  /* Accents used as text or tints, lifted to stay legible on dark surfaces.
+     Red and orange stay as-is: they carry white text on filled CTAs. */
+  --color-green: #4ade80;
+  --color-blue: #8fb0ff;
+  --color-amber: #fbbf24;
+  --color-purple: #b79cff;
+  --color-purple-light: #2a2238;
+}
+
+/* -----------------------------------------
+   06. BASE STYLES
+----------------------------------------- */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+
+    background-color: var(--background);
+    color: var(--foreground);
+
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+
+  /* Headings default to Inter: most of them are interface headings (dialogs,
+     dashboard cards, settings). Editorial and display headings opt into
+     Belleza with `font-display` (or `.heading-display`). Size and weight come
+     from utilities at the call site, as Tailwind preflight resets them. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-sans);
+    text-wrap: balance;
+  }
+
+  p {
+    font-family: var(--font-sans);
+    text-wrap: pretty;
+  }
+
+  button,
+  input,
+  textarea,
+  select,
+  option {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input,
+  select,
+  textarea {
+    color: var(--foreground);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img,
+  video,
+  svg {
+    max-width: 100%;
+  }
+
+  img,
+  video {
+    height: auto;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+}
+
+/* -----------------------------------------
+   07. SHARED COMPONENT STYLES
+----------------------------------------- */
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: var(--container-wide);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .container-content {
+    width: 100%;
+    max-width: var(--container-content);
+    margin-inline: auto;
+    padding-inline: var(--page-gutter);
+  }
+
+  .section-spacing {
+    padding-block: var(--section-spacing);
+  }
+
+  .heading-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+  }
+
+  .heading-ui {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+  }
+
+  .text-body {
+    font-family: var(--font-sans);
+    line-height: 1.65;
+  }
+
+  .text-caption {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted-foreground);
+  }
+
+  .text-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--primary);
+  }
+
+  .card-base {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card-lg);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-soft {
+    background-color: var(--panel);
+    color: var(--foreground);
+    border-radius: var(--radius-card-xl);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.75rem 1.5rem;
+
+    border: 1px solid transparent;
+    border-radius: 9999px;
+
+    background: var(--primary);
+    color: var(--primary-foreground);
+
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+
+    transition:
+      background-color 200ms ease,
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.75rem 1.5rem;
+
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+
+    background: var(--card);
+    color: var(--foreground);
+
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25;
+
+    transition:
+      background-color 200ms ease,
+      border-color 200ms ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--secondary);
+  }
+
+  .input-base {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.75rem 1rem;
+
+    border: 1px solid var(--input);
+    border-radius: var(--radius-card-sm);
+
+    background: var(--card);
+    color: var(--foreground);
+
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+
+    transition:
+      border-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+
+  .input-base:focus {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .brand-gradient {
+    background: linear-gradient(
+      110deg,
+      #c50404 0%,
+      #e11d2e 45%,
+      #ff7a1a 100%
+    );
+    color: #ffffff;
+  }
+
+  .divider-soft {
+    border-color: var(--border);
+  }
+}
+
+/* -----------------------------------------
+   08. CUSTOM UTILITIES
+----------------------------------------- */
+
 @utility no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -83,11 +562,56 @@ body {
   }
 }
 
-/* A native <select> stripped to `appearance: none` loses its arrow. This draws
-   it back on in --color-muted. Pair it with right padding so text clears it. */
 @utility select-caret {
+  appearance: none;
+
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234a4a4a' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+
   background-repeat: no-repeat;
   background-position: right 0.875rem center;
   background-size: 20px 20px;
+
+  &:where(.dark, .dark *) {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23b1b1b8' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
+
+/* `font-display`, `font-sans` and `shadow-card` are generated from the
+   @theme tokens above, so they need no @utility of their own. */
+
+@utility bg-brand-gradient {
+  background: linear-gradient(
+    110deg,
+    #c50404 0%,
+    #e11d2e 45%,
+    #ff7a1a 100%
+  );
+}
+
+/* -----------------------------------------
+   09. INTERACTION AND ACCESSIBILITY
+----------------------------------------- */
+
+@media (hover: hover) {
+  .hover-lift {
+    transition:
+      transform 250ms ease,
+      box-shadow 250ms ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -189,7 +189,7 @@ function EditItemForm({
 
         <label className="block space-y-2">
           <span className="text-xs font-medium text-ink">Photo</span>
-          <div className="rounded-xl border border-dashed border-stone-200 bg-surface p-4 text-center">
+          <div className="rounded-xl border border-dashed border-line bg-surface p-4 text-center">
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -241,7 +241,7 @@ function EditItemForm({
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="w-full text-center text-sm font-medium text-red-600 hover:text-red-700"
+            className="w-full text-center text-sm font-medium text-danger hover:text-danger"
           >
             Delete item
           </button>

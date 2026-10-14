@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
 import type { SavedAddress } from "@/components/checkout/AddressSelector";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { withRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Checkout", robots: NO_INDEX };
 
 function getMetadataString(metadata: Record<string, unknown>, key: string) {
   const value = metadata[key];

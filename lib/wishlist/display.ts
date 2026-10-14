@@ -51,9 +51,9 @@ export function getAvatarColorClass(userId: string) {
   const palette = [
     "bg-brand-light text-brand",
     "bg-surface text-muted",
-    "bg-red-50 text-red-600",
-    "bg-green-50 text-green-700",
-    "bg-amber-50 text-amber-700",
+    "bg-brand-light text-danger",
+    "bg-success/10 text-success",
+    "bg-warning/10 text-warning",
   ];
   const total = [...userId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
 

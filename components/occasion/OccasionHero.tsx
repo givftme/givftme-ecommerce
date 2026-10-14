@@ -32,7 +32,7 @@ export function OccasionHero({
   itemCount: number;
 }) {
   return (
-    <section className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+    <section className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-brand-light text-[40px]">
           {OCCASION_EMOJIS[occasion.occasion_type]}

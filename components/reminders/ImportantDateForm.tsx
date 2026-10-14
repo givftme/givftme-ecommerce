@@ -164,7 +164,7 @@ function ImportantDateFormBody({
           )}
         </label>
 
-        <div className="flex items-center justify-between rounded-2xl border border-stone-100 bg-white px-4 py-3">
+        <div className="flex items-center justify-between rounded-2xl border border-line bg-card px-4 py-3">
           <div>
             <p className="text-sm font-medium text-ink">Recurs annually</p>
             <p className="text-xs text-muted">We&apos;ll remind you again next year.</p>
@@ -181,7 +181,7 @@ function ImportantDateFormBody({
           <span className="text-xs font-medium text-ink">Their wishlist link</span>
           <Input
             {...form.register("linked_wishlist_url")}
-            placeholder="Optional — paste their Gifvtme wishlist link"
+            placeholder="Optional — paste their Givftme wishlist link"
           />
           {form.formState.errors.linked_wishlist_url && (
             <span className="text-xs font-medium text-brand">
@@ -198,7 +198,7 @@ function ImportantDateFormBody({
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="w-full text-center text-sm font-medium text-red-600 hover:text-red-700"
+            className="w-full text-center text-sm font-medium text-danger hover:text-danger"
           >
             Delete date
           </button>

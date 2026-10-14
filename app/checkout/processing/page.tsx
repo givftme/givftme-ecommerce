@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { ProcessingScreen } from "@/components/order/ProcessingScreen";
+import { NO_INDEX } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = { title: "Checkout", robots: NO_INDEX };
 
 interface ProcessingPageProps {
   searchParams: Promise<{ order?: string | string[] }>;

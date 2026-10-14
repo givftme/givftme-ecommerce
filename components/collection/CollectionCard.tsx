@@ -26,7 +26,7 @@ export function CollectionCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <Gift className="h-10 w-10 text-stone-300" strokeWidth={1.5} />
+              <Gift className="h-10 w-10 text-muted/40" strokeWidth={1.5} />
             </div>
           )}
           {collection.featured ? (

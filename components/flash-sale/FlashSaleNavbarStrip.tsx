@@ -19,7 +19,7 @@ export function FlashSaleNavbarStrip({
   }
 
   return (
-    <div className="bg-brand text-white">
+    <div className="bg-primary text-primary-foreground">
       <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-1.5 text-xs font-semibold sm:text-sm">
         <Zap className="h-3.5 w-3.5 shrink-0" fill="currentColor" />
         <span>

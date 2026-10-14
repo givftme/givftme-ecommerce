@@ -15,7 +15,7 @@ export function ReactivationPromptsBanner({
   return (
     <section className="rounded-2xl border border-brand/30 bg-brand-light p-4 shadow-sm">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-brand">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-brand">
           <Sparkles className="h-5 w-5" strokeWidth={1.7} />
         </div>
         <div className="min-w-0 flex-1 space-y-2">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -8,6 +9,7 @@ import { normalizeCollection, normalizeProductCards } from "@/lib/sanity/catalog
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { COLLECTION_PAGE_QUERY } from "@/lib/sanity/queries";
 import type { MuseumCollection, ProductCardData } from "@/lib/sanity/types";
+import { buildPageMetadata, truncateDescription } from "@/lib/seo/metadata";
 
 export const revalidate = 60;
 
@@ -16,11 +18,39 @@ interface CollectionPageData extends Partial<MuseumCollection> {
   products?: ProductCardData[];
 }
 
-export default async function CollectionPage({
-  params,
-}: {
+type CollectionPageProps = {
   params: Promise<{ slug: string }>;
-}) {
+};
+
+export async function generateMetadata({
+  params,
+}: CollectionPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const rawCollection = await sanityFetch<CollectionPageData | null>(
+    COLLECTION_PAGE_QUERY,
+    { slug, offset: 0, limit: 12 }
+  );
+
+  if (!rawCollection) {
+    return { title: "Collection not found", robots: { index: false } };
+  }
+
+  const collection = normalizeCollection(rawCollection);
+  const collectionTitle = collection.title.trim();
+  const occasionTitle = collection.occasion?.title.trim();
+  const title = occasionTitle ? `${collectionTitle} — ${occasionTitle}` : collectionTitle;
+
+  return buildPageMetadata({
+    title,
+    description: truncateDescription(
+      collection.description ||
+        `Browse the ${collectionTitle} collection of curated gifts on Givftme.`
+    ),
+    path: `/collections/${slug}`,
+  });
+}
+
+export default async function CollectionPage({ params }: CollectionPageProps) {
   const { slug } = await params;
   const rawCollection = await sanityFetch<CollectionPageData | null>(
     COLLECTION_PAGE_QUERY,

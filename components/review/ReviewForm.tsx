@@ -144,7 +144,7 @@ export function ReviewForm({
             {rating > 0 ? `${rating} out of 5` : "Select a rating"}
           </p>
           {form.formState.errors.rating ? (
-            <p className="text-xs font-medium text-red-600">
+            <p className="text-xs font-medium text-danger">
               {form.formState.errors.rating.message}
             </p>
           ) : null}
@@ -161,7 +161,7 @@ export function ReviewForm({
             {body.length}/{REVIEW_BODY_MAX_LENGTH}
           </p>
           {form.formState.errors.body ? (
-            <p className="text-xs font-medium text-red-600">
+            <p className="text-xs font-medium text-danger">
               {form.formState.errors.body.message}
             </p>
           ) : null}
@@ -189,7 +189,7 @@ export function ReviewForm({
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="block w-full border-t border-stone-100 pt-4 text-center text-sm font-medium text-red-600 hover:text-red-700"
+            className="block w-full border-t border-line pt-4 text-center text-sm font-medium text-danger hover:text-danger"
           >
             Delete review
           </button>

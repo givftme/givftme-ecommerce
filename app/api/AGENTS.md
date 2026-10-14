@@ -18,6 +18,7 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `pools/[id]/contribute/route.ts`, `pools/[id]/cash-out/route.ts`, `pools/[id]/cancel/route.ts` | Authenticated pool payment and management actions |
 | `pools/notifications/route.ts` | CRON_SECRET-protected retries for queued pool cash-out emails |
 | `dashboard/pools/route.ts` | Current user's active and past pools |
+| `og/wishlist/[token]/route.tsx`, `og/pool/[token]/route.tsx` | Public, edge-rendered 1200×630 link-preview PNGs for shared wishlists and gift pools |
 | `important-dates/route.ts` | Example of authentication, validation, and domain delegation |
 | `checkout/route.test.ts` | Direct handler tests with mocked service boundaries |
 | `../../vercel.json` | Configured cron paths and schedules |
@@ -43,6 +44,13 @@ Checkout and external purchase marking remain separate flows. You can consult ro
 Gift pooling is a third flow. Its Flutterwave webhook branch verifies the payment
 before calling the pool confirmation RPC; keep pool payment records out of
 orders and purchases. Late captured payments are marked for manual ops review.
+
+The OG image routes are unauthenticated because crawlers call them. The wishlist
+route resolves the share key through the anon `gifvtme_get_shared_wishlist` RPC
+via `createPublicClient()`, never the service client, so private lists fall back
+to `/og-default.jpg`. A malformed token gets 400 and every other failure gets 200,
+both with the brand image. Helpers live in `lib/og/`, and the Inter TTFs they
+load are served from `public/fonts/`.
 
 Account APIs authenticate inside each handler. Address rows are protected by
 their own RLS policy; keep user ownership in every query. `/api/orders` accepts

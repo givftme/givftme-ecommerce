@@ -29,7 +29,7 @@ export function OrderCard({ order }: { order: OrderCardData }) {
   const firstItem = order.items[0];
 
   return (
-    <article className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm md:p-5">
+    <article className="rounded-2xl border border-line bg-card p-4 shadow-sm md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-ink">Order #{order.id.slice(0, 9).toUpperCase()}</p>
@@ -56,7 +56,7 @@ export function OrderCard({ order }: { order: OrderCardData }) {
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <p className="text-sm font-semibold text-ink">{formatPrice(order.total_amount)}</p>
         <div className="flex flex-wrap items-center gap-2">
           {order.unreviewed_product_id && (

@@ -7,7 +7,7 @@ export function MuseumOccasionCard({ occasion }: { occasion: MuseumOccasion }) {
   return (
     <Link
       href={`/occasions/${occasion.slug}`}
-      className="museum-occasion-card group block overflow-hidden rounded-2xl border border-stone-100 bg-white shadow-sm transition-colors hover:border-brand/40"
+      className="museum-occasion-card group block overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-colors hover:border-brand/40"
     >
       <div
         className="relative bg-surface"
@@ -23,10 +23,10 @@ export function MuseumOccasionCard({ occasion }: { occasion: MuseumOccasion }) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <PartyPopper className="h-10 w-10 text-stone-300" strokeWidth={1.5} />
+            <PartyPopper className="h-10 w-10 text-muted/40" strokeWidth={1.5} />
           </div>
         )}
-        <span className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm">
+        <span className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-card text-xl shadow-sm">
           {occasion.emoji || "🎁"}
         </span>
       </div>

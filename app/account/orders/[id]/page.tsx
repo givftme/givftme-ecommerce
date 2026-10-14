@@ -109,12 +109,12 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
         <OrderStatusBadge status={order.status} />
       </div>
 
-      <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm md:p-6">
+      <div className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm md:p-6">
         <OrderTracking status={order.status} />
       </div>
 
       {showTracking && (
-        <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+        <div className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-ink">Tracking</h2>
           {order.tracking_number ? (
             <div className="mt-3 space-y-2 text-sm">
@@ -150,9 +150,9 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
         </div>
       )}
 
-      <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-ink">Order summary</h2>
-        <div className="mt-3 divide-y divide-stone-100">
+        <div className="mt-3 divide-y divide-line">
           {order.order_items.map((item) => (
             <div key={item.id} className="flex items-center gap-3 py-4">
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface">
@@ -166,7 +166,7 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <Gift className="h-6 w-6 text-stone-300" />
+                    <Gift className="h-6 w-6 text-muted/40" />
                   </div>
                 )}
               </div>
@@ -184,7 +184,7 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
             </div>
           ))}
         </div>
-        <dl className="space-y-2 border-t border-stone-100 pt-4 text-sm">
+        <dl className="space-y-2 border-t border-line pt-4 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted">Subtotal</dt>
             <dd className="font-semibold text-ink">
@@ -193,11 +193,11 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
           </div>
           <div className="flex justify-between">
             <dt className="text-muted">Shipping</dt>
-            <dd className="font-semibold text-green-700">
+            <dd className="font-semibold text-success">
               {formatPrice(0)}
             </dd>
           </div>
-          <div className="flex items-end justify-between border-t border-stone-100 pt-3">
+          <div className="flex items-end justify-between border-t border-line pt-3">
             <dt className="text-base font-semibold text-ink">Total</dt>
             <dd className="text-xl font-bold text-brand">
               {formatPrice(order.total_amount)}
@@ -206,7 +206,7 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
         </dl>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+      <div className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-ink">Shipping details</h2>
         <dl className="mt-3 space-y-1 text-sm">
           <p className="text-ink">{order.shipping_name || "—"}</p>
@@ -215,7 +215,7 @@ export default async function AccountOrderPage({ params }: OrderPageProps) {
         </dl>
       </div>
 
-      <details className="mt-6 rounded-2xl border border-stone-100 bg-white p-5 shadow-sm">
+      <details className="mt-6 rounded-2xl border border-line bg-card p-5 shadow-sm">
         <summary className="cursor-pointer text-lg font-semibold text-ink">
           Order timeline
         </summary>
