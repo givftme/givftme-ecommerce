@@ -70,7 +70,7 @@ export interface AdminTeamMember {
 async function loadTeamMember(user: User): Promise<AdminTeamMember | null> {
   const { data, error } = await createServiceClient()
     .from("users")
-    .select("role, full_name, email, avatar_url")
+    .select("role, full_name, avatar_url")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw new Error(`Could not load team role: ${error.message}`);
@@ -79,7 +79,8 @@ async function loadTeamMember(user: User): Promise<AdminTeamMember | null> {
     id: user.id,
     role: data.role,
     fullName: data.full_name || user.email || "Team member",
-    email: data.email || user.email || "",
+    // public.users has no email column; the session carries it.
+    email: user.email || "",
     avatarUrl: data.avatar_url ?? null,
   };
 }

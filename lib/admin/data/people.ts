@@ -150,6 +150,8 @@ export async function getPersonRecord(service: SupabaseClient, userId: string): 
   ]);
 
   const wishlistIds = wishlists.map((list) => list.id);
+  // public.users has no email column; it lives on the auth user.
+  const email = authData?.user?.email ?? null;
   const [shareCounts, purchasesMade, purchasesReceived, newsletter, inviteOptIns, missedEvents] = await Promise.all([
     Promise.all(wishlistIds.map((id) => countOf(service.from("events").select("id", { count: "exact", head: true })
       .eq("event", "wishlist_shared").eq("props->>wishlist_id", id)))),
@@ -160,8 +162,8 @@ export async function getPersonRecord(service: SupabaseClient, userId: string): 
       ? countOf(service.from("purchases").select("id, wishlist_items!inner(wishlist_id)", { count: "exact", head: true })
           .in("wishlist_items.wishlist_id", wishlistIds))
       : Promise.resolve(0),
-    profile.email
-      ? service.from("newsletter_subscribers").select("created_at").eq("email", String(profile.email).toLowerCase()).maybeSingle()
+    email
+      ? service.from("newsletter_subscribers").select("created_at").eq("email", email.toLowerCase()).maybeSingle()
       : Promise.resolve({ data: null }),
     countOf(service.from("wishlist_invites").select("id", { count: "exact", head: true })
       .eq("invitee_user_id", userId).eq("reminder_opted_in", true)),
@@ -189,7 +191,7 @@ export async function getPersonRecord(service: SupabaseClient, userId: string): 
     profile: {
       id: profile.id,
       full_name: profile.full_name ?? null,
-      email: profile.email ?? authUser?.email ?? null,
+      email,
       phone: profile.phone ?? null,
       avatar_url: profile.avatar_url ?? null,
       role: profile.role ?? null,

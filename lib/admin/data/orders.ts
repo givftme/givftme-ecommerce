@@ -92,16 +92,37 @@ interface OrderListRow {
   order_status_history: { status: string; changed_at: string }[] | null;
 }
 
+export interface UserContact {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+}
+
+/**
+ * Names and emails for people, by id or by email. Email lives only in
+ * auth.users, so this goes through gifvtme_admin_user_contacts().
+ */
+export async function userContacts(
+  service: SupabaseClient,
+  lookup: { ids?: string[]; emails?: string[] },
+): Promise<UserContact[]> {
+  const ids = [...new Set((lookup.ids ?? []).filter(Boolean))];
+  const emails = [...new Set((lookup.emails ?? []).filter(Boolean).map((email) => email.toLowerCase()))];
+  if (!ids.length && !emails.length) return [];
+  const { data, error } = await service.rpc("gifvtme_admin_user_contacts", {
+    p_ids: ids.length ? ids : null,
+    p_emails: emails.length ? emails : null,
+  });
+  if (error) throw new Error(error.message);
+  return (data || []) as UserContact[];
+}
+
 export async function namesForUsers(service: SupabaseClient, ids: string[]) {
-  const unique = [...new Set(ids.filter(Boolean))];
   const names = new Map<string, { full_name: string | null; email: string | null }>();
-  for (let index = 0; index < unique.length; index += 100) {
-    const { data, error } = await service
-      .from("users")
-      .select("id, full_name, email")
-      .in("id", unique.slice(index, index + 100));
-    if (error) throw new Error(error.message);
-    for (const row of data || []) names.set(row.id, { full_name: row.full_name, email: row.email });
+  for (const row of await userContacts(service, { ids })) {
+    names.set(row.id, { full_name: row.full_name, email: row.email });
   }
   return names;
 }
@@ -196,8 +217,8 @@ export async function getAdminOrder(service: SupabaseClient, id: string): Promis
   if (error) throw new Error(error.message);
   if (!data) return null;
 
-  const [{ data: buyer }, { data: actions }] = await Promise.all([
-    service.from("users").select("id, full_name, email, phone").eq("id", data.buyer_id).maybeSingle(),
+  const [[buyer], { data: actions }] = await Promise.all([
+    userContacts(service, { ids: [data.buyer_id] }),
     service.from("admin_actions").select("action, created_at, admin_id, metadata")
       .eq("target_type", "order").eq("target_id", id).neq("action", "view_order")
       .order("created_at", { ascending: false }).limit(50),
@@ -212,7 +233,7 @@ export async function getAdminOrder(service: SupabaseClient, id: string): Promis
   return {
     ...order,
     total_amount: Number(order.total_amount),
-    buyer: buyer ?? null,
+    buyer: buyer ? { id: buyer.id, full_name: buyer.full_name, email: buyer.email, phone: buyer.phone } : null,
     items: (items || []).map((item) => ({ ...item, unit_price: Number(item.unit_price) })),
     history: (history || []).slice().sort((a, b) => a.changed_at.localeCompare(b.changed_at)),
     changes: (actions || []).map((action) => ({

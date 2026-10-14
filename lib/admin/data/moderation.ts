@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logAdminAction } from "@/lib/admin/audit";
-import { namesForUsers } from "@/lib/admin/data/orders";
+import { namesForUsers, userContacts } from "@/lib/admin/data/orders";
 import type { EnquiryStatus, EnquiryUpdate } from "@/lib/admin/validation";
 import type { BusinessEnquiryValues } from "@/lib/business/validation";
 import { sanityFetch } from "@/lib/sanity/fetch";
@@ -149,9 +149,10 @@ export async function createBusinessEnquiry(
 
 export async function listTeamMembers(service: SupabaseClient) {
   const { data, error } = await service
-    .from("users").select("id, full_name, email, role").not("role", "is", null).order("full_name");
+    .from("users").select("id").not("role", "is", null);
   if (error) throw new Error(error.message);
-  return (data || []) as { id: string; full_name: string | null; email: string | null; role: string }[];
+  const members = await userContacts(service, { ids: (data || []).map((row) => row.id) });
+  return members.sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || ""));
 }
 
 export async function listEnquiries(service: SupabaseClient): Promise<EnquiryRow[]> {

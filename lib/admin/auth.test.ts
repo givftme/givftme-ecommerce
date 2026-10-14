@@ -17,7 +17,7 @@ const { requireAdminApi } = await import("@/lib/admin/auth");
 
 function signedIn(role: string | null) {
   getUser.mockResolvedValue({ data: { user: { id: "u1", email: "u1@givftme.test" } } });
-  roleLookup.mockResolvedValue({ data: { role, full_name: "Ada", email: "u1@givftme.test", avatar_url: null }, error: null });
+  roleLookup.mockResolvedValue({ data: { role, full_name: "Ada", avatar_url: null }, error: null });
 }
 
 describe("requireAdminApi", () => {
@@ -60,7 +60,7 @@ describe("requireAdminApi", () => {
     signedIn("operations");
     const auth = await requireAdminApi("orders", { action: "updateOrderStatus", audit: { action: "list_orders" } });
     expect(auth.ok).toBe(true);
-    if (auth.ok) expect(auth.member).toMatchObject({ id: "u1", role: "operations" });
+    if (auth.ok) expect(auth.member).toMatchObject({ id: "u1", role: "operations", email: "u1@givftme.test" });
     expect(logAdminAction).toHaveBeenCalledWith(expect.anything(), "u1", { action: "list_orders" });
   });
 

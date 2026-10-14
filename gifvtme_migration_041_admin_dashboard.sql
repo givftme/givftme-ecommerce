@@ -12,6 +12,8 @@
 --
 -- Safe to re-run: every object uses IF NOT EXISTS, OR REPLACE, or a guarded
 -- DROP-then-CREATE.
+--
+-- public.users has no email column; email is read from auth.users.
 
 -- ---------------------------------------------------------------------
 -- 1. Team roles
@@ -509,7 +511,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   WITH people AS (
-    SELECT u.id, u.full_name, coalesce(u.email, au.email) AS email, u.phone,
+    SELECT u.id, u.full_name, au.email::text AS email, u.phone,
       au.created_at AS signed_up_at
     FROM public.users u JOIN auth.users au ON au.id = u.id
     WHERE u.role IS NULL
@@ -595,14 +597,14 @@ AS $$
       btrim(coalesce(p_query, '')) = '' AS empty
   ),
   matches AS (
-    SELECT u.id, u.full_name, coalesce(u.email, au.email) AS email, u.phone, u.role,
+    SELECT u.id, u.full_name, au.email::text AS email, u.phone, u.role,
       au.created_at AS signed_up_at
     FROM public.users u
     JOIN auth.users au ON au.id = u.id
     CROSS JOIN q
     WHERE q.empty
        OR u.full_name ILIKE q.pattern
-       OR coalesce(u.email, au.email) ILIKE q.pattern
+       OR au.email ILIKE q.pattern
        OR u.phone ILIKE q.pattern
   )
   SELECT m.id, m.full_name, m.email, m.phone,
@@ -615,6 +617,31 @@ AS $$
   FROM matches m
   ORDER BY last_active_at DESC NULLS LAST, m.signed_up_at DESC
   LIMIT least(greatest(coalesce(p_limit, 25), 1), 100);
+$$;
+
+-- Names and emails for a set of people, by id or by (lower-cased) email.
+-- The admin screens use this instead of reading auth.users through the API.
+CREATE OR REPLACE FUNCTION public.gifvtme_admin_user_contacts(
+  p_ids uuid[] DEFAULT NULL,
+  p_emails text[] DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  full_name text,
+  email text,
+  phone text,
+  role text
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT u.id, u.full_name, au.email::text, u.phone, u.role
+  FROM public.users u
+  JOIN auth.users au ON au.id = u.id
+  WHERE (p_ids IS NOT NULL AND u.id = ANY (p_ids))
+     OR (p_emails IS NOT NULL AND lower(au.email) = ANY (p_emails));
 $$;
 
 -- Lead time: days between an order and the occasion it was for. Shared by
@@ -1014,6 +1041,7 @@ BEGIN
     'public.gifvtme_admin_cohort_retention(integer)',
     'public.gifvtme_admin_segment_members(text)',
     'public.gifvtme_admin_search_people(text, integer)',
+    'public.gifvtme_admin_user_contacts(uuid[], text[])',
     'public.gifvtme_admin_lead_time_histogram(timestamptz)',
     'public.gifvtme_admin_calendar()',
     'public.gifvtme_admin_wishlist_metrics(timestamptz)',

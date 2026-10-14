@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { namesForUsers } from "@/lib/admin/data/orders";
+import { namesForUsers, userContacts } from "@/lib/admin/data/orders";
 
 // There is no corporate account table yet, so a company account is a
 // business enquiry that reached `won`. Its orders are the ones placed by the
@@ -53,11 +53,8 @@ export async function listCorporateAccounts(service: SupabaseClient) {
   if (error) throw new Error(error.message);
 
   const emails = [...new Set((enquiries || []).map((row) => row.email?.toLowerCase()).filter(Boolean))] as string[];
-  const { data: users, error: usersError } = emails.length
-    ? await service.from("users").select("id, email").in("email", emails)
-    : { data: [], error: null };
-  if (usersError) throw new Error(usersError.message);
-  const userByEmail = new Map((users || []).map((user) => [String(user.email).toLowerCase(), user.id as string]));
+  const users = await userContacts(service, { emails });
+  const userByEmail = new Map(users.filter((user) => user.email).map((user) => [user.email!.toLowerCase(), user.id]));
 
   const userIds = [...userByEmail.values()];
   const { data: orders, error: ordersError } = userIds.length
