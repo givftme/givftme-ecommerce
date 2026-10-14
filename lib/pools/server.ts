@@ -174,7 +174,7 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
   const [wishlistsResult, profilesResult, itemsResult, progressResult] = await Promise.all([
     service.from("wishlists").select("id, title").in("id", wishlistIds),
     service.from("users").select("id, full_name").in("id", profileIds),
-    itemIds.length ? service.from("wishlist_items").select("id, title").in("id", itemIds) : Promise.resolve({ data: [], error: null }),
+    itemIds.length ? service.from("wishlist_items").select("id, title, image_url").in("id", itemIds) : Promise.resolve({ data: [], error: null }),
     service.from("group_gift_pool_progress").select("pool_id, contributor_count").in("pool_id", poolIds),
   ]);
 
@@ -183,7 +183,14 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
 
   const wishlistById = new Map(((wishlistsResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.title ?? "Wishlist")]));
   const profileById = new Map(((profilesResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.full_name ?? "Gifvtme member")]));
-  const itemById = new Map(((itemsResult.data ?? []) as UnknownRow[]).map((row) => [String(row.id), String(row.title ?? "Gift")]));
+  const itemRows = (itemsResult.data ?? []) as UnknownRow[];
+  const itemById = new Map(itemRows.map((row) => [String(row.id), String(row.title ?? "Gift")]));
+  const receiverByItemId = new Map(pools.flatMap((pool) => pool.wishlist_item_id ? [[pool.wishlist_item_id, pool.receiver_id] as const] : []));
+  const signedItems = await Promise.all(itemRows.map((row) => {
+    const itemId = String(row.id);
+    return signWishlistImage(service, receiverByItemId.get(itemId) ?? "", { id: itemId, image_url: asString(row.image_url) });
+  }));
+  const itemImageById = new Map(signedItems.map((item) => [item.id, item.image_url]));
   const contributorCountByPoolId = new Map(
     ((progressResult.data ?? []) as UnknownRow[]).map((row) => [
       String(row.pool_id), asNumber(row.contributor_count),
@@ -196,6 +203,7 @@ export async function getDashboardPools(userId: string): Promise<{ active: Dashb
     receiver_name: profileById.get(pool.receiver_id) ?? "Gifvtme member",
     creator_name: profileById.get(pool.created_by) ?? "Gifvtme member",
     item_title: pool.wishlist_item_id ? itemById.get(pool.wishlist_item_id) ?? null : null,
+    item_image_url: pool.wishlist_item_id ? itemImageById.get(pool.wishlist_item_id) ?? null : null,
     contributor_count: contributorCountByPoolId.get(pool.id) ?? 0,
   }));
 
