@@ -25,7 +25,7 @@ Pages default to server components. Existing dynamic pages and API handlers awai
 
 `_components/` is a private folder (no route) holding the home page sections and their helpers.
 
-Admin pages live in `admin/`. `admin/layout.tsx` requires a team role (`requireTeamMember()`) and renders `AdminShell`; each dashboard page then calls `requireAdminScreen(screen, { path })` from `lib/admin/auth.ts`, which redirects roles outside the matrix in `lib/admin/roles.ts` and logs the view to `admin_actions`. Pages read with the service client through `lib/admin/data/*`. The older `admin/gift-candidates` and `admin/pricing` pages still authorize with `requireAdminPageUser()` against `ADMIN_EMAILS`, and now also need a role to pass the proxy.
+Admin pages live in `admin/`. `admin/layout.tsx` requires a team role (`requireTeamMember()`) and renders `AdminShell`; each dashboard page then calls `requireAdminScreen(screen, { path })` from `lib/admin/auth.ts`, which redirects roles outside the matrix in `lib/admin/roles.ts` and logs the view to `admin_actions`. Pages read with the service client through `lib/admin/data/*`. After sign-in (password login, the `/callback` route, and the proxy's auth-page redirect), `postSignInDestination()` in `lib/auth/destination.ts` decides where to go: an explicit safe `redirect` wins, otherwise team members land on `homePathForRole()` (`ROLE_HOME_SCREEN` in `lib/admin/roles.ts`) and customers on `/wishlists`. The older `admin/gift-candidates` and `admin/pricing` pages still authorize with `requireAdminPageUser()` against `ADMIN_EMAILS`, and now also need a role to pass the proxy.
 
 ## Gotchas
 

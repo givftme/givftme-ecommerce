@@ -1,7 +1,7 @@
 "use server";
 
 import { validatePublicAuthEnv } from "@/lib/env";
-import { getSafeRedirect } from "@/lib/auth/redirect";
+import { postSignInDestination } from "@/lib/auth/destination";
 import {
   type AuthActionResult,
   type LoginValues,
@@ -39,6 +39,6 @@ export async function loginAction(
 
   return {
     success: true,
-    redirectTo: getSafeRedirect(values.redirectTo),
+    redirectTo: await postSignInDestination(supabase, values.redirectTo),
   };
 }

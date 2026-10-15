@@ -5,13 +5,16 @@ import { GET } from "./route";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 const exchangeCodeForSession = vi.fn();
+const rpc = vi.fn();
 
 describe("auth callback return destination", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     exchangeCodeForSession.mockResolvedValue({ error: null });
+    rpc.mockResolvedValue({ data: null, error: null });
     vi.mocked(createClient).mockResolvedValue({
       auth: { exchangeCodeForSession },
+      rpc,
     } as unknown as Awaited<ReturnType<typeof createClient>>);
   });
 
@@ -36,5 +39,12 @@ describe("auth callback return destination", () => {
   it("rejects an external return destination", async () => {
     const response = await GET(new NextRequest("https://givftme.test/callback?code=example&redirect=https%3A%2F%2Fevil.test"));
     expect(response.headers.get("location")).toBe("https://givftme.test/wishlists");
+  });
+
+  it("lands a team member on their role's home when no destination was given", async () => {
+    rpc.mockResolvedValue({ data: "finance", error: null });
+    const response = await GET(new NextRequest("https://givftme.test/callback?code=example"));
+    expect(rpc).toHaveBeenCalledWith("gifvtme_current_user_admin_role");
+    expect(response.headers.get("location")).toBe("https://givftme.test/admin/money");
   });
 });

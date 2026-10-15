@@ -30,8 +30,15 @@ Optional local integrations include Microlink, Resend, cron, and affiliate IDs. 
 ## Admin dashboard
 
 Apply `gifvtme_migration_041_admin_dashboard.sql`, then grant the first team role
-from the Supabase SQL editor, for example
-`UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';`. Roles are
+from the Supabase SQL editor. Email lives on `auth.users`, so join through it:
+
+```sql
+UPDATE public.users u SET role = 'admin'
+FROM auth.users au
+WHERE au.id = u.id AND lower(au.email) = 'you@example.com';
+```
+
+The person must have signed up first. Roles are
 `support`, `operations`, `growth`, `finance`, and `admin`; the dashboard is at
 `/admin`. No new environment variables are needed. Analytics screens fill in as
 events accrue from the migration date onward.

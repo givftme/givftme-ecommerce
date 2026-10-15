@@ -93,3 +93,38 @@ describe("admin route gate", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 });
+
+describe("signed-in landing by role", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function signedInAs(role: string | null) {
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      supabase: { rpc: vi.fn().mockResolvedValue({ data: role, error: null }) },
+      user: { id: "u1" },
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+  }
+
+  it.each([
+    ["admin", "/admin/pulse"],
+    ["support", "/admin/people"],
+    ["finance", "/admin/money"],
+    [null, "/wishlists"],
+  ])("sends a %s to %s from the login page", async (role, destination) => {
+    signedInAs(role);
+    const response = await proxy(new NextRequest("https://givftme.test/login"));
+    expect(response.headers.get("location")).toBe(`https://givftme.test${destination}`);
+  });
+
+  it("still honours an explicit destination for team members", async () => {
+    signedInAs("growth");
+    const response = await proxy(new NextRequest(`https://givftme.test/login?redirect=${encodeURIComponent("/w/abc")}`));
+    expect(response.headers.get("location")).toBe("https://givftme.test/w/abc");
+  });
+
+  it("uses the role home when the requested destination would loop", async () => {
+    signedInAs("growth");
+    const response = await proxy(new NextRequest(`https://givftme.test/login?redirect=${encodeURIComponent("/signup")}`));
+    expect(response.headers.get("location")).toBe("https://givftme.test/admin/growth");
+  });
+});

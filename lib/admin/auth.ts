@@ -6,6 +6,7 @@ import { logAdminAction, type AdminActionInput } from "@/lib/admin/audit";
 import {
   canAccessScreen,
   canPerform,
+  homePathForRole,
   isAdminRole,
   type AdminAction,
   type AdminRole,
@@ -110,7 +111,7 @@ export async function requireAdminScreen(
   options: { path: string; targetType?: string; targetId?: string; action?: string } = { path: "/admin" },
 ): Promise<AdminTeamMember> {
   const member = await requireTeamMember(options.path);
-  if (!canAccessScreen(member.role, screen)) redirect("/admin/pulse");
+  if (!canAccessScreen(member.role, screen)) redirect(homePathForRole(member.role));
 
   await logAdminAction(createServiceClient(), member.id, {
     action: options.action ?? "view_screen",

@@ -105,6 +105,21 @@ export const ROLE_LABELS: Record<AdminRole, string> = {
   admin: "Admin",
 };
 
+// Where each role lands after signing in (and at /admin). Pulse is the shared
+// overview; roles with one primary job start on that screen instead.
+export const ROLE_HOME_SCREEN: Record<AdminRole, AdminScreen> = {
+  admin: "pulse",
+  operations: "pulse",
+  support: "people",
+  growth: "growth",
+  finance: "money",
+};
+
+export function homePathForRole(role: AdminRole) {
+  const screen = ROLE_HOME_SCREEN[role];
+  return ADMIN_NAV.flatMap((group) => group.items).find((item) => item.screen === screen)?.href ?? "/admin/pulse";
+}
+
 export function isAdminRole(value: unknown): value is AdminRole {
   return typeof value === "string" && (ADMIN_ROLES as readonly string[]).includes(value);
 }
