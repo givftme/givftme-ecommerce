@@ -97,7 +97,9 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 | `order_status_history` | Append-only status log. `customer_notified` boolean. |
 | `events` | Append-only product event log the admin screens read. Written by `lib/events/server.ts`, `POST /api/events`, and two DB triggers. |
 | `admin_actions` | Audit row for every admin page view and mutation. |
-| `business_enquiries` | `/business` brief form submissions. `status` = `new` \| `contacted` \| `qualified` \| `won` \| `lost`. |
+| `business_enquiries` | `/business` brief form and dashboard "Send a brief" submissions. `status` = `new` \| `contacted` \| `qualified` \| `won` \| `lost`. |
+| `business_accounts`, `business_users` | Business dashboard companies and their HR users (`role` = `admin` \| `editor` \| `approver` \| `limited`). Business users have `users.account_type = 'business'`. |
+| `business_people`, `business_campaigns`, `business_rules`, `business_deliveries` | Tracked staff/clients (`bday` is `MM-DD`), gifting campaigns (`Draft` → `Pending approval` → `Approved` → `Delivered`), automatic rule toggles, and proof of delivery. Service-role writes only. |
 
 ## Cron routes (all protected by `Authorization: Bearer ${CRON_SECRET}`)
 
@@ -111,7 +113,7 @@ Buttons are `rounded-full` (pill). Cards are `rounded-2xl`. Inputs are `rounded-
 
 ## Feature specs location
 
-Feature specs are in `context/feature-specs/`. The files currently present are `19_ACCOUNT_MANAGEMENT_SPEC.md`, `20_aDDRESS_BOOK.md`, `21-GIFT-POOLING.md`, `22-METADATA-AND-OG-IMAGES.md`, and `23-ADMIN-DASHBOARD-SPEC.md`; this checkout has no feature index.
+Feature specs are in `context/feature-specs/`. The files currently present are `19_ACCOUNT_MANAGEMENT_SPEC.md`, `20_aDDRESS_BOOK.md`, `21-GIFT-POOLING.md`, `22-METADATA-AND-OG-IMAGES.md`, `23-ADMIN-DASHBOARD-SPEC.md`, and `24-BUSINESS-DASHBOARD-SPEC.md`; this checkout has no feature index.
 
 ## When you're unsure
 

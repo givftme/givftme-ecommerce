@@ -34,6 +34,16 @@ describe("postSignInDestination", () => {
     expect(await postSignInDestination(session(null).client, undefined)).toBe("/wishlists");
   });
 
+  it("sends business accounts to the HR dashboard", async () => {
+    const rpc = vi.fn(async (name: string) => ({
+      data: name === "gifvtme_current_user_account_type" ? "business" : null,
+      error: null,
+    }));
+    const client = { rpc } as unknown as SupabaseClient;
+    expect(await postSignInDestination(client, null)).toBe("/business-dashboard");
+    expect(await postSignInDestination(client, "/business-dashboard/auth")).toBe("/business-dashboard/auth");
+  });
+
   it("falls back to wishlists when the role can't be read", async () => {
     expect(await postSignInDestination(session(null, { message: "function does not exist" }).client)).toBe("/wishlists");
     expect(await postSignInDestination(session("superuser").client)).toBe("/wishlists");

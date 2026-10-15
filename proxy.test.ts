@@ -128,3 +128,54 @@ describe("signed-in landing by role", () => {
     expect(response.headers.get("location")).toBe("https://givftme.test/admin/growth");
   });
 });
+
+describe("business dashboard gate", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function session(user: { id: string } | null, accountType: string | null, error: unknown = null) {
+    const rpc = vi.fn().mockResolvedValue({ data: accountType, error });
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      supabase: { rpc },
+      user,
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+    return rpc;
+  }
+
+  it("sends signed out visitors to the business sign-in screen", async () => {
+    session(null, null);
+    const response = await proxy(new NextRequest("https://givftme.test/business-dashboard"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth");
+  });
+
+  it("lets signed out visitors open the sign-in screen", async () => {
+    session(null, null);
+    const response = await proxy(new NextRequest("https://givftme.test/business-dashboard/auth"));
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("keeps consumer accounts out of the dashboard", async () => {
+    const rpc = session({ id: "customer" }, "consumer");
+    const response = await proxy(new NextRequest("https://givftme.test/business-dashboard"));
+    expect(rpc).toHaveBeenCalledWith("gifvtme_current_user_account_type");
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=not_business");
+  });
+
+  it("fails closed when the account type lookup errors", async () => {
+    session({ id: "someone" }, "business", { message: "function does not exist" });
+    const response = await proxy(new NextRequest("https://givftme.test/business-dashboard"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=not_business");
+  });
+
+  it("lets business accounts in", async () => {
+    session({ id: "hr" }, "business");
+    expect((await proxy(new NextRequest("https://givftme.test/business-dashboard"))).headers.get("location")).toBeNull();
+  });
+
+  it("never redirects away from the sign-in screen, so it can't loop", async () => {
+    const rpc = session({ id: "hr" }, "business");
+    const response = await proxy(new NextRequest("https://givftme.test/business-dashboard/auth?error=not_business"));
+    expect(response.headers.get("location")).toBeNull();
+    expect(rpc).not.toHaveBeenCalledWith("gifvtme_current_user_account_type");
+  });
+});

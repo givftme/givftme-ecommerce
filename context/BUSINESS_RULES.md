@@ -52,6 +52,13 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 32. **Privacy rules are enforced in code.** A segment export describing fewer than 50 people contains no rows; remembrance and sympathy dates never enter a segment; claims on a person's own items are shown only as counts, never attributed to givers; ranked tables show receivers as initials.
 33. **Admin status changes never set `pending_payment`, `payment_failed`, or `confirmed`.** Those belong to the Flutterwave webhook.
 
+## Business dashboard
+
+34. **Business dashboard data is always scoped to one `business_account_id`, authorized server-side.** Every server action and `/api/business-dashboard/*` handler re-resolves the session, confirms a `business_users` row for that account, and checks the role against `lib/business-dashboard/permissions.ts` before using the service role. Members may only SELECT their own account's rows through RLS; nothing writes through PostgREST.
+35. **Business campaigns are not orders.** A campaign never charges a card or creates an `orders` row; ops fulfil it manually and may link the resulting order via `business_campaigns.linked_order_id`. Campaign totals are estimates (`heads × (per_head + delivery_fee)`), with the delivery fee snapshotted from the account when the campaign is created.
+36. **Only Finance-level roles approve.** `approver` and `admin` move a campaign from Pending approval to Approved. A campaign sent for approval whose total is under the account's `auto_approve_under` (admin-set) is approved immediately. Editing an Approved campaign sends it back to Pending approval. Delivered campaigns can't be edited.
+37. **Removing a person is a soft delete** (`business_people.active = false`), and duplicates are matched by name, case-insensitively, within the same kind.
+
 ## Currency & locale
 
 22. **All prices throughout the application are in Nigerian Naira (₦) with no currency conversion logic.** Do not introduce a currency parameter to formatting functions, price fields, or payment calls — Naira is hardcoded by design for v1.

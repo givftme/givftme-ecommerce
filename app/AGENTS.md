@@ -27,6 +27,8 @@ Pages default to server components. Existing dynamic pages and API handlers awai
 
 Admin pages live in `admin/`. `admin/layout.tsx` requires a team role (`requireTeamMember()`) and renders `AdminShell`; each dashboard page then calls `requireAdminScreen(screen, { path })` from `lib/admin/auth.ts`, which redirects roles outside the matrix in `lib/admin/roles.ts` and logs the view to `admin_actions`. Pages read with the service client through `lib/admin/data/*`. After sign-in (password login, the `/callback` route, and the proxy's auth-page redirect), `postSignInDestination()` in `lib/auth/destination.ts` decides where to go: an explicit safe `redirect` wins, otherwise team members land on `homePathForRole()` (`ROLE_HOME_SCREEN` in `lib/admin/roles.ts`) and customers on `/wishlists`. The older `admin/gift-candidates` and `admin/pricing` pages still authorize with `requireAdminPageUser()` against `ADMIN_EMAILS`, and now also need a role to pass the proxy.
 
+The business dashboard lives at `business-dashboard/`: `page.tsx` loads every view's data on the server and renders `BizDashShell`, and `auth/page.tsx` is the sign-in / create-account screen. `proxy.ts` sends sessions whose `users.account_type` isn't `business` (checked through `gifvtme_current_user_account_type()`) to the auth screen and never redirects away from it; the page itself checks `business_users` membership. `postSignInDestination()` sends business accounts to `/business-dashboard`.
+
 ## Gotchas
 
 The dashboard layout authenticates the viewer and ensures an evergreen wishlist exists. The shared wishlist layout only provides toast context. A layout or proxy redirect does not replace authorization inside a route handler.

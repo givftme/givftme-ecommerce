@@ -39,7 +39,29 @@ features without inferring status for unrelated modules.
   catalogue's call sites, the `admin_actions` audit trail, and the `/business`
   brief form now saving to `business_enquiries`.
 
+- **Business dashboard** (`feature-specs/24-BUSINESS-DASHBOARD-SPEC.md`):
+  `/business-dashboard` for company HR teams. Sign in / create a business
+  account (`users.account_type = 'business'`), and a single-page shell with
+  Overview, Upcoming moments, Staff, Clients & partners, Bulk upload (CSV or
+  pasted Excel rows, column mapping, review), Campaigns with a 3-step wizard and
+  Draft → Pending approval → Approved flow, Year calendar, Automatic rules,
+  Deliveries, Budget & invoices, Brand kit with live preview, and Team &
+  approvals. Role permissions (admin / editor / approver / limited), year
+  schedule CSV export, "Send a brief" into `business_enquiries`, and business
+  events in the `events` log.
+
 ## Operational follow-up
+
+- Apply `gifvtme_migration_042_business_dashboard.sql` (business tables, RLS,
+  `users.account_type`, and the `gifvtme_create_business_account` RPC) before
+  anyone signs up at `/business-dashboard/auth`.
+- Business dashboard gaps left for a decision: there is no invoices or payment
+  table, so invoices are derived per delivery month from approved and delivered
+  campaigns and marked "Due" or "Upcoming", never "Paid"; "Invite colleague"
+  only shows a toast (v1 per the spec); proof-of-delivery rows and
+  `business_campaigns.linked_order_id` are written by ops in Retool; the
+  automatic rules and reminder settings are stored but nothing sends reminders
+  or creates campaigns from them yet.
 
 - Apply `gifvtme_migration_041_admin_dashboard.sql` and grant the first team role
   in the Supabase SQL editor. People listed in `ADMIN_EMAILS` also need a role to

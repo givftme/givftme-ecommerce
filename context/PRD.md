@@ -50,6 +50,8 @@ Catalog items are different — Givftme curates and owns the relationship with t
 
 **Decision: lifecycle segment definitions are provisional.** The spec defers to an external document (`Givftme-07-Admin-and-Data-Layer.docx`) that isn't in this repository. The nine segments in `lib/admin/segments.ts` (mirrored in `gifvtme_admin_segment_members()`) should be checked against it.
 
+**Decision (October 2026): business dashboard accounts are Supabase Auth users flagged `users.account_type = 'business'`** (`feature-specs/24-BUSINESS-DASHBOARD-SPEC.md`), not a separate credential store. A company is a `business_accounts` row; its HR users are `business_users` rows with a dashboard role (admin, editor, approver, limited) that is unrelated to the internal `users.role`. Signup creates the auth user, then the account, membership, flag and default rules in one SQL function, deleting the auth user if that fails. The dashboard is a single client shell with no URL per view, backed by server actions; corporate campaigns stay estimates outside the order and payment flows, fulfilled manually by ops.
+
 **Decision: Sanity CMS for product/collection/occasion content, Supabase for everything transactional.** Sanity's studio interface is well-suited to rich editorial content (descriptions, images, collections) in a way Retool is not. The tradeoff accepted: the Next.js app queries two data sources and composes them at the page level, rather than one unified database.
 
 ## Sharing & permissions
