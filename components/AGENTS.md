@@ -18,6 +18,9 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 | `pools/PoolPageClient.tsx`, `pools/PoolProgress.tsx` | Public pool contribution and management experience |
 | `pools/PoolCreationDialog.tsx` | Responsive item/general pool creation |
 | `pools/PoolShareActions.tsx` | Dashboard pool share and copy-link actions |
+| `admin/AdminShell.tsx` | Admin sidebar (role-filtered, collapsible), mobile drawer, and top bar with people search |
+| `admin/AdminUi.tsx`, `admin/AdminCharts.tsx` | Server-safe admin panels, tables, stat tiles, and dependency-free charts |
+| `admin/useAdminRequest.ts` | Admin mutation helper: fetch, toast, and refresh server data |
 
 ## Conventions
 
@@ -34,6 +37,8 @@ Pool progress subscribes only to the sanitized `group_gift_pool_progress`
 Realtime table. Its ring and bar use `useGSAP` and respect reduced motion.
 Pool creation and payment dialogs use one responsive surface with bottom-sheet
 placement on mobile and centered dialog placement on desktop.
+
+Admin charts use the validated `--viz-1`…`--viz-6` categorical tokens in a fixed order (`slotColor`) and `--viz-heat` for sequential fills. Light slots 3–5 sit under 3:1 contrast on the card, so every admin chart prints its values as text beside the marks.
 
 ## Gotchas
 

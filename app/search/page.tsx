@@ -15,6 +15,7 @@ import { sanityFetch } from "@/lib/sanity/fetch";
 import { OCCASIONS_QUERY, PRODUCT_SEARCH_QUERY } from "@/lib/sanity/queries";
 import type { MuseumOccasion, ProductCardData } from "@/lib/sanity/types";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { recordRequestEventAfter } from "@/lib/events/server";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Search Results",
@@ -48,6 +49,13 @@ export default async function SearchPage({
     sanityFetch<Partial<MuseumOccasion>[]>(OCCASIONS_QUERY),
   ]);
   const products = searchable ? normalizeProductCards(rawProducts) : [];
+  if (searchable) {
+    await recordRequestEventAfter({
+      event: "search_performed",
+      // Click-through isn't known at search time; result pages record views.
+      props: { query, result_count: products.length, clicked: false },
+    });
+  }
   const suggestionOccasions = rawOccasions
     .map(normalizeOccasion)
     .filter((occasion) => occasion.id)

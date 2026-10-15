@@ -36,6 +36,7 @@ export async function updateSession(request: NextRequest) {
 
   return {
     response,
+    supabase,
     user: error ? null : user,
   };
 }

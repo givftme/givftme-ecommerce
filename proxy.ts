@@ -39,7 +39,22 @@ function redirectWithSessionCookies(
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const { response, user } = await updateSession(request);
+  const { response, supabase, user } = await updateSession(request);
+
+  // Admin routes: a session and a team role. Each admin page still checks its
+  // own screen permission; this only keeps customers out of /admin entirely.
+  if (matchesRoute(pathname, ["/admin"])) {
+    if (!user) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", `${pathname}${search}`);
+      return redirectWithSessionCookies(request, response, loginUrl.pathname + loginUrl.search);
+    }
+
+    const { data: role, error } = await supabase.rpc("gifvtme_current_user_admin_role");
+    if (error || !role) {
+      return redirectWithSessionCookies(request, response, "/?error=unauthorized");
+    }
+  }
 
   if (matchesRoute(pathname, protectedRoutes) && !user) {
     const loginUrl = new URL("/login", request.url);

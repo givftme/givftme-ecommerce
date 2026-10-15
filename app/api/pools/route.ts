@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordRequestEvent } from "@/lib/events/server";
 import { trackEvent } from "@/lib/analytics";
 import { jsonError, readJson } from "@/lib/api/response";
 import { getAppUrl } from "@/lib/env";
@@ -45,6 +46,16 @@ export async function POST(request: Request) {
   trackEvent("pool.created", {
     type: parsed.data.wishlist_item_id ? "item" : "general",
     target_amount: parsed.data.target_amount,
+  });
+  await recordRequestEvent({
+    event: "pool_created",
+    userId: user.id,
+    props: {
+      pool_id: poolId,
+      wishlist_id: parsed.data.wishlist_id,
+      type: parsed.data.wishlist_item_id ? "item" : "general",
+      target_amount: parsed.data.target_amount,
+    },
   });
 
   return NextResponse.json({

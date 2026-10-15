@@ -44,6 +44,12 @@ Catalog items are different — Givftme curates and owns the relationship with t
 
 **Decision: Retool, not a custom admin dashboard, for v1 internal operations.** A proper admin dashboard (product CRUD, order management, supplier sync, analytics) is realistically a second product's worth of engineering. Retool connects directly to Supabase and lets the catalog/ops team work within days instead of weeks. Revisit this in v2 once real operational pain points are known.
 
+**Superseded (October 2026): an internal admin dashboard at `/admin/*`** (`feature-specs/23-ADMIN-DASHBOARD-SPEC.md`). Operational pain arrived: ops, support, growth, and finance each needed their own view, and analytics needed an event log Retool couldn't provide. The dashboard is role-gated (`users.role`: support, operations, growth, finance, admin), reads an append-only `events` log, and audits every view and mutation in `admin_actions`. It covers order status changes, pool payout recording, review moderation, business enquiries, reminder failure triage, people records, and analytics screens. It does not edit catalog content (Sanity Studio still owns that) and does not automate supplier forwarding or bank transfers. Retool remains usable alongside it.
+
+**Decision: manual order status changes never set payment states.** The admin status panel offers only the post-payment transitions from `VALID_TRANSITIONS`; `pending_payment`, `payment_failed`, and `confirmed` are set solely by the signature-verified Flutterwave webhook, so no person can record money that wasn't captured.
+
+**Decision: lifecycle segment definitions are provisional.** The spec defers to an external document (`Givftme-07-Admin-and-Data-Layer.docx`) that isn't in this repository. The nine segments in `lib/admin/segments.ts` (mirrored in `gifvtme_admin_segment_members()`) should be checked against it.
+
 **Decision: Sanity CMS for product/collection/occasion content, Supabase for everything transactional.** Sanity's studio interface is well-suited to rich editorial content (descriptions, images, collections) in a way Retool is not. The tradeoff accepted: the Next.js app queries two data sources and composes them at the page level, rather than one unified database.
 
 ## Sharing & permissions

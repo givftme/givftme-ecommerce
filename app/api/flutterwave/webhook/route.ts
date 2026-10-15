@@ -5,6 +5,7 @@ import {
   getOrderIdFromFlutterwaveReference,
 } from "@/lib/flutterwave/paymentReference";
 import { trackEvent } from "@/lib/analytics";
+import { lastKnownLocation, recordEvent, recordOrderPlacedEvents } from "@/lib/events/server";
 import {
   sendPoolCashedOut,
   sendContributionReceipt as sendPoolContributionReceipt,
@@ -107,7 +108,7 @@ async function handlePoolContributionWebhook(
 
   const { data: contribution, error } = await supabase
     .from("pool_contributions")
-    .select("id, pool_id, amount, status")
+    .select("id, pool_id, amount, status, contributor_id")
     .eq("id", contributionId)
     .maybeSingle();
   if (error) {
@@ -181,6 +182,23 @@ async function handlePoolContributionWebhook(
     amount: Number(contribution.amount),
     pool_percentage_after: target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0,
   });
+  // A late payment held for refund never reached the pool, so it isn't a contribution.
+  if (!refundRequired) {
+    const context = contribution.contributor_id
+      ? await lastKnownLocation(supabase, contribution.contributor_id)
+      : {};
+    await recordEvent({
+      event: "pool_contributed",
+      userId: contribution.contributor_id ?? null,
+      context,
+      props: {
+        pool_id: contribution.pool_id,
+        contribution_id: contribution.id,
+        amount: Number(contribution.amount),
+        pool_pct_after: target > 0 ? Math.min(100, Math.round((raised / target) * 100)) : 0,
+      },
+    }, supabase);
+  }
   if (confirmation.newly_funded) {
     const { data: progress } = await supabase.from("group_gift_pool_progress")
       .select("contributor_count").eq("pool_id", contribution.pool_id).maybeSingle();
@@ -192,6 +210,10 @@ async function handlePoolContributionWebhook(
       contributor_count: contributorCount,
       days_to_fund: Math.max(0, Math.floor((fundedAt - createdAt) / 86_400_000)),
     });
+    await recordEvent({
+      event: "pool_completed",
+      props: { pool_id: contribution.pool_id, contributor_count: contributorCount, total_raised: raised },
+    }, supabase);
     if (confirmation.pool_status === "paid_out") {
       trackEvent("pool.cashed_out", {
         pool_id: contribution.pool_id,
@@ -315,6 +337,10 @@ export async function POST(request: Request) {
       already_confirmed?: boolean;
       claim_conflict?: boolean;
     } | null;
+
+    if (!confirmResult?.already_confirmed) {
+      await recordOrderPlacedEvents(supabase, order.id);
+    }
 
     if (confirmResult?.claim_conflict) {
       // The money was captured, so the order stands. The reservation had

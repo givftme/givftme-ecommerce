@@ -46,3 +46,50 @@ describe("authentication return destinations", () => {
     expect(location.searchParams.get("redirect")).toBe("/account/orders?status=paid");
   });
 });
+
+describe("admin route gate", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function session(user: { id: string } | null, role: string | null, error: unknown = null) {
+    const rpc = vi.fn().mockResolvedValue({ data: role, error });
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      supabase: { rpc },
+      user,
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+    return rpc;
+  }
+
+  it("sends signed out visitors to login with their destination", async () => {
+    session(null, null);
+    const response = await proxy(new NextRequest("https://givftme.test/admin/orders?status=shipped"));
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("redirect")).toBe("/admin/orders?status=shipped");
+  });
+
+  it("sends customers without a role home with an error", async () => {
+    const rpc = session({ id: "customer" }, null);
+    const response = await proxy(new NextRequest("https://givftme.test/admin"));
+    expect(rpc).toHaveBeenCalledWith("gifvtme_current_user_admin_role");
+    expect(response.headers.get("location")).toBe("https://givftme.test/?error=unauthorized");
+  });
+
+  it("fails closed when the role lookup errors", async () => {
+    session({ id: "someone" }, "admin", { message: "function does not exist" });
+    const response = await proxy(new NextRequest("https://givftme.test/admin/pulse"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/?error=unauthorized");
+  });
+
+  it("lets team members through", async () => {
+    session({ id: "ops" }, "operations");
+    const response = await proxy(new NextRequest("https://givftme.test/admin/pulse"));
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("does not gate look-alike paths", async () => {
+    const rpc = session({ id: "customer" }, null);
+    await proxy(new NextRequest("https://givftme.test/administrator"));
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});

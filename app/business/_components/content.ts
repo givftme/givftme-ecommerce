@@ -31,8 +31,8 @@ import type { PlannerOccasion } from "@/lib/business/planner";
 
 /**
  * Experience Centre contact settings. Fill these in before going live: an
- * empty value keeps its contact option visible but inert, and an empty
- * `enquiryEndpoint` shows the thank-you without sending the brief anywhere.
+ * empty value keeps its contact option visible but inert. Briefs post to
+ * `enquiryEndpoint`, which saves them for the admin Enquiries screen.
  */
 export const CONTACT = {
   /** International format without "+", e.g. "2348012345678". */
@@ -42,8 +42,8 @@ export const CONTACT = {
   emailLabel: "[business email]",
   phone: "",
   phoneLabel: "[phone number]",
-  /** A form service URL (Formspree, Zoho, HubSpot) that accepts a JSON POST. */
-  enquiryEndpoint: "",
+  /** Accepts the brief as a JSON POST (app/api/business/enquiry). */
+  enquiryEndpoint: "/api/business/enquiry",
 };
 
 export const WHATSAPP_GREETING =

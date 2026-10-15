@@ -580,3 +580,22 @@ Last updated: 2026-10-13
 | Shadow | floating previews `shadow-float`, chips `shadow-soft` |
 
 Section CTAs use `BriefLink`, which scrolls to the Experience Centre and adds its occasion, note or team size to the brief through `BusinessContext`. The studio and the gift card preview share the visitor's brand name and colour; text on that colour picks light or dark ink at runtime (`color.ts`). The visitor's swatch colours are data, not theme tokens. The 3D studio follows `HeroStage`: `three` is imported on mount, the scene pauses off screen, and the controls keep working with a text fallback when WebGL is unavailable.
+
+## Admin Dashboard
+
+File: components/admin/AdminShell.tsx, components/admin/AdminUi.tsx, components/admin/AdminCharts.tsx
+Last updated: 2026-10-15
+
+| Property | Class |
+| --- | --- |
+| Background | page `bg-surface`, sidebar/top bar/panels `bg-card` |
+| Border | `border border-line`; active nav `bg-brand-light text-brand` |
+| Border radius | panels and stat tiles `rounded-2xl`, inputs/selects `rounded-xl`, buttons and tabs `rounded-full` |
+| Primary text | page title `text-2xl font-bold md:text-3xl`, panel title `text-base font-semibold` |
+| Secondary text | `text-xs text-muted`, table headers `text-xs uppercase tracking-wide text-muted` |
+| Spacing | panels `p-5`, page `px-4 py-6 md:px-6 md:py-8`, grids `gap-3`/`gap-6` |
+| Shadow | `shadow-card` |
+| Accent | `text-brand` links, `text-danger` for drop-off and alerts (always with an icon or sign) |
+
+**Pattern notes:**
+One responsive shell: a collapsible sidebar from `lg`, a left drawer (`Sheet`) below it, and a sticky top bar with breadcrumb, people search for roles that can open People, and the member's name and role badge. Wide tables scroll inside `DataTable`; the page never scrolls sideways. Filters are plain GET forms so screens stay server-rendered. Charts are dependency-free, use the `--viz-*` tokens in fixed order, carry native tooltips, and always print their values as text.

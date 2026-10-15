@@ -23,7 +23,9 @@ You can reuse `PageWrapper` for public catalog pages. The root layout does not p
 
 Pages default to server components. Existing dynamic pages and API handlers await their promise based route parameters. You can consult the installed Next.js guides named by root AGENTS.md before changing these conventions.
 
-`_components/` is a private folder (no route) holding the home page sections and their helpers. Admin pages live in `admin/` and call `requireAdminPageUser()` from `lib/admin/auth.ts`, which checks the viewer against `ADMIN_EMAILS`.
+`_components/` is a private folder (no route) holding the home page sections and their helpers.
+
+Admin pages live in `admin/`. `admin/layout.tsx` requires a team role (`requireTeamMember()`) and renders `AdminShell`; each dashboard page then calls `requireAdminScreen(screen, { path })` from `lib/admin/auth.ts`, which redirects roles outside the matrix in `lib/admin/roles.ts` and logs the view to `admin_actions`. Pages read with the service client through `lib/admin/data/*`. The older `admin/gift-candidates` and `admin/pricing` pages still authorize with `requireAdminPageUser()` against `ADMIN_EMAILS`, and now also need a role to pass the proxy.
 
 ## Gotchas
 

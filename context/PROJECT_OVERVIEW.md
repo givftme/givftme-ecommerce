@@ -14,7 +14,7 @@ In one sentence: people create wishlists for life occasions (birthdays, weddings
 
 **The giver** is anyone who lands on a shared wishlist link and buys something. Givers must create an account before marking an item purchased (this enables the thank-you message system) but the flow is designed to be as frictionless as possible otherwise.
 
-**Internal operations** is the small team that manually reviews and forwards orders to suppliers, updates order status in Retool, and curates the product catalog and editorial collections in Sanity. There is no custom admin dashboard in v1 — Retool is the operational interface.
+**Internal operations** is the small team that manually reviews and forwards orders to suppliers, updates order status in Retool, and curates the product catalog and editorial collections in Sanity. They work in the role-gated admin dashboard at `/admin` (see `feature-specs/23-ADMIN-DASHBOARD-SPEC.md`); Retool remains available on the same Supabase data.
 
 ## The core architectural fact to never forget
 
@@ -37,7 +37,7 @@ Wishlist creation (evergreen + occasion-specific, pulling from each other), URL 
 
 ## Explicitly NOT in v1 (do not build these without being asked)
 
-An in-app wallet or stored balance, a custom admin dashboard (Retool is intentional), native mobile apps, multi-currency support (Naira only), automated supplier API integration (order forwarding is manual), any social feed feature.
+An in-app wallet or stored balance, admin features beyond spec 23 (catalog editing stays in Sanity), native mobile apps, multi-currency support (Naira only), automated supplier API integration (order forwarding is manual), any social feed feature.
 
 ## Timeline context
 

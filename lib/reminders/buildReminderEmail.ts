@@ -88,18 +88,25 @@ function unsubscribeUrl(token: string, type: "owner" | "invitee") {
   )}&type=${type}`;
 }
 
+// Records reminder_opened when the recipient's mail client loads images.
+function openPixelUrl(reminderId: string) {
+  return `${getAppUrl()}/api/events/open/${encodeURIComponent(reminderId)}`;
+}
+
 function wrapEmail({
   greeting,
   body,
   ctaLabel,
   ctaUrl,
   unsubscribe,
+  openPixel,
 }: {
   greeting: string;
   body: string;
   ctaLabel?: string;
   ctaUrl?: string;
   unsubscribe: string;
+  openPixel?: string;
 }) {
   const text = [
     greeting,
@@ -128,6 +135,7 @@ function wrapEmail({
           <button type="submit" style="background: none; border: 0; padding: 0; color: #666666; text-decoration: underline; cursor: pointer; font: inherit;">Unsubscribe from this reminder</button>
         </form>
       </p>
+      ${openPixel ? `<img src="${openPixel}" width="1" height="1" alt="" style="display: block; border: 0; width: 1px; height: 1px;" />` : ""}
     </div>
   `;
 
@@ -170,6 +178,7 @@ export function buildReminderEmail({
       ctaLabel: wishlistUrl ? "View their wishlist" : "Browse gift ideas",
       ctaUrl: wishlistUrl || getAppUrl(),
       unsubscribe: unsubscribeUrl(reminder.important_date_id, "owner"),
+      openPixel: openPixelUrl(reminder.id),
     });
 
     return { to: recipientEmail, subject, html, text };
@@ -194,6 +203,7 @@ export function buildReminderEmail({
       ctaLabel: "View your wishlist",
       ctaUrl: `${getAppUrl()}/wishlists`,
       unsubscribe: unsubscribeUrl(reminder.occasion_id, "owner"),
+      openPixel: openPixelUrl(reminder.id),
     });
 
     return { to: recipientEmail, subject, html, text };
@@ -218,6 +228,7 @@ export function buildReminderEmail({
       ctaLabel: "View wishlist",
       ctaUrl: buildWishlistShareUrl(invite.token),
       unsubscribe: unsubscribeUrl(reminder.invite_id, "invitee"),
+      openPixel: openPixelUrl(reminder.id),
     });
 
     return { to: recipientEmail, subject, html, text };
