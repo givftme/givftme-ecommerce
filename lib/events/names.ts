@@ -23,6 +23,14 @@ export const EVENT_NAMES = [
   "review_submitted",
   "pool_payout_requested",
   "admin_action",
+  // Business dashboard (24-BUSINESS-DASHBOARD-SPEC.md, "Analytics events").
+  // Attributed to the company through props.account_id.
+  "business.account.created",
+  "business.people.imported",
+  "business.campaign.created",
+  "business.campaign.approved",
+  "business.brand_kit.saved",
+  "business.export.schedule",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];

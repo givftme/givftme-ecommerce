@@ -22,6 +22,7 @@ This directory contains reusable domain logic, validation, result types, and ser
 | `admin/data/` | Service-role reads and audited mutations behind each admin screen |
 | `admin/privacy.ts`, `admin/segments.ts` | Privacy rule helpers (50-person minimum, sensitive occasions, initials) and segment definitions |
 | `events/` | Event catalogue, request context (device/geo), server `recordEvent`, and the client `track()` |
+| `business-dashboard/` | Business dashboard constants, permission matrix, session and account-scoped reads (`queries.ts`), server actions (`actions.ts`), signup/sign-in (`account.ts`), and pure date/CSV/moments helpers (`utils.ts`) |
 
 ## Conventions
 

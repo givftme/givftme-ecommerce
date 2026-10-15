@@ -56,6 +56,32 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Business dashboard: a session whose public.users.account_type is
+  // 'business'. The sign-in screen is always reachable; it sends members on
+  // to the dashboard itself, and the dashboard page checks business_users
+  // membership, so neither can loop through here.
+  if (
+    matchesRoute(pathname, ["/business-dashboard"]) &&
+    !matchesRoute(pathname, ["/business-dashboard/auth"])
+  ) {
+    if (!user) {
+      return redirectWithSessionCookies(request, response, "/business-dashboard/auth");
+    }
+
+    let isBusiness = false;
+    try {
+      const { data: accountType, error } = await supabase.rpc("gifvtme_current_user_account_type");
+      isBusiness = !error && accountType === "business";
+    } catch {
+      // Lookup unavailable: fail closed to the sign-in screen.
+    }
+
+    if (!isBusiness) {
+      return redirectWithSessionCookies(request, response, "/business-dashboard/auth?error=not_business");
+    }
+    return response;
+  }
+
   if (matchesRoute(pathname, protectedRoutes) && !user) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", `${pathname}${search}`);

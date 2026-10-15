@@ -599,3 +599,22 @@ Last updated: 2026-10-15
 
 **Pattern notes:**
 One responsive shell: a collapsible sidebar from `lg`, a left drawer (`Sheet`) below it, and a sticky top bar with breadcrumb, people search for roles that can open People, and the member's name and role badge. Wide tables scroll inside `DataTable`; the page never scrolls sideways. Filters are plain GET forms so screens stay server-rendered. Charts are dependency-free, use the `--viz-*` tokens in fixed order, carry native tooltips, and always print their values as text.
+
+## Business Dashboard
+
+File: components/business-dashboard/BizDashShell.tsx, components/business-dashboard/BizDashSidebar.tsx, components/business-dashboard/BizUi.tsx
+Last updated: 2026-10-15
+
+| Property | Class |
+| --- | --- |
+| Background | page `bg-surface`, sidebar `bg-neutral-950 text-white` (dark in both themes), cards `bg-card`, Experience Centre card and auth panel `bg-ink text-background` |
+| Border | cards `border border-border`, selected choices `border-brand bg-brand-light` |
+| Border radius | cards `rounded-2xl`, inputs/selects `rounded-xl`, buttons, tabs and pills `rounded-full` |
+| Primary text | view title `text-2xl font-bold md:text-3xl`, card title `text-base font-bold`, Inter throughout |
+| Secondary text | `text-xs text-muted` / `text-sm text-muted` |
+| Spacing | cards `p-5`, page `px-4 py-6 md:px-8 md:py-8`, grids `gap-3`/`gap-4 md:gap-6` |
+| Shadow | none on cards; month cards `hover:shadow-card hover:-translate-y-0.5`; modals `shadow-float` |
+| Accent | brand red for birthdays and primary actions, `text-purple` anniversaries, `text-green` campaigns, amber countdown chips at 7 days or fewer |
+
+**Pattern notes:**
+One client shell with no URL per view; the sidebar becomes a fixed 260px overlay at 1000px and below (`translateX(-102%)` → `0`, 0.3s), and two-column layouts stack there too. Stat and calendar grids go from four columns to two. `Modal` (Radix) enters with opacity and `scale(0.98)` over 0.25s via `starting:`; prefers-reduced-motion drops every transition in the shell to 0.01ms. `var(--company-brand)` (set on the shell from `business_accounts.brand_color`) only colours the company mark and the brand kit preview. Campaign status pills: Draft `muted`, Pending approval `warning`, Approved `info`, Delivered `success`; tiers: Standard `muted`, Premium `purple`, Signature `default`. Wide tables scroll inside their card.

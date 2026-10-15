@@ -24,6 +24,11 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `events/route.ts` | Public client event intake: whitelisted `CLIENT_EVENTS` only, sets `gv_anon`/`gv_sid` cookies, always 200 |
 | `events/open/[id]/route.ts` | Reminder email open pixel; records `reminder_opened` for a sent reminder, always returns the GIF |
 | `business/enquiry/route.ts` | Public `/business` brief submission into `business_enquiries` |
+| `business-dashboard/auth/signin/route.ts`, `business-dashboard/auth/signup/route.ts` | Business dashboard password sign-in (members only) and company account creation (auth user + `gifvtme_create_business_account` RPC, auth user deleted if the RPC fails) |
+| `business-dashboard/people/route.ts`, `business-dashboard/people/import/route.ts` | GET the member's active staff and clients; POST validated CSV rows (delegates to the `importPeople` server action) |
+| `business-dashboard/campaigns/route.ts`, `business-dashboard/deliveries/route.ts` | GET campaigns (limited members: own only) and proof-of-delivery records |
+| `business-dashboard/upcoming/route.ts`, `business-dashboard/export-schedule/route.ts` | Computed upcoming moments (`?days=`, Lagos dates); the 365-day schedule CSV (records `business.export.schedule`) |
+| `business-dashboard/brief/route.ts` | Dashboard "Send a brief" into `business_enquiries` |
 | `admin/pulse/route.ts` | Pulse KPIs, operations strip, and the needs-a-human counts |
 | `admin/growth/funnel/route.ts`, `admin/growth/cohorts/route.ts` | Activation funnel and weekly cohort retention (`?weeks=`) |
 | `admin/segments/[id]/route.ts`, `admin/segments/[id]/export/route.ts` | Segment count plus 10-row preview; CSV export (headers only under 50 people) |
@@ -46,6 +51,8 @@ Wishlist owner checks intentionally return 404 for both missing and nonowned IDs
 Existing dynamic handlers await `context.params`. Route tests sit beside handlers as `route.test.ts` and call exported methods with Request objects. You can mock external services as the checkout tests do without contacting live systems.
 
 Dashboard handlers under `admin/` authorize with `requireAdminApi(screen, { action, audit })` from `lib/admin/auth.ts`: 401 without a session, 403 when the role can't open the screen or perform the action, and an `admin_actions` row for reads that pass `audit`. Mutations log their own outcome inside `lib/admin/data/*`. Validate dynamic ids with `isUuid()` and request bodies with `lib/admin/validation.ts`. The older `admin/gift-candidates` and `admin/pricing` handlers still use `getAdminApiUser()`, which checks `ADMIN_EMAILS`.
+
+Business dashboard handlers under `business-dashboard/` authorize with `requireBusinessApi(permission?)` from `lib/business-dashboard/auth.ts`: 401 without a session, 403 for non-members or a role without the permission. They read and write with the service role, always filtered by the member's `account_id`. Mutations from the dashboard UI go through the server actions in `lib/business-dashboard/actions.ts`, which run the same membership and permission check on the `accountId` they receive.
 
 Record product events with `recordEvent()` / `recordRequestEvent()` from `lib/events/server.ts` (customer pages use `recordRequestEventAfter()` so the write happens after the response). They never throw, so they can sit on any success path. `user_signed_up` and `order_delivered` come from database triggers, not handlers.
 

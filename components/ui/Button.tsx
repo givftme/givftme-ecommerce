@@ -13,6 +13,11 @@ const buttonVariants = cva(
         ghost:
           "border-[1.5px] border-brand text-brand bg-transparent hover:bg-brand-light",
         text: "text-brand bg-transparent hover:bg-brand-light",
+        // Neutral bordered button (the business dashboard's `.btn-line`).
+        outline: "border border-border bg-card text-foreground hover:bg-surface",
+        // Solid black button (the business dashboard's `.btn-ink`).
+        // `ink` flips to near-white in dark mode, so the text follows the page background.
+        ink: "bg-ink text-background hover:bg-ink/85",
       },
       size: {
         sm: "h-9 px-4 text-sm",

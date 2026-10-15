@@ -14,6 +14,7 @@ const badgeVariants = cva(
         info: "bg-blue/10 text-blue",
         muted: "bg-surface text-muted",
         sale: "bg-primary text-primary-foreground",
+        purple: "bg-purple-light text-purple dark:bg-purple/15",
       },
     },
     defaultVariants: {

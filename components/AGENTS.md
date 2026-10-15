@@ -21,6 +21,10 @@ This directory groups reusable UI by domain. You can find generic primitives in 
 | `admin/AdminShell.tsx` | Admin sidebar (role-filtered, collapsible), mobile drawer, and top bar with people search |
 | `admin/AdminUi.tsx`, `admin/AdminCharts.tsx` | Server-safe admin panels, tables, stat tiles, and dependency-free charts |
 | `admin/useAdminRequest.ts` | Admin mutation helper: fetch, toast, and refresh server data |
+| `business-dashboard/BizDashShell.tsx` | Business dashboard SPA shell: client-side view switching, modals, `run()` action helper, and the `--company-brand` variable |
+| `business-dashboard/BizDashContext.tsx`, `business-dashboard/BizUi.tsx` | Dashboard context (`useBizDash`) and shared cards, pills, avatars, the animated `Modal`, and occasion icons |
+| `business-dashboard/views/*`, `business-dashboard/modals/*` | The twelve dashboard views and the person, campaign wizard, and brief modals |
+| `business-dashboard/Toast.tsx` | The dashboard's own bottom-centre, one-at-a-time toast (`useToast`) |
 
 ## Conventions
 
@@ -39,6 +43,14 @@ Pool creation and payment dialogs use one responsive surface with bottom-sheet
 placement on mobile and centered dialog placement on desktop.
 
 Admin charts use the validated `--viz-1`…`--viz-6` categorical tokens in a fixed order (`slotColor`) and `--viz-heat` for sequential fills. Light slots 3–5 sit under 3:1 contrast on the card, so every admin chart prints its values as text beside the marks.
+
+The business dashboard is one client shell with no URL per view. Views read
+everything from `useBizDash()`; mutations call server actions through `run()`,
+which toasts and calls `router.refresh()`, so server data stays the source of
+truth. `var(--company-brand)` is reserved for the company mark and the brand kit
+preview; everything else uses the standard brand tokens. The dashboard's
+`useToast` is its own (bottom-centre, 2.6s), not `ui/Toast.tsx`. `Button` gained
+`outline` (neutral border) and `ink` variants and `Badge` a `purple` variant for it.
 
 ## Gotchas
 
