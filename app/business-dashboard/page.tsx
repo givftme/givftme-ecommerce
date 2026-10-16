@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation";
 import { BizDashShell } from "@/components/business-dashboard/BizDashShell";
 import { BUSINESS_AUTH_PATH } from "@/lib/business-dashboard/auth";
-import { getBusinessSession, loadBusinessDashboard } from "@/lib/business-dashboard/queries";
+import {
+  getBusinessSession,
+  loadBusinessDashboard,
+} from "@/lib/business-dashboard/queries";
 import { lagosToday, toIsoDate } from "@/lib/business-dashboard/utils";
 
 // One shell for every view; the views switch client-side without a URL change.

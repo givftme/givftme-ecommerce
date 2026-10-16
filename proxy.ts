@@ -12,7 +12,9 @@ const protectedRoutes = [
   "/account",
   "/reviews",
 ];
-const authOnlyRoutes = ["/login", "/signup", "/welcome", "/onboarding"];
+// Signed-in visitors to these are sent on by postSignInDestination(): business
+// accounts to /business-dashboard, customers to /wishlists.
+const authOnlyRoutes = ["/login", "/signup", "/get-started", "/welcome", "/onboarding"];
 
 function matchesRoute(pathname: string, routes: string[]) {
   return routes.some(

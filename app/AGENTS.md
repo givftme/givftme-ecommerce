@@ -29,6 +29,8 @@ Admin pages live in `admin/`. `admin/layout.tsx` requires a team role (`requireT
 
 The business dashboard lives at `business-dashboard/`: `page.tsx` loads every view's data on the server and renders `BizDashShell`, and `auth/page.tsx` is the sign-in / create-account screen. `proxy.ts` sends sessions whose `users.account_type` isn't `business` (checked through `gifvtme_current_user_account_type()`) to the auth screen and never redirects away from it; the page itself checks `business_users` membership. `postSignInDestination()` sends business accounts to `/business-dashboard`.
 
+Sign-up starts at `get-started/page.tsx`, which chooses between the consumer form at `/signup?type=individual` and the business create-account tab at `/business-dashboard/auth?type=business`. `(auth)/signup/page.tsx` redirects any visit without `type=individual` to `/get-started`, keeping `redirect`, so new sign-up links should point to `/get-started`. `proxy.ts` treats `/get-started` as auth-only and sends signed-in visitors to `postSignInDestination()`.
+
 ## Gotchas
 
 The dashboard layout authenticates the viewer and ensures an evergreen wishlist exists. The shared wishlist layout only provides toast context. A layout or proxy redirect does not replace authorization inside a route handler.

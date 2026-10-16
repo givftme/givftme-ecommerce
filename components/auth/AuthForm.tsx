@@ -113,7 +113,7 @@ export function AuthForm({ mode, redirectTo, initialError }: {
           </Form>
           <p className="mt-4 text-center text-xs text-muted">
             {isSignup ? "Already have an account?" : "New to Givftme?"}{" "}
-            <Link href={withRedirect(isSignup ? "/login" : "/signup", redirectTo)} className="inline-flex min-h-11 items-center font-semibold text-brand underline-offset-4 hover:underline">{isSignup ? "Log in" : "Create an account"}</Link>
+            <Link href={withRedirect(isSignup ? "/login" : "/get-started", redirectTo)} className="inline-flex min-h-11 items-center font-semibold text-brand underline-offset-4 hover:underline">{isSignup ? "Log in" : "Create an account"}</Link>
           </p>
         </div>
       </section>

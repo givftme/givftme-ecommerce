@@ -182,7 +182,7 @@ export function OnboardingSlider({
                   Login
                 </Link>
                 <Link
-                  href={withRedirect("/signup", redirectTo)}
+                  href={withRedirect("/get-started", redirectTo)}
                   className={cn(
                     buttonVariants({
                       variant: "ghost",

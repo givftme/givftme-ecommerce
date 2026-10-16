@@ -45,7 +45,7 @@ export function AuthGateSheet({
             Log in
           </Link>
           <Link
-            href={withRedirect("/signup", redirectPath)}
+            href={withRedirect("/get-started", redirectPath)}
             className={cn(
               buttonVariants({ variant: "ghost", fullWidth: true }),
               "h-12"

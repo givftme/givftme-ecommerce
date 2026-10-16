@@ -13,15 +13,16 @@ const ERRORS: Record<string, string> = {
 export default async function BusinessAuthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; tab?: string }>;
+  searchParams: Promise<{ error?: string; tab?: string; type?: string }>;
 }) {
   const { member } = await getBusinessSession();
   if (member) redirect(BUSINESS_DASHBOARD_PATH);
 
-  const { error, tab } = await searchParams;
+  // `type=business` arrives from /get-started, so it opens on Create account.
+  const { error, tab, type } = await searchParams;
   return (
     <BizAuthScreen
-      initialTab={tab === "create" ? "create" : "signin"}
+      initialTab={tab === "create" || type === "business" ? "create" : "signin"}
       initialError={error ? ERRORS[error] ?? null : null}
     />
   );

@@ -228,7 +228,7 @@ export function Navbar({
             </>
           ) : (
             <Link
-              href={loginHref}
+              href="/get-started"
               className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
             >
               Get started

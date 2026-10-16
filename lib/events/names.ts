@@ -31,6 +31,10 @@ export const EVENT_NAMES = [
   "business.campaign.approved",
   "business.brand_kit.saved",
   "business.export.schedule",
+  // Account type selection (25-ACCOUNT-TYPE-SELECTION-SPEC.md).
+  "get_started.viewed",
+  "get_started.individual_selected",
+  "get_started.business_selected",
 ] as const;
 
 export type EventName = (typeof EVENT_NAMES)[number];
@@ -38,7 +42,12 @@ export type EventName = (typeof EVENT_NAMES)[number];
 // The only events a browser may report through POST /api/events. Everything
 // else is recorded server-side where the fact actually happens, so a client
 // can't inflate orders, signups, or claims.
-export const CLIENT_EVENTS = ["wishlist_shared"] as const satisfies readonly EventName[];
+export const CLIENT_EVENTS = [
+  "wishlist_shared",
+  "get_started.viewed",
+  "get_started.individual_selected",
+  "get_started.business_selected",
+] as const satisfies readonly EventName[];
 export type ClientEventName = (typeof CLIENT_EVENTS)[number];
 
 export function isClientEvent(value: unknown): value is ClientEventName {

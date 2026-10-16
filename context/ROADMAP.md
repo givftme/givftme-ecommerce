@@ -50,6 +50,14 @@ features without inferring status for unrelated modules.
   schedule CSV export, "Send a brief" into `business_enquiries`, and business
   events in the `events` log.
 
+- **Account type selection** (`feature-specs/25-ACCOUNT-TYPE-SELECTION-SPEC.md`):
+  `/get-started` picks Individual (`/signup?type=individual`) or Business
+  (`/business-dashboard/auth?type=business`, opens on Create account), carries
+  any `redirect` through, and pre-highlights the business card for
+  `?hint=business`. `/signup` without `type=individual` redirects there, the
+  proxy sends signed-in visitors home, and every sign-up CTA links to it.
+  Client events `get_started.viewed`, `.individual_selected`, `.business_selected`.
+
 ## Operational follow-up
 
 - Apply `gifvtme_migration_042_business_dashboard.sql` (business tables, RLS,

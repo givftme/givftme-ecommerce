@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   const resumeTarget = `${GIFT_RESUME_PATH}?c=${encodeURIComponent(reference)}`;
   const response = NextResponse.json({
     authenticated: false,
-    auth_url: withRedirect("/signup", resumeTarget),
+    auth_url: withRedirect("/get-started", resumeTarget),
     login_url: withRedirect("/login", resumeTarget),
     // Handed back so the existing AuthGateSheet can build its own sign up
     // and sign in links from the same target.

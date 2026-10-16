@@ -56,7 +56,7 @@ export function AuthWelcomePanel({
             Login
           </Link>
           <Link
-            href={withRedirect("/signup", redirectTo)}
+            href={withRedirect("/get-started", redirectTo)}
             className={cn(
               buttonVariants({ variant: "ghost", fullWidth: true, size: "lg" }),
               "h-12"

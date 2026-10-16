@@ -179,3 +179,36 @@ describe("business dashboard gate", () => {
     expect(rpc).not.toHaveBeenCalledWith("gifvtme_current_user_account_type");
   });
 });
+
+describe("get started redirect", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function session(user: { id: string } | null, accountType: string | null) {
+    const rpc = vi.fn((name: string) =>
+      Promise.resolve({ data: name === "gifvtme_current_user_account_type" ? accountType : null, error: null }),
+    );
+    vi.mocked(updateSession).mockResolvedValue({
+      response: NextResponse.next(),
+      supabase: { rpc },
+      user,
+    } as unknown as Awaited<ReturnType<typeof updateSession>>);
+  }
+
+  it("sends signed in consumers to their wishlists", async () => {
+    session({ id: "customer" }, "consumer");
+    const response = await proxy(new NextRequest("https://givftme.test/get-started"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/wishlists");
+  });
+
+  it("sends signed in business accounts to the business dashboard", async () => {
+    session({ id: "hr" }, "business");
+    const response = await proxy(new NextRequest("https://givftme.test/get-started?hint=business"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard");
+  });
+
+  it("renders the page for signed out visitors", async () => {
+    session(null, null);
+    const response = await proxy(new NextRequest("https://givftme.test/get-started"));
+    expect(response.headers.get("location")).toBeNull();
+  });
+});

@@ -61,6 +61,26 @@ Last updated: 2026-09-22
 **Pattern notes:**
 One AuthForm handles login and signup, including existing validation and server actions. The shared AuthVisual uses the existing logo and waving mascot, with a compact mobile header and a desktop illustration panel. Use signup’s existing first name and last name fields. Input text remains at least 16px on mobile to avoid focus zoom. Session persistence controls and legal links need working backing behavior or destinations before inclusion.
 
+### Account Type Selection
+
+File: app/get-started/page.tsx, components/auth/AccountTypeOptions.tsx
+Last updated: 2026-10-16
+
+| Property | Class |
+| --- | --- |
+| Background | page `bg-background`, individual card `bg-card`, business card `bg-ink-deep` |
+| Border | individual `border-line border-t-4 border-t-brand`, business `border-white/10` |
+| Border radius | cards `rounded-2xl`, icon squares `rounded-2xl`, CTAs and badge `rounded-full` |
+| Primary text | heading `font-display text-3xl sm:text-4xl`, card titles `text-xl font-semibold` |
+| Secondary text | `text-sm leading-6 text-muted` (business `text-white/70`) |
+| Spacing | cards `p-6 sm:p-7`, grid `max-w-[640px] gap-4 sm:grid-cols-2` |
+| Hover state | individual `hover:border-brand` + red glow, business white glow; same on `focus-visible` |
+| Shadow | `0 8px 32px rgba(197,4,4,0.12)` / `rgba(255,255,255,0.08)` on hover only |
+| Accent | brand checkmarks, `ring-2 ring-brand` on the business card for `?hint=business` |
+
+**Pattern notes:**
+A standalone screen with no Navbar or Footer: logo and "The Gift Museum" tagline, then the two cards. Each card is a whole `Link` with the CTA drawn as a `buttonVariants` span, so it works without JavaScript. GSAP staggers the cards in and dips the clicked one to `scale: 0.97` before `router.push`; both skip under reduced motion. The business card uses `ink-deep` because `ink` flips to near-white in dark mode.
+
 ### Auth Form Controls
 
 File: components/auth/AuthFormInput.tsx

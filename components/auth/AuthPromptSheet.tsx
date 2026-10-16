@@ -45,7 +45,7 @@ export function AuthPromptSheet({
             Log in
           </Link>
           <Link
-            href={withRedirect("/signup", currentPath)}
+            href={withRedirect("/get-started", currentPath)}
             className={cn(
               buttonVariants({ variant: "ghost", fullWidth: true }),
               "h-12"

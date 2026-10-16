@@ -89,7 +89,7 @@ export function ForgotPasswordForm() {
 
       <p className="mt-auto pt-10 text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/signup" className="font-semibold text-ink">
+        <Link href="/get-started" className="font-semibold text-ink">
           Signup
         </Link>
       </p>
