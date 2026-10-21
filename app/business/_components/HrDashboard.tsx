@@ -3,6 +3,8 @@
 import { Camera, HeartHandshake, Palette, Receipt, ShieldCheck } from "lucide-react";
 import { useInView } from "@/hooks/useInView";
 import { Eyebrow, Icon, Pill, Reveal, Wrap, cx, type PillTone } from "@/components/ui/primitives";
+import { BusinessAccountCta } from "@/app/business/_components/BusinessAccountCta";
+import type { BusinessViewer } from "@/lib/business/entry";
 
 const STATS = [
   { label: "This month", value: "12 moments", fill: "66%", caption: "8 delivered · 4 scheduled" },
@@ -36,7 +38,7 @@ const REASONS = [
   { icon: HeartHandshake, title: "Handled with care", detail: "Quiet, careful sympathy packages when a colleague loses someone." },
 ];
 
-export function HrDashboard() {
+export function HrDashboard({ viewer }: { viewer: BusinessViewer }) {
   const [ref, inView] = useInView<HTMLDivElement>();
 
   return (
@@ -121,6 +123,8 @@ export function HrDashboard() {
               </li>
             ))}
           </ul>
+          {/* The section shows the dashboard, so it carries the way in. */}
+          <BusinessAccountCta viewer={viewer} className="mt-1" />
         </Reveal>
       </Wrap>
     </section>

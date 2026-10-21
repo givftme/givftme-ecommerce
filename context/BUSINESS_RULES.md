@@ -58,6 +58,7 @@ This file lists hard invariants. Unlike `PRD.md`, which explains reasoning, this
 35. **Business campaigns are not orders.** A campaign never charges a card or creates an `orders` row; ops fulfil it manually and may link the resulting order via `business_campaigns.linked_order_id`. Campaign totals are estimates (`heads × (per_head + delivery_fee)`), with the delivery fee snapshotted from the account when the campaign is created.
 36. **Only Finance-level roles approve.** `approver` and `admin` move a campaign from Pending approval to Approved. A campaign sent for approval whose total is under the account's `auto_approve_under` (admin-set) is approved immediately. Editing an Approved campaign sends it back to Pending approval. Delivered campaigns can't be edited.
 37. **Removing a person is a soft delete** (`business_people.active = false`), and duplicates are matched by name, case-insensitively, within the same kind.
+38. **A business account is a separate login from a personal one.** A business account is created with its own (work) email; an existing personal account is never converted or linked, even though `gifvtme_create_business_account` could flag an existing user. The business auth screen tells a signed-in personal account to sign out and use a work email, and only ever signs a session out of the current device. Dashboard access needs both a `business_users` membership and `users.account_type = 'business'`; a login with only one is reported as an incomplete business account, never as a personal one.
 
 ## Currency & locale
 

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { postSignInDestination } from "@/lib/auth/destination";
+import { CUSTOMER_HOME, postSignInDestination } from "@/lib/auth/destination";
+import { BUSINESS_SIGN_IN_HREF } from "@/lib/business/entry";
 
 const protectedRoutes = [
   "/wishlists",
@@ -98,6 +99,15 @@ export async function proxy(request: NextRequest) {
   if (matchesRoute(pathname, authOnlyRoutes) && user) {
     // An explicit return path wins; otherwise the role's home (or /wishlists).
     const destination = await postSignInDestination(supabase, request.nextUrl.searchParams.get("redirect"));
+    // A customer choosing business (the CTAs on /business) wants a business
+    // account, not their wishlists. Business accounts still get the dashboard.
+    if (
+      pathname === "/get-started" &&
+      request.nextUrl.searchParams.get("hint") === "business" &&
+      destination === CUSTOMER_HOME
+    ) {
+      return redirectWithSessionCookies(request, response, `${BUSINESS_SIGN_IN_HREF}?type=business`);
+    }
     // An auth page cannot be the destination for an already signed in user.
     let destinationPath: string;
     try {

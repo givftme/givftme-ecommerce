@@ -211,4 +211,22 @@ describe("get started redirect", () => {
     const response = await proxy(new NextRequest("https://givftme.test/get-started"));
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("sends signed in consumers choosing business to create a business account", async () => {
+    session({ id: "customer" }, "consumer");
+    const response = await proxy(new NextRequest("https://givftme.test/get-started?hint=business"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?type=business");
+  });
+
+  it("still honours an explicit destination for a consumer choosing business", async () => {
+    session({ id: "customer" }, "consumer");
+    const response = await proxy(new NextRequest(`https://givftme.test/get-started?hint=business&redirect=${encodeURIComponent("/w/abc")}`));
+    expect(response.headers.get("location")).toBe("https://givftme.test/w/abc");
+  });
+
+  it("renders the business-highlighted page for signed out visitors", async () => {
+    session(null, null);
+    const response = await proxy(new NextRequest("https://givftme.test/get-started?hint=business"));
+    expect(response.headers.get("location")).toBeNull();
+  });
 });

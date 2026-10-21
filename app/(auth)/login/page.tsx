@@ -4,6 +4,7 @@ export const metadata = { title: "Log in" };
 
 const authErrors: Record<string, string> = {
   oauth: "Couldn't connect to Google. Please try again.",
+  oauth_cancelled: "Google sign-in was cancelled. Try again, or use your email and password.",
   confirmation_failed: "Something went wrong. Please try again.",
 };
 

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { trackEvent } from "@/lib/analytics";
-import { getSafeRedirect } from "@/lib/auth/redirect";
+import { OAUTH_CALLBACK_PARAM, OAUTH_CALLBACK_VALUE, getSafeRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 
 export function GoogleOAuthButton({
@@ -30,6 +30,7 @@ export function GoogleOAuthButton({
     startTransition(async () => {
       const supabase = createClient();
       const callbackUrl = new URL("/callback", window.location.origin);
+      callbackUrl.searchParams.set(OAUTH_CALLBACK_PARAM, OAUTH_CALLBACK_VALUE);
       const safeRedirect = getSafeRedirect(redirectTo, "");
 
       if (safeRedirect) {

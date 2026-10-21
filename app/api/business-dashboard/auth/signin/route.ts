@@ -12,6 +12,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || "Check your details and try again.", 400);
 
   const result = await signInBusiness(parsed.data);
-  if (!result.ok) return jsonError(result.error, result.status);
+  if (!result.ok) {
+    // The code lets the sign-in screen react, e.g. offer to resend the confirmation link.
+    return result.code
+      ? NextResponse.json({ error: result.error, code: result.code }, { status: result.status })
+      : jsonError(result.error, result.status);
+  }
   return NextResponse.json({ redirectTo: result.redirectTo });
 }

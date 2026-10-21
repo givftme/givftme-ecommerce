@@ -1,6 +1,8 @@
 import { cache } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { namesForUsers } from "@/lib/admin/data/orders";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/profile";
+import type { AccountType } from "@/lib/business/entry";
 import { BUSINESS_ROLES, RULES, type BusinessRole } from "@/lib/business-dashboard/data";
 import type {
   BusinessAccount,
@@ -11,7 +13,7 @@ import type {
   BusinessPerson,
   RuleState,
 } from "@/lib/business-dashboard/types";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 // Supabase reads for the business dashboard, always scoped to one
 // business_account_id. They use the service role, so callers must have
@@ -72,18 +74,19 @@ function isBusinessRole(value: unknown): value is BusinessRole {
 export interface BusinessSession {
   user: User | null;
   member: BusinessMember | null;
+  /** users.account_type, the flag proxy.ts gates the dashboard on; null when unknown. */
+  accountType: AccountType | null;
 }
 
 /**
- * The signed-in user and their business membership (first account when they
- * belong to several). Deduplicated per request.
+ * The signed-in user, their business membership (first account when they
+ * belong to several) and account type. Membership is what authorizes; the
+ * account type only lets callers spot a login whose two records disagree.
+ * Deduplicated per request, sharing the user and profile reads with PageWrapper.
  */
 export const getBusinessSession = cache(async (): Promise<BusinessSession> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { user: null, member: null };
+  const user = await getCurrentUser();
+  if (!user) return { user: null, member: null, accountType: null };
 
   const service = createServiceClient();
   const { data, error } = await service
@@ -94,19 +97,20 @@ export const getBusinessSession = cache(async (): Promise<BusinessSession> => {
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(`Could not load business membership: ${error.message}`);
-  if (!data || !isBusinessRole(data.role)) return { user, member: null };
+  const profile = await getCurrentProfile(user.id);
+  if (!data || !isBusinessRole(data.role)) return { user, member: null, accountType: profile.account_type };
 
-  const { data: profile } = await service.from("users").select("full_name").eq("id", user.id).maybeSingle();
   const email = user.email || "";
   return {
     user,
+    accountType: profile.account_type,
     member: {
       id: data.id,
       account_id: data.account_id,
       user_id: data.user_id,
       role: data.role,
       department: data.department,
-      full_name: (profile?.full_name as string | null) || email.split("@")[0] || "Team member",
+      full_name: profile.full_name || email.split("@")[0] || "Team member",
       email,
     },
   };

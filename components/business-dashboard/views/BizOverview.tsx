@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarRange, Download, Headset, Palette, Sparkles, Upload } from "lucide-react";
+import { ArrowRight, CalendarRange, CheckCircle2, Circle, Download, Headset, Palette, Sparkles, Upload } from "lucide-react";
 import { useBizDash } from "@/components/business-dashboard/BizDashContext";
 import { Card, EmptyState, MomentRow, OccasionIcon, StatCard, StatGrid, ViewHeader } from "@/components/business-dashboard/BizUi";
 import { BizProofTile } from "@/components/business-dashboard/views/BizProof";
@@ -9,7 +9,81 @@ import { Button } from "@/components/ui/Button";
 import { approveCampaign } from "@/lib/business-dashboard/actions";
 import { campaignCost, formatLongDate, formatNaira, formatNairaK, fromIsoDate } from "@/lib/business-dashboard/utils";
 
-/** Stats, next 30 days, proof of delivery, approvals and quick actions. */
+interface SetupStep {
+  label: string;
+  detail: string;
+  done: boolean;
+  action: { label: string; onClick: () => void } | null;
+}
+
+/**
+ * First-run guidance for a new account, worked out from the data already on
+ * the page (no onboarding flag). Hidden once everything is done, or when
+ * nothing left is something this member can do.
+ */
+function SetupChecklist() {
+  const { account, staff, clients, campaigns, can, go, openCampaign } = useBizDash();
+
+  const steps: SetupStep[] = [
+    {
+      label: "Add your people",
+      detail: "Upload the staff list so birthdays and work anniversaries appear on their own.",
+      done: staff.length + clients.length > 0,
+      action: can("edit_people") ? { label: "Upload", onClick: () => go("import", { importKind: "staff" }) } : null,
+    },
+    {
+      label: "Add your logo",
+      detail: "It goes on every cake, box and card.",
+      done: Boolean(account.logo_url),
+      action: can("edit_brand") ? { label: "Brand kit", onClick: () => go("brand") } : null,
+    },
+    {
+      label: "Set an annual budget",
+      detail: "Track spend against it as campaigns are approved.",
+      done: account.annual_budget > 0,
+      action: can("view_budget") && can("approve_campaigns") ? { label: "Budget", onClick: () => go("budget") } : null,
+    },
+    {
+      label: "Plan your first campaign",
+      detail: "A birthday, Customer Service Week or end-of-year gift.",
+      done: campaigns.length > 0,
+      action: can("edit_campaigns") ? { label: "New campaign", onClick: () => openCampaign() } : null,
+    },
+  ];
+
+  const doneCount = steps.filter((step) => step.done).length;
+  if (!steps.some((step) => !step.done && step.action)) return null;
+
+  return (
+    <Card title="Get set up" description={`${doneCount} of ${steps.length} done`} className="mt-4 md:mt-6">
+      <ol className="divide-y divide-border">
+        {steps.map((step) => (
+          <li key={step.label} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+            {step.done ? (
+              <CheckCircle2 aria-hidden="true" className="h-5 w-5 shrink-0 text-success" />
+            ) : (
+              <Circle aria-hidden="true" className="h-5 w-5 shrink-0 text-muted" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className={step.done ? "text-sm font-semibold text-muted line-through" : "text-sm font-semibold text-ink"}>
+                {step.label}
+                <span className="sr-only">{step.done ? " (done)" : " (to do)"}</span>
+              </p>
+              {step.done ? null : <p className="text-xs text-muted">{step.detail}</p>}
+            </div>
+            {!step.done && step.action ? (
+              <Button variant="text" size="sm" onClick={step.action.onClick}>
+                {step.action.label} <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+/** Stats, setup checklist, next 30 days, proof of delivery, approvals and quick actions. */
 export function BizOverview() {
   const {
     account,
@@ -67,6 +141,8 @@ export function BizOverview() {
           pill={pending.length > 0 ? <Badge variant="warning">Needs approval</Badge> : null}
         />
       </StatGrid>
+
+      <SetupChecklist />
 
       <div className="mt-4 grid gap-4 md:mt-6 md:gap-6 min-[1001px]:grid-cols-[1.4fr_1fr]">
         <div className="flex min-w-0 flex-col gap-4 md:gap-6">

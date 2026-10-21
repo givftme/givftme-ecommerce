@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CalendarDays,
   Camera,
+  Globe,
   Handshake,
   LayoutDashboard,
   LogOut,
@@ -169,6 +170,16 @@ export function BizDashSidebar({ open, onClose }: { open: boolean; onClose: () =
             </section>
           ))}
         </nav>
+
+        <div className="border-t border-white/10 px-3 py-2">
+          <a
+            href="/business"
+            className="flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-white/75 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            <Globe aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
+            Givftme for Business site
+          </a>
+        </div>
 
         <div className="flex items-center gap-3 border-t border-white/10 px-4 py-3">
           <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-bold">

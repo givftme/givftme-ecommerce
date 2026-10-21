@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { homePathForRole, isAdminRole } from "@/lib/admin/roles";
 import { getSafeRedirect } from "@/lib/auth/redirect";
+import { BUSINESS_DASHBOARD_HREF } from "@/lib/business/entry";
 
 export const CUSTOMER_HOME = "/wishlists";
-export const BUSINESS_HOME = "/business-dashboard";
+export const BUSINESS_HOME = BUSINESS_DASHBOARD_HREF;
 
 /**
  * Where to send someone who has just signed in. An explicit, safe return path

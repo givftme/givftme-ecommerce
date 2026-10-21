@@ -1,4 +1,8 @@
 const DEFAULT_AUTH_REDIRECT = "/wishlists";
+
+/** Marks an OAuth return to /callback, so its failures read as OAuth ones. */
+export const OAUTH_CALLBACK_PARAM = "via";
+export const OAUTH_CALLBACK_VALUE = "oauth";
 const SAFE_REDIRECT_ORIGIN = "https://givftme.local";
 
 function hasUnsafeSlashVariant(path: string) {

@@ -58,6 +58,23 @@ features without inferring status for unrelated modules.
   proxy sends signed-in visitors home, and every sign-up CTA links to it.
   Client events `get_started.viewed`, `.individual_selected`, `.business_selected`.
 
+- **Business entry points**: `/business` now leads into the account system. The
+  hero sub-line and the HR dashboard section show, by viewer, "Sign in" and
+  "Create a business account" (`/get-started?hint=business`), or "Open your
+  dashboard" for business members (`BusinessAccountCta`). On `/business` the
+  Navbar's sign-in and get-started go to the business screens, and business
+  accounts get a Dashboard link on every public page. The proxy sends a
+  signed-in customer choosing business to the create-account tab. The business
+  auth screen tells a signed-in personal account to use a separate work email,
+  links to the personal login, and signs sessions out of this device only. A
+  login whose account type and membership disagree gets an "incomplete account"
+  notice. It offers to resend the confirmation link (after sign-up, after an
+  `email_not_confirmed` sign-in, and with an email field after an expired link),
+  again once a 60-second cooldown passes. Failed business confirmation links
+  return there; failed or cancelled Google sign-ins say so instead. Overview has
+  a derived "Get set up" checklist, and the sidebar links back to `/business`.
+  `PageWrapper` keeps name and avatar if `account_type` can't be read.
+
 ## Operational follow-up
 
 - Apply `gifvtme_migration_042_business_dashboard.sql` (business tables, RLS,
@@ -66,7 +83,8 @@ features without inferring status for unrelated modules.
 - Business dashboard gaps left for a decision: there is no invoices or payment
   table, so invoices are derived per delivery month from approved and delivered
   campaigns and marked "Due" or "Upcoming", never "Paid"; "Invite colleague"
-  only shows a toast (v1 per the spec); proof-of-delivery rows and
+  only shows a toast (v1 per the spec), so colleagues have no way to join an
+  account yet; proof-of-delivery rows and
   `business_campaigns.linked_order_id` are written by ops in Retool; the
   automatic rules and reminder settings are stored but nothing sends reminders
   or creates campaigns from them yet.

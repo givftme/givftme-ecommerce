@@ -36,6 +36,57 @@ describe("auth callback return destination", () => {
     expect(location.searchParams.get("error")).toBe("confirmation_failed");
   });
 
+  it("returns a failed business confirmation to the business sign-in screen", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: new Error("Expired") });
+    const response = await GET(new NextRequest("https://givftme.test/callback?code=expired&redirect=%2Fbusiness-dashboard"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=confirmation_failed");
+  });
+
+  it("reports an expired email link (Supabase's access_denied, no code) as a dead confirmation link", async () => {
+    const response = await GET(
+      new NextRequest("https://givftme.test/callback?redirect=%2Fbusiness-dashboard&error=access_denied&error_code=otp_expired"),
+    );
+    expect(exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=confirmation_failed");
+  });
+
+  it("tells a cancelled Google sign-in apart from a dead confirmation link", async () => {
+    const response = await GET(
+      new NextRequest("https://givftme.test/callback?via=oauth&redirect=%2Fbusiness-dashboard&error=access_denied"),
+    );
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=oauth_cancelled");
+  });
+
+  it("reports a failed Google code exchange as a Google failure", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: new Error("bad_code_verifier") });
+    const response = await GET(new NextRequest("https://givftme.test/callback?via=oauth&code=example&redirect=%2Fbusiness-dashboard"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/business-dashboard/auth?error=oauth");
+  });
+
+  it("sends a consumer's failed Google sign-in to the login with the return path kept", async () => {
+    const response = await GET(
+      new NextRequest("https://givftme.test/callback?via=oauth&redirect=%2Fshop&error=server_error"),
+    );
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("oauth");
+    expect(location.searchParams.get("redirect")).toBe("/shop");
+  });
+
+  it("completes a Google sign-in as before when the exchange succeeds", async () => {
+    const response = await GET(new NextRequest("https://givftme.test/callback?via=oauth&code=example&redirect=%2Fshop"));
+    expect(response.headers.get("location")).toBe("https://givftme.test/shop");
+  });
+
+  it("never sends a failure to an external destination", async () => {
+    const response = await GET(
+      new NextRequest("https://givftme.test/callback?via=oauth&redirect=https%3A%2F%2Fevil.test&error=access_denied"),
+    );
+    const location = new URL(response.headers.get("location")!);
+    expect(location.origin).toBe("https://givftme.test");
+    expect(location.searchParams.get("redirect")).toBe("/wishlists");
+  });
+
   it("rejects an external return destination", async () => {
     const response = await GET(new NextRequest("https://givftme.test/callback?code=example&redirect=https%3A%2F%2Fevil.test"));
     expect(response.headers.get("location")).toBe("https://givftme.test/wishlists");

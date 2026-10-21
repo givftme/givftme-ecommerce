@@ -1,7 +1,9 @@
 import { Building2, CakeSlice, CreditCard, Gift, Headset, Layers, Package } from "lucide-react";
 import { Badge, Btn, Icon, Reveal, Wrap } from "@/components/ui/primitives";
 import { BrandStudio } from "@/app/business/_components/BrandStudio";
+import { BusinessAccountCta } from "@/app/business/_components/BusinessAccountCta";
 import { EXPERIENCE_CENTRE_HREF } from "@/app/business/_components/BriefLink";
+import type { BusinessViewer } from "@/lib/business/entry";
 
 const PRODUCT_CHIPS = [
   { icon: CakeSlice, label: "Branded cakes" },
@@ -10,7 +12,7 @@ const PRODUCT_CHIPS = [
   { icon: Gift, label: "Hampers" },
 ];
 
-export function BusinessHero() {
+export function BusinessHero({ viewer }: { viewer: BusinessViewer }) {
   return (
     <section
       id="studio"
@@ -60,6 +62,10 @@ export function BusinessHero() {
               <Icon as={Layers} />
               See plans
             </Btn>
+          </Reveal>
+
+          <Reveal delay={0.45} className="-mt-3">
+            <BusinessAccountCta viewer={viewer} variant="line" />
           </Reveal>
 
           <Reveal as="ul" delay={0.5} aria-label="What we brand" className="flex flex-wrap gap-2">

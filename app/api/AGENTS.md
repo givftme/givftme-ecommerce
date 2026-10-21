@@ -24,7 +24,7 @@ This directory contains customer API handlers, payment callbacks, and scheduled 
 | `events/route.ts` | Public client event intake: whitelisted `CLIENT_EVENTS` only, sets `gv_anon`/`gv_sid` cookies, always 200 |
 | `events/open/[id]/route.ts` | Reminder email open pixel; records `reminder_opened` for a sent reminder, always returns the GIF |
 | `business/enquiry/route.ts` | Public `/business` brief submission into `business_enquiries` |
-| `business-dashboard/auth/signin/route.ts`, `business-dashboard/auth/signup/route.ts` | Business dashboard password sign-in (members only) and company account creation (auth user + `gifvtme_create_business_account` RPC, auth user deleted if the RPC fails) |
+| `business-dashboard/auth/signin/route.ts`, `business-dashboard/auth/signup/route.ts` | Business dashboard password sign-in (members whose `account_type` is `business`; anything else is signed out of this device only and gets a `code`: `email_not_confirmed`, `not_business`, or `account_incomplete`) and company account creation (auth user + `gifvtme_create_business_account` RPC, auth user deleted if the RPC fails) |
 | `business-dashboard/people/route.ts`, `business-dashboard/people/import/route.ts` | GET the member's active staff and clients; POST validated CSV rows (delegates to the `importPeople` server action) |
 | `business-dashboard/campaigns/route.ts`, `business-dashboard/deliveries/route.ts` | GET campaigns (limited members: own only) and proof-of-delivery records |
 | `business-dashboard/upcoming/route.ts`, `business-dashboard/export-schedule/route.ts` | Computed upcoming moments (`?days=`, Lagos dates); the 365-day schedule CSV (records `business.export.schedule`) |

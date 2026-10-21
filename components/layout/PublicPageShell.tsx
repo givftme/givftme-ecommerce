@@ -7,12 +7,14 @@ import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Navbar } from "@/components/layout/Navbar";
 import { ToastProvider } from "@/components/ui/Toast";
+import type { AccountType } from "@/lib/business/entry";
 
 interface PublicPageShellProps {
   children: ReactNode;
   userName?: string;
   avatarUrl?: string;
   isAuthenticated?: boolean;
+  accountType?: AccountType;
   searchQuery?: string;
   flashSaleEndTime?: string | null;
   flashSaleMaxDiscountPercent?: number | null;
@@ -23,6 +25,7 @@ function CartAwareChrome({
   userName,
   avatarUrl,
   isAuthenticated,
+  accountType,
   searchQuery,
   flashSaleEndTime,
   flashSaleMaxDiscountPercent,
@@ -37,6 +40,7 @@ function CartAwareChrome({
         userName={userName}
         avatarUrl={avatarUrl}
         isAuthenticated={isAuthenticated}
+        accountType={accountType}
         searchQuery={searchQuery}
         flashSaleEndTime={flashSaleEndTime}
         flashSaleMaxDiscountPercent={flashSaleMaxDiscountPercent}

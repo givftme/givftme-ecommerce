@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Clock,
   Home,
+  LayoutDashboard,
   ListChecks,
   Menu,
   Search,
@@ -27,7 +28,12 @@ import { useGSAP } from "@gsap/react";
 import { FlashSaleNavbarStrip } from "@/components/flash-sale/FlashSaleNavbarStrip";
 import { ThemeSelector } from "@/components/layout/ThemeSelector";
 import { cn } from "@/lib/utils";
-import { withRedirect } from "@/lib/auth/redirect";
+import {
+  BUSINESS_DASHBOARD_HREF,
+  isBusinessPage,
+  navbarEntryLinks,
+  type AccountType,
+} from "@/lib/business/entry";
 
 gsap.registerPlugin(useGSAP);
 
@@ -52,6 +58,7 @@ export interface NavbarProps {
   userName?: string;
   avatarUrl?: string;
   isAuthenticated?: boolean;
+  accountType?: AccountType;
   searchQuery?: string;
   flashSaleEndTime?: string | null;
   flashSaleMaxDiscountPercent?: number | null;
@@ -63,6 +70,7 @@ export function Navbar({
   userName,
   avatarUrl,
   isAuthenticated = false,
+  accountType,
   searchQuery,
   flashSaleEndTime,
   flashSaleMaxDiscountPercent,
@@ -70,7 +78,10 @@ export function Navbar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const loginHref = withRedirect("/login", `${pathname}${search ? `?${search}` : ""}`);
+  // On /business, sign-in and get-started lead into the business account system.
+  const onBusinessPage = isBusinessPage(pathname);
+  const { signInHref, getStartedHref } = navbarEntryLinks(pathname, search);
+  const isBusinessAccount = isAuthenticated && accountType === "business";
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRecentlyViewedOpen, setIsRecentlyViewedOpen] = useState(false);
@@ -78,8 +89,12 @@ export function Navbar({
   const desktopCartRef = useRef<HTMLAnchorElement>(null);
   const mobileCartRef = useRef<HTMLAnchorElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
-  const accountHref = isAuthenticated ? "/account" : loginHref;
-  const accountSecondaryLabel = isAuthenticated ? "My Account" : "Sign In / Log In";
+  const accountHref = isAuthenticated ? "/account" : signInHref;
+  const accountSecondaryLabel = isAuthenticated
+    ? "My Account"
+    : onBusinessPage
+      ? "Business sign in"
+      : "Sign In / Log In";
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
@@ -184,6 +199,16 @@ export function Navbar({
 
           {isAuthenticated ? (
             <>
+              {isBusinessAccount ? (
+                <Link
+                  href={BUSINESS_DASHBOARD_HREF}
+                  className="hidden h-11 items-center gap-2 rounded-full border border-line px-5 text-sm font-medium text-ink transition-colors hover:border-brand hover:text-brand md:inline-flex"
+                >
+                  <LayoutDashboard className="h-5 w-5" strokeWidth={1.75} />
+                  Dashboard
+                </Link>
+              ) : null}
+
               <Link
                 href={accountHref}
                 aria-label={accountSecondaryLabel}
@@ -227,12 +252,22 @@ export function Navbar({
               </Link>
             </>
           ) : (
-            <Link
-              href="/get-started"
-              className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
-            >
-              Get started
-            </Link>
+            <>
+              {onBusinessPage ? (
+                <Link
+                  href={signInHref}
+                  className="hidden h-11 items-center rounded-full px-4 text-sm font-medium text-ink transition-colors hover:bg-surface md:inline-flex"
+                >
+                  Sign in
+                </Link>
+              ) : null}
+              <Link
+                href={getStartedHref}
+                className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover max-sm:h-10 max-sm:px-4 max-sm:text-[13.5px]"
+              >
+                Get started
+              </Link>
+            </>
           )}
 
           <button
@@ -312,6 +347,16 @@ export function Navbar({
             {label}
           </Link>
         ))}
+        {isBusinessAccount ? (
+          <Link
+            href={BUSINESS_DASHBOARD_HREF}
+            onClick={() => setIsMenuOpen(false)}
+            className="flex items-center gap-3 border-b border-line py-3.5 font-medium text-ink"
+          >
+            <LayoutDashboard className="h-5 w-5 text-brand" />
+            Business dashboard
+          </Link>
+        ) : null}
         <Link
           href={accountHref}
           onClick={() => setIsMenuOpen(false)}

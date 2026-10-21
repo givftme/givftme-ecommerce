@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { FeedbackProvider } from "@/hooks/useFeedback";
+import { businessViewer, type BusinessViewer } from "@/lib/business/entry";
+import { getBusinessSession } from "@/lib/business-dashboard/queries";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import Faq from "@/app/_components/home/Faq";
 import { BudgetPlanner } from "@/app/business/_components/BudgetPlanner";
@@ -32,12 +34,25 @@ function currentLagosMonth() {
   return Number(month) - 1;
 }
 
-export default function BusinessPage() {
+/** Who is looking decides the account CTAs: sign in, create, or open the dashboard. */
+async function currentViewer(): Promise<BusinessViewer> {
+  try {
+    const { user, member, accountType } = await getBusinessSession();
+    return businessViewer({ signedIn: Boolean(user), accountType, isMember: Boolean(member) });
+  } catch {
+    // Membership lookup unavailable: the signed-out CTAs still lead somewhere useful.
+    return "guest";
+  }
+}
+
+export default async function BusinessPage() {
+  const viewer = await currentViewer();
+
   return (
     <PageWrapper>
       <FeedbackProvider>
         <BusinessProvider>
-          <BusinessHero />
+          <BusinessHero viewer={viewer} />
           <OccasionMarquee />
           <Moments />
           <Plans />
@@ -45,7 +60,7 @@ export default function BusinessPage() {
           <BudgetPlanner />
           <CorporateCalendar currentMonth={currentLagosMonth()} />
           <HowItWorks />
-          <HrDashboard />
+          <HrDashboard viewer={viewer} />
           <ExperienceCentre />
           <Faq
             heading="Questions from HR teams"

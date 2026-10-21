@@ -1,7 +1,8 @@
 import { ReactNode } from "react";
 import type { User } from "@supabase/supabase-js";
 import { PublicPageShell } from "@/components/layout/PublicPageShell";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile, getCurrentUser } from "@/lib/auth/profile";
+import type { AccountType } from "@/lib/business/entry";
 import { getMaxFlashSaleDiscountPercent, normalizeProductCards } from "@/lib/sanity/catalog";
 import { sanityFetch } from "@/lib/sanity/fetch";
 import { FLASH_SALE_PRODUCTS_QUERY } from "@/lib/sanity/queries";
@@ -44,24 +45,19 @@ export async function PageWrapper({
   isAuthenticated,
   searchQuery,
 }: PageWrapperProps) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const resolvedIsAuthenticated = isAuthenticated ?? Boolean(user);
 
   let profileName: string | undefined;
   let avatarUrl: string | undefined;
+  let accountType: AccountType | undefined;
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("full_name, avatar_url")
-      .eq("id", user.id)
-      .maybeSingle();
+    const profile = await getCurrentProfile(user.id);
 
-    profileName = profile?.full_name?.trim().split(/\s+/)[0] || undefined;
-    avatarUrl = profile?.avatar_url || undefined;
+    profileName = profile.full_name?.trim().split(/\s+/)[0] || undefined;
+    avatarUrl = profile.avatar_url || undefined;
+    accountType = profile.account_type ?? undefined;
   }
 
   const resolvedUserName = userName ?? profileName ?? getUserDisplayName(user);
@@ -82,6 +78,7 @@ export async function PageWrapper({
       userName={resolvedUserName}
       avatarUrl={avatarUrl}
       isAuthenticated={resolvedIsAuthenticated}
+      accountType={accountType}
       searchQuery={searchQuery}
       flashSaleEndTime={flashSaleEndTime}
       flashSaleMaxDiscountPercent={flashSaleMaxDiscountPercent}

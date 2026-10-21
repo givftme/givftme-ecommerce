@@ -22,6 +22,9 @@ This directory contains reusable domain logic, validation, result types, and ser
 | `admin/data/` | Service-role reads and audited mutations behind each admin screen |
 | `admin/privacy.ts`, `admin/segments.ts` | Privacy rule helpers (50-person minimum, sensitive occasions, initials) and segment definitions |
 | `events/` | Event catalogue, request context (device/geo), server `recordEvent`, and the client `track()` |
+| `auth/profile.ts` | Per-request cached `getCurrentUser()` and `getCurrentProfile()` (name, avatar, `account_type`, which is null when unreadable, e.g. before migration 042), shared by `PageWrapper` and `getBusinessSession()` |
+| `auth/resend.ts` | Client-safe confirmation-resend cooldown and failure/rate-limit messages |
+| `business/entry.ts` | Client-safe business entry links (dashboard, sign-in, `/get-started?hint=business`, contact), `businessViewer()` (`guest`, `consumer`, `business`, or `incomplete` when account type and membership disagree), and the Navbar's sign-in/get-started targets. Keep it free of server and admin imports |
 | `business-dashboard/` | Business dashboard constants, permission matrix, session and account-scoped reads (`queries.ts`), server actions (`actions.ts`), signup/sign-in (`account.ts`), and pure date/CSV/moments helpers (`utils.ts`) |
 
 ## Conventions
