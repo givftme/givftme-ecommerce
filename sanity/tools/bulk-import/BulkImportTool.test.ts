@@ -10,11 +10,41 @@ import { COLUMN_NAMES, type ColumnName } from "@/sanity/tools/bulk-import/column
 import { buildImageLibrary } from "@/sanity/tools/bulk-import/images";
 import { imageBytes, imageFile } from "@/sanity/tools/bulk-import/test-fixtures";
 
-// The Studio's hooks need a running Studio; the tool only reads these two.
-vi.mock("sanity", () => ({
-  useCurrentUser: () => ({ roles: [{ name: "administrator" }] }),
-  useDataset: () => "development",
+// The Studio's hooks need a running Studio, so they're replaced. The client
+// can only read: it has no create, patch, delete or asset methods, so a write
+// would throw and fail the test.
+const studio = vi.hoisted(() => ({
+  dataset: "development",
+  clientDataset: "development",
+  useClient: vi.fn(),
+  withConfig: vi.fn(),
+  fetch: vi.fn(),
 }));
+
+vi.mock("sanity", async () => {
+  // The Studio bundle doesn't load in jsdom; it re-exports this ID helper from the client.
+  const { getPublishedId } = await import("@sanity/client/csm");
+  const client = {
+    config: () => ({ dataset: studio.clientDataset, projectId: "test-project" }),
+    withConfig: (config: unknown) => {
+      studio.withConfig(config);
+      return { fetch: studio.fetch };
+    },
+  };
+  return {
+    getPublishedId,
+    useCurrentUser: () => ({ roles: [{ name: "administrator" }] }),
+    useDataset: () => studio.dataset,
+    useClient: (options: unknown) => {
+      studio.useClient(options);
+      return client;
+    },
+  };
+});
+
+// sanity/env.ts throws without Sanity env vars, and the query module pulls in next-sanity.
+vi.mock("@/sanity/env", () => ({ apiVersion: "2026-07-09", dataset: "development", projectId: "test-project" }));
+vi.mock("@/lib/sanity/queries", () => ({ BULK_IMPORT_INDEX_QUERY: "BULK_IMPORT_INDEX_QUERY" }));
 
 // The real image reader, wrapped so one test can make it fail.
 vi.mock("@/sanity/tools/bulk-import/images", async (importOriginal) => {
@@ -33,6 +63,10 @@ let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.clearAllMocks();
+  studio.dataset = "development";
+  studio.clientDataset = "development";
+  studio.fetch.mockReset();
+  studio.fetch.mockResolvedValue({ products: [], collections: [], suppliers: [] });
   // Node's File and Blob can be read and streamed, as a browser's can.
   vi.stubGlobal("File", NodeFile);
   vi.stubGlobal("Blob", NodeBlob);
@@ -249,5 +283,256 @@ describe("errors", () => {
     await choose(spreadsheetInput(), [new File(["legacy"], "old.xls")]);
     await waitFor(() => expect(text()).toContain("Old .xls workbooks aren't supported."));
     expect(text()).toContain("Choose a spreadsheet first");
+  });
+});
+
+type Index = { products: unknown[]; collections: unknown[]; suppliers: unknown[] };
+
+const existingBelt: Index = {
+  products: [{ _id: "product-belt", title: "Old Belt", slug: "belt", baseSku: null, variantSkus: null }],
+  collections: [],
+  suppliers: [],
+};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+const CHECK = "Check against the Studio";
+const STALE = "changed since the last check";
+const checkButton = () => button(CHECK) as HTMLButtonElement;
+/** Each Step 4 product card's title, with its outcome. */
+const productResults = () =>
+  Object.fromEntries(
+    [...container.querySelectorAll("[data-outcome]")].map((card) => [
+      card.querySelector("[data-ui='Text']")?.textContent ?? "",
+      card.getAttribute("data-outcome"),
+    ])
+  );
+
+/** Starts a check and waits for its answer, whatever it is. */
+async function checkStudio() {
+  await click(CHECK);
+  await waitFor(() => expect(text()).not.toMatch(/Checking \d+ products? against/));
+}
+
+describe("checking against the Studio", () => {
+  it("reads from the workspace's dataset with the Studio client, without fetching until asked", async () => {
+    await renderTool();
+    expect(text()).toContain("Choose a spreadsheet first.");
+
+    await loadSpreadsheet(bag());
+    expect(text()).toContain("Reads dataset: development");
+    expect(text()).toContain("Nothing has been uploaded or saved");
+    expect(studio.useClient).toHaveBeenCalledWith({ apiVersion: "2026-07-09" });
+    expect(studio.fetch).not.toHaveBeenCalled();
+  });
+
+  it("marks products ready, warning or blocked, explaining each and previewing what would be imported", async () => {
+    studio.fetch.mockResolvedValue(existingBelt);
+    await renderTool();
+    await loadSpreadsheet(
+      bag({ images: "front.jpg" }),
+      bag({ handle: "belt", title: "Belt" }),
+      bag({ handle: "hat", title: "Hat" }),
+      bag({ handle: "scarf", title: "Scarf", price: "" })
+    );
+    await choose(imagesInput(), [imageFile("front.jpg")]);
+    await waitFor(() => expect(text()).toContain("usable image"));
+
+    await checkStudio();
+    expect(studio.withConfig).toHaveBeenCalledWith({ perspective: "raw", useCdn: false });
+    expect(studio.fetch).toHaveBeenCalledTimes(1);
+    expect(studio.fetch).toHaveBeenCalledWith("BULK_IMPORT_INDEX_QUERY");
+
+    expect(text()).toContain("2 of 3 products can be imported");
+    expect(text()).toContain("1 ready · 1 with warnings · 1 blocked (1 already in the Studio)");
+    expect(text()).toContain("1 more product failed spreadsheet validation and isn't included.");
+    expect(text()).toContain("The importable products use 1 image file (64 bytes)");
+    expect(text()).toContain("Checked against development at");
+    expect(productResults()).toEqual({ Belt: "blocked", Hat: "warning", "Leather Bag": "ready" });
+    expect(text()).toContain('Already in the Studio as "Old Belt" (product-belt, published)');
+    expect(text()).toContain("It has no gallery images, so it will show without a photo.");
+    expect(text()).toContain("Images:front.jpg");
+    expect(text()).toContain("Supplier:None");
+  });
+
+  it("with no images chosen, blocks only products that list images", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag({ images: "front.jpg" }), bag({ handle: "belt", title: "Belt" }));
+    expect(text()).toContain("No images are chosen.");
+
+    await checkStudio();
+    expect(productResults()).toEqual({ "Leather Bag": "blocked", Belt: "warning" });
+    expect(text()).toContain("Some of its images are missing or ambiguous; see Choose images.");
+  });
+
+  it("explains a failed read, and recovers on the next check", async () => {
+    studio.fetch.mockRejectedValueOnce(Object.assign(new Error("Forbidden"), { statusCode: 403 }));
+    await renderTool();
+    await loadSpreadsheet(bag());
+
+    await checkStudio();
+    expect(text()).toContain("Your Sanity session can't read this dataset.");
+    expect(productResults()).toEqual({});
+
+    await checkStudio();
+    expect(text()).not.toContain("Your Sanity session can't read this dataset.");
+    expect(productResults()).toEqual({ "Leather Bag": "warning" });
+  });
+
+  it("says something went wrong when the response can't be used, logging the cause", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    studio.fetch.mockResolvedValueOnce({ products: [{ _id: 42 }] });
+    await renderTool();
+    await loadSpreadsheet(bag());
+
+    await checkStudio();
+    expect(text()).toContain("Something went wrong while checking. Try again.");
+    expect(consoleError).toHaveBeenCalledWith(
+      "Bulk import: couldn't check the spreadsheet against the Studio",
+      expect.any(Error)
+    );
+  });
+});
+
+describe("keeping Studio results current", () => {
+  it("sets results aside when the spreadsheet changes, until checked again", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag());
+    await checkStudio();
+    expect(productResults()).toEqual({ "Leather Bag": "warning" });
+
+    await loadSpreadsheet(bag({ title: "Suede Bag" }));
+    expect(text()).toContain(STALE);
+    expect(productResults()).toEqual({});
+    expect(checkButton().disabled).toBe(false);
+
+    await checkStudio();
+    expect(text()).not.toContain(STALE);
+    expect(productResults()).toEqual({ "Suede Bag": "warning" });
+    expect(studio.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("sets results aside when the spreadsheet is removed", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag());
+    await checkStudio();
+
+    await click("Clear spreadsheet");
+    expect(productResults()).toEqual({});
+    await loadSpreadsheet(bag());
+    expect(text()).toContain(STALE);
+    expect(productResults()).toEqual({});
+  });
+
+  it("sets results aside while images are read and after they change, and waits for them", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag({ images: "front.jpg" }));
+    await checkStudio();
+    expect(productResults()).toEqual({ "Leather Bag": "blocked" });
+
+    const library = await buildImageLibrary([imageFile("front.jpg")]);
+    const reading = deferred<typeof library>();
+    vi.mocked(buildImageLibrary).mockReturnValueOnce(reading.promise);
+    await choose(imagesInput(), [imageFile("front.jpg")]);
+    expect(text()).toContain("Waiting for the chosen images to finish reading.");
+    expect(checkButton().disabled).toBe(true);
+    expect(productResults()).toEqual({});
+
+    await act(async () => reading.resolve(library));
+    await waitFor(() => expect(text()).toContain(STALE));
+    expect(checkButton().disabled).toBe(false);
+
+    await checkStudio();
+    expect(productResults()).toEqual({ "Leather Bag": "ready" });
+
+    await click("Clear images");
+    expect(text()).toContain(STALE);
+    expect(productResults()).toEqual({});
+  });
+
+  it("sets results aside when the dataset changes", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag());
+    await checkStudio();
+
+    studio.dataset = "staging";
+    studio.clientDataset = "staging";
+    await renderTool();
+    expect(text()).toContain("Reads dataset: staging");
+    expect(text()).toContain(STALE);
+    expect(productResults()).toEqual({});
+  });
+
+  it("ignores an earlier check that answers after a later one", async () => {
+    const first = deferred<Index>();
+    const second = deferred<Index>();
+    studio.fetch.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    await renderTool();
+    await loadSpreadsheet(bag());
+
+    await click(CHECK);
+    expect(text()).toContain("Checking 1 product against development…");
+    expect(checkButton().disabled).toBe(true);
+
+    await loadSpreadsheet(bag({ title: "Suede Bag" }));
+    await click(CHECK);
+
+    await act(async () => second.resolve({ products: [], collections: [], suppliers: [] }));
+    await waitFor(() => expect(productResults()).toEqual({ "Suede Bag": "warning" }));
+
+    // The first answer says the product exists; it must not replace the newer result.
+    await act(async () => first.resolve({ products: [{ _id: "product-bag", title: "Old" }], collections: [], suppliers: [] }));
+    expect(productResults()).toEqual({ "Suede Bag": "warning" });
+    expect(text()).not.toContain("Already in the Studio");
+  });
+
+  it("ignores an earlier check that answers while a later one is still running", async () => {
+    const first = deferred<Index>();
+    const second = deferred<Index>();
+    studio.fetch.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    await renderTool();
+    await loadSpreadsheet(bag());
+    await click(CHECK);
+    await loadSpreadsheet(bag({ title: "Suede Bag" }));
+    await click(CHECK);
+
+    await act(async () => first.resolve({ products: [], collections: [], suppliers: [] }));
+    expect(text()).toContain("Checking 1 product against development…");
+    expect(productResults()).toEqual({});
+
+    await act(async () => second.reject(new Error("offline")));
+    await waitFor(() => expect(text()).toContain("Couldn't reach Sanity"));
+    expect(productResults()).toEqual({});
+  });
+});
+
+describe("dataset safety", () => {
+  it("refuses to check when the client and the workspace disagree about the dataset", async () => {
+    studio.clientDataset = "production";
+    await renderTool();
+    await loadSpreadsheet(bag());
+
+    expect(text()).toContain('The Studio client reads "production", but this workspace is "development".');
+    expect(checkButton().disabled).toBe(true);
+    await act(async () => checkButton().click());
+    expect(studio.fetch).not.toHaveBeenCalled();
+  });
+
+  it("shows which dataset is read, flagging production", async () => {
+    studio.dataset = "production";
+    studio.clientDataset = "production";
+    await renderTool();
+    await loadSpreadsheet(bag());
+
+    expect(text()).toContain("Reads dataset: production");
+    expect(text()).toContain("This Studio writes to the production dataset");
   });
 });

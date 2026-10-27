@@ -28,21 +28,28 @@ export function ImageStep({
   library,
   match,
   onLibraryChange,
+  onReadingChange,
 }: {
   plan: ImportPlan | null;
   library: ImageLibrary | null;
   /** Matching for the current plan; computed by the parent so later steps share it. */
   match: ImageMatchResult | null;
   onLibraryChange: (library: ImageLibrary | null) => void;
+  /** Told when reading starts and stops, so later steps wait for the new images. */
+  onReadingChange?: (reading: boolean) => void;
 }) {
   const filesInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const request = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
-  const [reading, setReading] = useState(false);
+  const [reading, setReadingState] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
   const [shownProducts, setShownProducts] = useState(PREVIEW_PAGE);
   const setLibrary = onLibraryChange;
+  const setReading = (value: boolean) => {
+    setReadingState(value);
+    onReadingChange?.(value);
+  };
 
   // A new spreadsheet starts its previews from the first page again.
   const [pagedPlan, setPagedPlan] = useState(plan);

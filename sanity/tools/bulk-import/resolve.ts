@@ -7,6 +7,22 @@ import type { ImportIssue, ImportPlan, PlannedProduct, PlannedProductFields } fr
 // that exist are skipped (never changed), and collection and supplier names
 // are resolved to the documents they reference. Only reads; nothing here
 // writes to Sanity.
+//
+// The rules, so the same spreadsheet and dataset always give the same answer:
+// - Drafts, release versions and published documents are grouped under their
+//   published ID. Any of them counts as "existing".
+// - A product is blocked if its document ID exists, or if its slug or any SKU
+//   (base or variant) is used by another product. Compared case-insensitively.
+// - Collections are found by slug, suppliers by name (case-insensitive, runs of
+//   spaces collapsed). A published document's value wins over its draft's.
+//   Exactly one document must match, and it must be published.
+// - A collection that isn't "active" is only a warning: products can be added
+//   to it, but the storefront won't show it yet.
+// - Images come from the previous step. A product is blocked only if an image
+//   it needs (listed in the spreadsheet, or found by SKU) is missing or
+//   ambiguous; a product with no images at all is a warning.
+// When several documents clash, they're listed by ID, so messages don't depend
+// on the order Sanity returns them in.
 
 export interface SanityIndex {
   products: {
@@ -48,7 +64,14 @@ export async function fetchSanityIndex(client: SanityClient): Promise<SanityInde
 
 export type SkipReason = "already-imported" | "duplicate" | "images" | "references";
 
-/** The order reasons are counted in: a product skipped for several counts once, under the first. */
+/**
+ * `ready` — nothing to review. `warning` — can be imported, but read the
+ * warnings first. `blocked` — won't be imported until the spreadsheet,
+ * images or Studio are fixed.
+ */
+export type ResolutionOutcome = "ready" | "warning" | "blocked";
+
+/** The order reasons are counted in: a product blocked for several counts once, under the first. */
 const SKIP_ORDER: SkipReason[] = ["already-imported", "duplicate", "images", "references"];
 
 export interface ProductResolution {
@@ -57,13 +80,14 @@ export interface ProductResolution {
   title: string;
   rows: number[];
   status: PlannedProductFields["status"];
-  ready: boolean;
+  outcome: ResolutionOutcome;
   skipReasons: { reason: SkipReason; message: string }[];
   warnings: string[];
   collections: { slug: string; id: string; title: string }[];
   supplier: { name: string; id: string } | null;
-  images: number;
-  variantImages: number;
+  /** Gallery filenames, in order; empty when the product is blocked by its images. */
+  images: string[];
+  variantImages: { combinationKey: string; filename: string }[];
 }
 
 export interface ResolutionResult {
@@ -73,17 +97,21 @@ export interface ResolutionResult {
     /** Products that passed spreadsheet validation and were checked here. */
     checked: number;
     ready: number;
-    skipped: number;
+    warning: number;
+    blocked: number;
     alreadyImported: number;
     duplicates: number;
     missingImages: number;
     missingReferences: number;
     /** Products rejected earlier, by spreadsheet validation. */
     rejectedInSpreadsheet: number;
-    /** Ready products with status "active": shown on the storefront once published. */
+    /** Importable products with status "active": shown on the storefront once published. */
     activeIfPublished: number;
+    /** Distinct files the importable products use; a file shared by several is counted once. */
     uploadImages: number;
     uploadBytes: number;
+    /** Of those, files used by more than one importable product. */
+    sharedImages: number;
   };
 }
 
@@ -105,17 +133,24 @@ interface Referenceable {
 
 const stateOf = (id: string) => (id.startsWith("drafts.") ? "draft" : id.startsWith("versions.") ? "version" : "published");
 const normaliseName = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
+const byId = (a: { id: string }, b: { id: string }) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 function describe(existing: Existing) {
   const states = [...existing.states].map((state) => (state === "version" ? "in a release" : state));
   return `"${existing.title}" (${existing.id}, ${states.join(" and ")})`;
 }
 
+function addTo<K, V>(map: Map<K, V[]>, key: K, value: V) {
+  const list = map.get(key);
+  if (!list) map.set(key, [value]);
+  else if (!list.includes(value)) list.push(value);
+}
+
 function indexProducts(index: SanityIndex) {
-  const byId = new Map<string, Existing>();
+  const products = new Map<string, Existing>();
   for (const document of index.products) {
     const id = getPublishedId(document._id);
-    const entry = byId.get(id) ?? { id, title: "", states: new Set(), slugs: new Set(), skus: new Set() };
+    const entry = products.get(id) ?? { id, title: "", states: new Set(), slugs: new Set(), skus: new Set() };
     const state = stateOf(document._id);
     entry.states.add(state);
     // Prefer the published title; a draft's is the fallback.
@@ -124,10 +159,17 @@ function indexProducts(index: SanityIndex) {
     for (const sku of [document.baseSku, ...(document.variantSkus ?? [])]) {
       if (sku) entry.skus.add(sku.toLowerCase());
     }
-    byId.set(id, entry);
+    products.set(id, entry);
   }
-  for (const entry of byId.values()) entry.title ||= "Untitled product";
-  return byId;
+
+  const bySlug = new Map<string, Existing[]>();
+  const bySku = new Map<string, Existing[]>();
+  for (const entry of [...products.values()].sort(byId)) {
+    entry.title ||= "Untitled product";
+    for (const slug of entry.slugs) addTo(bySlug, slug, entry);
+    for (const sku of entry.skus) addTo(bySku, sku, entry);
+  }
+  return { products, bySlug, bySku };
 }
 
 /**
@@ -142,11 +184,11 @@ function indexReferenceable<T extends { _id: string }>(
   title: (document: T) => string,
   status: (document: T) => string | null = () => null
 ) {
-  const byId = new Map<string, Referenceable & { key: string | null; keyFromPublished: boolean }>();
+  const entries = new Map<string, Referenceable & { key: string | null; keyFromPublished: boolean }>();
   for (const document of documents) {
     const id = getPublishedId(document._id);
     const published = stateOf(document._id) === "published";
-    const entry = byId.get(id) ?? { id, title: "", published: false, status: null, key: null, keyFromPublished: false };
+    const entry = entries.get(id) ?? { id, title: "", published: false, status: null, key: null, keyFromPublished: false };
     if (published) {
       entry.published = true;
       entry.title = title(document);
@@ -158,25 +200,23 @@ function indexReferenceable<T extends { _id: string }>(
       entry.status ??= status(document);
       entry.key ??= key(document);
     }
-    byId.set(id, entry);
+    entries.set(id, entry);
   }
 
   const byKey = new Map<string, Referenceable[]>();
-  for (const entry of byId.values()) {
-    if (!entry.key) continue;
-    byKey.set(entry.key, [...(byKey.get(entry.key) ?? []), entry]);
+  for (const entry of [...entries.values()].sort(byId)) {
+    if (entry.key) addTo(byKey, entry.key, entry);
   }
   return byKey;
 }
 
 /** Every SKU in a product, with the spreadsheet row it came from. */
 function productSkus(product: PlannedProduct) {
-  if (!product.fields.hasVariants) {
-    return product.fields.baseSku ? [{ sku: product.fields.baseSku, row: product.rows[0] }] : [];
-  }
-  return (product.fields.variants ?? []).flatMap((variant, index) =>
-    variant.sku ? [{ sku: variant.sku, row: product.rows[index] }] : []
-  );
+  const skus = product.fields.baseSku ? [{ sku: product.fields.baseSku, row: product.rows[0] }] : [];
+  (product.fields.variants ?? []).forEach((variant, index) => {
+    if (variant.sku) skus.push({ sku: variant.sku, row: product.rows[index] ?? product.rows[0] });
+  });
+  return skus;
 }
 
 export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index: SanityIndex): ResolutionResult {
@@ -206,26 +246,26 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
       title: product.fields.title,
       rows: product.rows,
       status: product.fields.status,
-      ready: false,
+      outcome: "ready",
       skipReasons: [],
       warnings: [],
       collections: [],
       supplier: null,
-      images: 0,
-      variantImages: 0,
+      images: [],
+      variantImages: [],
     };
     const skip = (reason: SkipReason, row: number, column: string, message: string) => {
       resolution.skipReasons.push({ reason, message });
-      // A re-run finding its own earlier import is expected, not a mistake.
-      report(reason === "already-imported" ? "warning" : "error", row, column, message);
+      report("error", row, column, message);
     };
     const warn = (row: number, column: string, message: string) => {
       resolution.warnings.push(message);
       report("warning", row, column, message);
     };
+    const otherThan = (entries: Existing[] | undefined) => entries?.find((entry) => entry.id !== product.documentId);
 
     // Existing products: never changed, so any match means skip.
-    const own = existing.get(product.documentId);
+    const own = existing.products.get(product.documentId);
     if (own) {
       skip(
         "already-imported",
@@ -234,20 +274,19 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
         `Already in the Studio as ${describe(own)}, probably from an earlier import. Skipped; it won't be changed.`
       );
     }
-    const others = [...existing.values()].filter((entry) => entry.id !== product.documentId);
-    const slug = product.fields.slug.current;
-    const slugOwner = others.find((entry) => entry.slugs.has(slug));
+    const slug = product.fields.slug.current.toLowerCase();
+    const slugOwner = otherThan(existing.bySlug.get(slug));
     if (slugOwner) {
       skip("duplicate", firstRow, "slug", `The slug "${slug}" is already used by ${describe(slugOwner)}.`);
     }
     for (const { sku, row } of productSkus(product)) {
-      const skuOwner = others.find((entry) => entry.skus.has(sku.toLowerCase()));
+      const skuOwner = otherThan(existing.bySku.get(sku.toLowerCase()));
       if (skuOwner) skip("duplicate", row, "sku", `The SKU "${sku}" is already used by ${describe(skuOwner)}.`);
     }
 
     // References must point at published documents, or the write is refused.
     for (const collectionSlug of product.collectionSlugs) {
-      const matches = collections.get(collectionSlug) ?? [];
+      const matches = collections.get(collectionSlug.toLowerCase()) ?? [];
       const [match] = matches;
       if (!match) {
         skip("references", firstRow, "collections", `No collection has the slug "${collectionSlug}". Use the slug of an existing collection.`);
@@ -301,31 +340,36 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
       }
     }
 
-    // Images were checked in the previous step; a product missing a listed image is skipped.
+    // Images were checked in the previous step; only an image the product needs can block it.
     const imageMatch = imageMatches.get(product.documentId);
     if (!imageMatch || !imageMatch.ok) {
-      skip("images", firstRow, "images", "Some of its listed images are missing or ambiguous; see Choose images.");
+      skip("images", firstRow, "images", "Some of its images are missing or ambiguous; see Choose images.");
     } else {
-      resolution.images = imageMatch.gallery.length;
-      resolution.variantImages = imageMatch.variantImages.length;
-      if (!imageMatch.gallery.length) warn(firstRow, "images", "It has no gallery images, so it will show without a photo.");
+      resolution.images = imageMatch.gallery.flatMap((slot) => (slot.image ? [slot.image.filename] : []));
+      resolution.variantImages = imageMatch.variantImages.flatMap((slot) =>
+        slot.image ? [{ combinationKey: slot.combinationKey, filename: slot.image.filename }] : []
+      );
+      if (!resolution.images.length) warn(firstRow, "images", "It has no gallery images, so it will show without a photo.");
     }
 
-    resolution.ready = resolution.skipReasons.length === 0;
+    resolution.outcome = resolution.skipReasons.length ? "blocked" : resolution.warnings.length ? "warning" : "ready";
     return resolution;
   });
 
-  const ready = products.filter((product) => product.ready);
-  const skipped = products.filter((product) => !product.ready);
+  const importable = products.filter((product) => product.outcome !== "blocked");
+  const blocked = products.filter((product) => product.outcome === "blocked");
   const primary = (product: ProductResolution) =>
     SKIP_ORDER.find((reason) => product.skipReasons.some((entry) => entry.reason === reason));
 
   // The same file used by several products is uploaded once.
-  const uploads = new Map<string, number>();
-  for (const product of ready) {
+  const uploads = new Map<string, { size: number; users: Set<string> }>();
+  for (const product of importable) {
     const match = imageMatches.get(product.documentId);
     for (const slot of [...(match?.gallery ?? []), ...(match?.variantImages ?? [])]) {
-      if (slot.image) uploads.set(slot.image.key, slot.image.size);
+      if (!slot.image) continue;
+      const upload = uploads.get(slot.image.key) ?? { size: slot.image.size, users: new Set() };
+      upload.users.add(product.documentId);
+      uploads.set(slot.image.key, upload);
     }
   }
 
@@ -334,16 +378,18 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
     issues: issues.sort((a, b) => (a.row ?? 0) - (b.row ?? 0)),
     summary: {
       checked: products.length,
-      ready: ready.length,
-      skipped: skipped.length,
-      alreadyImported: skipped.filter((product) => primary(product) === "already-imported").length,
-      duplicates: skipped.filter((product) => primary(product) === "duplicate").length,
-      missingImages: skipped.filter((product) => primary(product) === "images").length,
-      missingReferences: skipped.filter((product) => primary(product) === "references").length,
+      ready: products.filter((product) => product.outcome === "ready").length,
+      warning: products.filter((product) => product.outcome === "warning").length,
+      blocked: blocked.length,
+      alreadyImported: blocked.filter((product) => primary(product) === "already-imported").length,
+      duplicates: blocked.filter((product) => primary(product) === "duplicate").length,
+      missingImages: blocked.filter((product) => primary(product) === "images").length,
+      missingReferences: blocked.filter((product) => primary(product) === "references").length,
       rejectedInSpreadsheet: plan.rejectedHandles.length,
-      activeIfPublished: ready.filter((product) => product.status === "active").length,
+      activeIfPublished: importable.filter((product) => product.status === "active").length,
       uploadImages: uploads.size,
-      uploadBytes: [...uploads.values()].reduce((total, size) => total + size, 0),
+      uploadBytes: [...uploads.values()].reduce((total, upload) => total + upload.size, 0),
+      sharedImages: [...uploads.values()].filter((upload) => upload.users.size > 1).length,
     },
   };
 }

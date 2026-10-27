@@ -5,20 +5,17 @@ import { useCurrentUser, useDataset } from "sanity";
 import { getImportAccess, type ImportAccess } from "./access";
 import { IMPORT_COLUMNS } from "./columns";
 import { ImageStep } from "./ImageStep";
-import type { ImageLibrary } from "./images";
+import { emptyImageLibrary, type ImageLibrary } from "./images";
 import { IssueList, issueLocation } from "./IssueList";
 import { buildImportPlan } from "./mapping";
 import { matchImages } from "./matching";
 import { readSpreadsheet, SpreadsheetError } from "./parse";
+import { ResolveStep } from "./ResolveStep";
 import { buildTemplateCsv, TEMPLATE_FILENAME } from "./template";
 import type { ImportPlan } from "./types";
 
 // Steps that later phases wire up. Listed so editors can see the whole flow.
 const UPCOMING_STEPS = [
-  {
-    title: "Check against the Studio",
-    description: "Products that already exist are flagged and skipped; collections and suppliers are looked up.",
-  },
   {
     title: "Choose draft or publish",
     description:
@@ -76,6 +73,13 @@ export function BulkImportTool() {
   // against them again. The match is derived, so it never refers to an old plan.
   const [library, setLibrary] = useState<ImageLibrary | null>(null);
   const match = useMemo(() => (plan && library ? matchImages(plan, library) : null), [plan, library]);
+  // The Studio check matches against no files when none are chosen, so each
+  // product is judged by the images it actually needs.
+  const checkedImages = useMemo(
+    () => (plan ? (match ?? matchImages(plan, emptyImageLibrary())) : null),
+    [plan, match]
+  );
+  const [imagesReading, setImagesReading] = useState(false);
 
   const reset = () => {
     setFileName(null);
@@ -196,11 +200,31 @@ export function BulkImportTool() {
               title="Choose images"
               description="Pick image files, a folder or ZIPs from this device. They're matched to products by the filenames in the spreadsheet, or by SKU when a product lists none."
             >
-              <ImageStep plan={plan} library={library} match={match} onLibraryChange={setLibrary} />
+              <ImageStep
+                plan={plan}
+                library={library}
+                match={match}
+                onLibraryChange={setLibrary}
+                onReadingChange={setImagesReading}
+              />
+            </Step>
+
+            <Step
+              number={4}
+              title="Check against the Studio"
+              description="Reads this dataset to flag products that already exist, slugs and SKUs already in use, and to look up collections and suppliers. Nothing is saved."
+            >
+              <ResolveStep
+                plan={plan}
+                images={checkedImages}
+                imagesChosen={library !== null}
+                imagesReading={imagesReading}
+                workspaceDataset={dataset}
+              />
             </Step>
 
             {UPCOMING_STEPS.map((step, index) => (
-              <Step key={step.title} number={index + 4} title={step.title} description={step.description} upcoming />
+              <Step key={step.title} number={index + 5} title={step.title} description={step.description} upcoming />
             ))}
           </Stack>
         </Stack>
