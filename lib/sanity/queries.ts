@@ -315,3 +315,20 @@ export const CART_FALLBACK_RECOMMENDATIONS_QUERY = defineQuery(/* groq */ `
 export const ADMIN_PRODUCT_TITLES_QUERY = defineQuery(/* groq */ `
   *[_type == "product" && _id in $ids] { _id, title }
 `);
+
+// Studio bulk import: the identifying fields of every product, collection and
+// supplier, so the importer can skip duplicates and resolve references. Run
+// with the editor's session and the "raw" perspective, so drafts count too.
+export const BULK_IMPORT_INDEX_QUERY = defineQuery(/* groq */ `
+  {
+    "products": *[_type == "product"] {
+      _id,
+      title,
+      "slug": slug.current,
+      baseSku,
+      "variantSkus": variants[].sku
+    },
+    "collections": *[_type == "collection"] { _id, title, "slug": slug.current, status },
+    "suppliers": *[_type == "supplier"] { _id, name }
+  }
+`);
