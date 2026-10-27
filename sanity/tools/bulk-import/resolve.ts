@@ -16,8 +16,11 @@ import type { ImportIssue, ImportPlan, PlannedProduct, PlannedProductFields } fr
 // - Collections are found by slug, suppliers by name (case-insensitive, runs of
 //   spaces collapsed). A published document's value wins over its draft's.
 //   Exactly one document must match, and it must be published.
-// - A collection that isn't "active" is only a warning: products can be added
-//   to it, but the storefront won't show it yet.
+// - An archived collection blocks the product. Any other collection that
+//   isn't "active" (a draft, usually being prepared) is only a warning: the
+//   product can be added, but the collection page won't show it yet.
+// - A variant product whose variants are all unavailable is a warning: it's
+//   listed on the storefront but can't be bought.
 // - Images come from the previous step. A product is blocked only if an image
 //   it needs (listed in the spreadsheet, or found by SKU) is missing or
 //   ambiguous; a product with no images at all is a warning.
@@ -304,6 +307,13 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
           "collections",
           `The collection "${match.title}" (${collectionSlug}) is only a draft. Publish it before importing products into it.`
         );
+      } else if (match.status === "archived") {
+        skip(
+          "references",
+          firstRow,
+          "collections",
+          `The collection "${match.title}" (${collectionSlug}) is archived. Use an active collection, or restore it in the Studio first.`
+        );
       } else {
         if (match.status !== "active") {
           warn(
@@ -338,6 +348,11 @@ export function resolveImport(plan: ImportPlan, images: ImageMatchResult, index:
       } else {
         resolution.supplier = { name: match.title, id: match.id };
       }
+    }
+
+    const variants = product.fields.variants ?? [];
+    if (product.fields.hasVariants && variants.length && variants.every((variant) => !variant.available)) {
+      warn(firstRow, "variant_available", "Every variant is marked unavailable, so it can't be bought until one is available.");
     }
 
     // Images were checked in the previous step; only an image the product needs can block it.

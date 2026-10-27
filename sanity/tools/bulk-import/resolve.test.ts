@@ -262,7 +262,19 @@ describe("references", () => {
     expect(result.products[0].collections).toEqual([{ slug: "bags", id: "collection-bags", title: "bags" }]);
   });
 
-  it("warns, without blocking, about collections that aren't active", async () => {
+  it("warns, without blocking, about a collection that's still a draft", async () => {
+    const result = await resolve([bag({ collections: "soon", images: "front.jpg" })], {
+      collections: [collection("collection-soon", "soon", { title: "Soon", status: "draft" })],
+    }, [imageFile("front.jpg")]);
+
+    expect(outcomes(result)).toEqual({ bag: "warning" });
+    expect(result.products[0].warnings).toEqual([
+      "The collection \"Soon\" is draft, so it isn't shown on the storefront yet.",
+    ]);
+    expect(result.products[0].collections.map((entry) => entry.id)).toEqual(["collection-soon"]);
+  });
+
+  it("blocks a product whose collection is archived", async () => {
     const result = await resolve([bag({ collections: "old, soon", images: "front.jpg" })], {
       collections: [
         collection("collection-old", "old", { title: "Old", status: "archived" }),
@@ -270,12 +282,33 @@ describe("references", () => {
       ],
     }, [imageFile("front.jpg")]);
 
-    expect(outcomes(result)).toEqual({ bag: "warning" });
-    expect(result.products[0].warnings).toEqual([
-      'The collection "Old" is archived, so it isn\'t shown on the storefront yet.',
-      'The collection "Soon" is draft, so it isn\'t shown on the storefront yet.',
+    expect(outcomes(result)).toEqual({ bag: "blocked" });
+    expect(messages(result, "bag")).toEqual([
+      'The collection "Old" (old) is archived. Use an active collection, or restore it in the Studio first.',
     ]);
-    expect(result.products[0].collections.map((entry) => entry.id)).toEqual(["collection-old", "collection-soon"]);
+    expect(result.summary.missingReferences).toBe(1);
+  });
+});
+
+describe("availability", () => {
+  it("warns when every variant is unavailable", async () => {
+    const result = await resolve([
+      shoe("40", "S40", { variant_available: "no" }),
+      shoe("41", "S41", { variant_available: "no" }),
+    ]);
+
+    expect(outcomes(result)).toEqual({ shoe: "warning" });
+    expect(result.products[0].warnings).toContain(
+      "Every variant is marked unavailable, so it can't be bought until one is available."
+    );
+  });
+
+  it("doesn't warn while at least one variant is available", async () => {
+    const result = await resolve([shoe("40", "S40", { variant_available: "no" }), shoe("41", "S41")]);
+
+    expect(result.products[0].warnings).not.toContain(
+      "Every variant is marked unavailable, so it can't be bought until one is available."
+    );
   });
 });
 

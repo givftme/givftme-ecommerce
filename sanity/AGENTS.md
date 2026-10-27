@@ -13,7 +13,7 @@ This directory owns catalog content schemas and shared Sanity utilities. The Stu
 | `schemaTypes/product.ts` | Product content, variants, and sale fields |
 | `schemaTypes/productVariant.ts` | Variant combination keys and prices |
 | `lib/client.ts` | Shared content client |
-| `tools/bulk-import/` | Studio "Bulk import" tool at `/studio/bulk-import` (in progress: template, CSV/XLSX parsing and validation, local image and ZIP matching, read-only check against the dataset via the editor's `useClient` session; no uploads or writes yet) |
+| `tools/bulk-import/` | Studio "Bulk import" tool at `/studio/bulk-import` (in progress: template, CSV/XLSX parsing and validation, local image and ZIP matching, read-only check against the dataset via the editor's `useClient` session, and draft-only imports into `development` with image uploads; no publishing or production writes. Rules: `context/BUSINESS_RULES.md` 39–43) |
 | `../lib/sanity/queries.ts` | Storefront GROQ queries |
 | `../lib/sanity/types.ts` | Storefront result types |
 | `../lib/sanity/catalog.ts` | Display normalization |

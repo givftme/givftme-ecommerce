@@ -11,14 +11,20 @@ import { buildImageLibrary } from "@/sanity/tools/bulk-import/images";
 import { imageBytes, imageFile } from "@/sanity/tools/bulk-import/test-fixtures";
 
 // The Studio's hooks need a running Studio, so they're replaced. The client
-// can only read: it has no create, patch, delete or asset methods, so a write
-// would throw and fail the test.
+// can read, create documents and upload assets, all mocked; it has no patch,
+// replace, delete or publish methods, so any other write would throw.
 const studio = vi.hoisted(() => ({
   dataset: "development",
   clientDataset: "development",
+  roles: ["administrator"],
+  permission: { granted: true, reason: "" },
   useClient: vi.fn(),
   withConfig: vi.fn(),
   fetch: vi.fn(),
+  create: vi.fn(),
+  upload: vi.fn(),
+  getDocument: vi.fn(),
+  validate: vi.fn(),
 }));
 
 vi.mock("sanity", async () => {
@@ -30,11 +36,26 @@ vi.mock("sanity", async () => {
       studio.withConfig(config);
       return { fetch: studio.fetch };
     },
+    create: (document: unknown) => studio.create(document),
+    getDocument: (id: string) => studio.getDocument(id),
+    assets: { upload: (...args: unknown[]) => studio.upload(...args) },
+  };
+  const grants = {
+    checkDocumentPermission: () => ({
+      subscribe: (observer: { next: (value: unknown) => void }) => {
+        observer.next(studio.permission);
+        return { unsubscribe: () => undefined };
+      },
+    }),
   };
   return {
     getPublishedId,
-    useCurrentUser: () => ({ roles: [{ name: "administrator" }] }),
+    useCurrentUser: () => ({ roles: studio.roles.map((name) => ({ name })) }),
     useDataset: () => studio.dataset,
+    useProjectId: () => "test-project",
+    useGrantsStore: () => grants,
+    useWorkspace: () => ({ name: "default" }),
+    validateDocument: (options: unknown) => studio.validate(options),
     useClient: (options: unknown) => {
       studio.useClient(options);
       return client;
@@ -44,7 +65,10 @@ vi.mock("sanity", async () => {
 
 // sanity/env.ts throws without Sanity env vars, and the query module pulls in next-sanity.
 vi.mock("@/sanity/env", () => ({ apiVersion: "2026-07-09", dataset: "development", projectId: "test-project" }));
-vi.mock("@/lib/sanity/queries", () => ({ BULK_IMPORT_INDEX_QUERY: "BULK_IMPORT_INDEX_QUERY" }));
+vi.mock("@/lib/sanity/queries", () => ({
+  BULK_IMPORT_INDEX_QUERY: "BULK_IMPORT_INDEX_QUERY",
+  BULK_IMPORT_PRODUCT_CHECK_QUERY: "BULK_IMPORT_PRODUCT_CHECK_QUERY",
+}));
 
 // The real image reader, wrapped so one test can make it fail.
 vi.mock("@/sanity/tools/bulk-import/images", async (importOriginal) => {
@@ -67,6 +91,18 @@ beforeEach(() => {
   studio.clientDataset = "development";
   studio.fetch.mockReset();
   studio.fetch.mockResolvedValue({ products: [], collections: [], suppliers: [] });
+  studio.roles = ["administrator"];
+  studio.permission = { granted: true, reason: "" };
+  studio.create.mockReset();
+  studio.create.mockImplementation(async (document: unknown) => document);
+  studio.upload.mockReset();
+  studio.upload.mockImplementation(async (_type: string, _blob: Blob, { filename }: { filename: string }) => ({
+    _id: `image-${filename.replace(/\W/g, "")}-64x64-jpg`,
+  }));
+  studio.getDocument.mockReset();
+  studio.getDocument.mockResolvedValue(undefined);
+  studio.validate.mockReset();
+  studio.validate.mockResolvedValue([]);
   // Node's File and Blob can be read and streamed, as a browser's can.
   vi.stubGlobal("File", NodeFile);
   vi.stubGlobal("Blob", NodeBlob);
@@ -534,5 +570,206 @@ describe("dataset safety", () => {
 
     expect(text()).toContain("Reads dataset: production");
     expect(text()).toContain("This Studio writes to the production dataset");
+  });
+});
+
+/** Each Step 5 result card's title, with its import status. */
+const importResults = () =>
+  Object.fromEntries(
+    [...container.querySelectorAll("[data-import-status]")].map((card) => [
+      card.querySelector("[data-ui='Text']")?.textContent ?? "",
+      card.getAttribute("data-import-status"),
+    ])
+  );
+const createdIds = () => studio.create.mock.calls.map(([document]) => (document as { _id: string })._id);
+const hasButton = (label: string) => {
+  try {
+    button(label);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Loads rows, optionally images, and runs the Studio check. */
+async function readyToImport(rows: RowInput[], files: File[] = []) {
+  await renderTool();
+  await loadSpreadsheet(...rows);
+  if (files.length) {
+    await choose(imagesInput(), files);
+    await waitFor(() => expect(text()).toContain("usable image"));
+  }
+  await checkStudio();
+}
+
+async function importDrafts(count: number) {
+  const noun = count === 1 ? "product" : "products";
+  await click(`Import ${count} ${noun} as drafts`);
+  await click(`Create ${count} ${count === 1 ? "draft" : "drafts"}`);
+  await waitFor(() => expect(text()).toMatch(/drafts? created in/));
+}
+
+describe("importing drafts", () => {
+  it("waits for a Studio check that matches the spreadsheet", async () => {
+    await renderTool();
+    await loadSpreadsheet(bag());
+    expect(text()).toContain("Run the Studio check in step 4 first.");
+    expect(hasButton("Import 1 product as drafts")).toBe(false);
+
+    await checkStudio();
+    expect(hasButton("Import 1 product as drafts")).toBe(true);
+
+    await loadSpreadsheet(bag({ title: "Suede Bag" }));
+    expect(text()).toContain("Run the Studio check in step 4 first.");
+    expect(hasButton("Import 1 product as drafts")).toBe(false);
+  });
+
+  it("creates drafts only after confirmation, uploading images first, then reports them", async () => {
+    await readyToImport([bag({ images: "front.jpg" }), bag({ handle: "belt", title: "Belt" })], [imageFile("front.jpg")]);
+    expect(text()).toContain('Creates 2 drafts in "development", uploading 1 image file (64 bytes) first.');
+
+    await click("Import 2 products as drafts");
+    expect(text()).toContain('Create 2 product drafts in the "development" dataset (project test-project)?');
+    expect(studio.create).not.toHaveBeenCalled();
+
+    await click("Create 2 drafts");
+    await waitFor(() => expect(text()).toContain('2 drafts created in "development"'));
+    expect(createdIds()).toEqual(["drafts.product-bag", "drafts.product-belt"]);
+    expect(studio.upload).toHaveBeenCalledTimes(1);
+    expect(studio.validate).toHaveBeenCalledWith(
+      expect.objectContaining({ workspace: { name: "default" }, environment: "studio" })
+    );
+    expect(importResults()).toEqual({ "Leather Bag": "created", Belt: "created" });
+    expect(text()).toContain("Nothing was published, patched or deleted.");
+    expect(hasButton("Import 2 products as drafts")).toBe(false);
+  });
+
+  it("checks permissions and the schema without uploading or creating anything", async () => {
+    await readyToImport([bag({ images: "front.jpg" }), bag({ handle: "belt", title: "Belt" })], [imageFile("front.jpg")]);
+    await click("Check permissions and schema (no changes)");
+    await waitFor(() => expect(text()).toContain("Preflight: 2 ready · 0 failed · 0 skipped"));
+
+    expect(text()).toContain("with 1 image (64 bytes) still to upload. Nothing was uploaded or saved.");
+    expect(studio.validate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document: expect.objectContaining({ _id: "drafts.product-bag" }),
+        getDocumentExists: expect.any(Function),
+      })
+    );
+    expect(studio.upload).not.toHaveBeenCalled();
+    expect(studio.create).not.toHaveBeenCalled();
+    expect(studio.getDocument).not.toHaveBeenCalled();
+  });
+
+  it("shows what the preflight found", async () => {
+    studio.permission = { granted: false, reason: "No create grant." };
+    await readyToImport([bag()]);
+    await click("Check permissions and schema (no changes)");
+    await waitFor(() => expect(text()).toContain("Preflight: 0 ready · 1 failed · 0 skipped"));
+
+    expect(text()).toContain("Leather Bag (failed): Your Sanity role can't create this draft. No create grant.");
+    expect(studio.create).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when the confirmation is cancelled", async () => {
+    await readyToImport([bag()]);
+    await click("Import 1 product as drafts");
+    await click("Cancel");
+
+    expect(studio.create).not.toHaveBeenCalled();
+    expect(hasButton("Import 1 product as drafts")).toBe(true);
+  });
+
+  it("ignores a second click on the confirmation", async () => {
+    await readyToImport([bag()]);
+    await click("Import 1 product as drafts");
+    const confirm = button("Create 1 draft");
+    await act(async () => {
+      confirm.click();
+      confirm.click();
+    });
+    await waitFor(() => expect(text()).toContain("1 draft created"));
+
+    expect(studio.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't offer imports into production", async () => {
+    studio.dataset = "production";
+    studio.clientDataset = "production";
+    await readyToImport([bag()]);
+
+    expect(text()).toContain("Imports into production aren't switched on yet.");
+    expect(hasButton("Import 1 product as drafts")).toBe(false);
+    expect(studio.create).not.toHaveBeenCalled();
+  });
+
+  it("doesn't offer imports to a read-only role", async () => {
+    studio.roles = ["viewer"];
+    await readyToImport([bag()]);
+
+    expect(text()).toContain("Your role is read-only, so you can't import products.");
+    expect(hasButton("Import 1 product as drafts")).toBe(false);
+  });
+
+  it("stops before uploading when the editor may not create drafts", async () => {
+    studio.permission = { granted: false, reason: "No create grant." };
+    await readyToImport([bag({ images: "front.jpg" })], [imageFile("front.jpg")]);
+    await importDrafts(1);
+
+    expect(text()).toContain("Your Sanity role can't create product drafts here, so nothing was uploaded or created.");
+    expect(studio.upload).not.toHaveBeenCalled();
+    expect(studio.create).not.toHaveBeenCalled();
+  });
+
+  it("stops between products when asked, keeping what was created", async () => {
+    const first = deferred<unknown>();
+    studio.create.mockReturnValueOnce(first.promise);
+    await readyToImport([bag(), bag({ handle: "belt", title: "Belt" })]);
+    await click("Import 2 products as drafts");
+    await click("Create 2 drafts");
+    await waitFor(() => expect(text()).toContain("Creating drafts: 0 of 2"));
+
+    await click("Stop");
+    expect(text()).toContain("Stopping after the current step…");
+    await act(async () => first.resolve({}));
+    await waitFor(() => expect(text()).toContain("The import was stopped. Drafts created before then are kept."));
+
+    expect(importResults()).toEqual({ "Leather Bag": "created", Belt: "not-attempted" });
+    expect(studio.create).toHaveBeenCalledTimes(1);
+    expect(hasButton("Retry 1 product")).toBe(true);
+  });
+
+  it("retries an unclear create after reading it back", async () => {
+    studio.create.mockRejectedValueOnce(new Error("offline"));
+    await readyToImport([bag()]);
+    await importDrafts(1);
+    expect(importResults()).toEqual({ "Leather Bag": "uncertain" });
+
+    await click("Retry 1 product");
+    await waitFor(() => expect(importResults()).toEqual({ "Leather Bag": "created" }));
+    expect(studio.getDocument).toHaveBeenCalledWith("drafts.product-bag");
+    expect(studio.create).toHaveBeenCalledTimes(2);
+    expect(hasButton("Retry 1 product")).toBe(false);
+  });
+
+  it("reports uploaded images that no created draft uses, without deleting them", async () => {
+    studio.create.mockImplementationOnce(async () => {
+      throw Object.assign(new Error("Invalid"), { statusCode: 400 });
+    });
+    await readyToImport([bag({ images: "front.jpg" })], [imageFile("front.jpg")]);
+    await importDrafts(1);
+
+    expect(importResults()).toEqual({ "Leather Bag": "failed" });
+    expect(text()).toContain("1 uploaded image isn't used by any created draft");
+    expect(text()).toContain("front.jpg (image-frontjpg-64x64-jpg). They stay in the media library; nothing is deleted.");
+  });
+
+  it("marks the report as earlier once the spreadsheet changes", async () => {
+    await readyToImport([bag()]);
+    await importDrafts(1);
+    await loadSpreadsheet(bag({ title: "Suede Bag" }));
+
+    expect(text()).toContain("This report is from an earlier check.");
+    expect(text()).toContain("Run the Studio check in step 4 first.");
   });
 });

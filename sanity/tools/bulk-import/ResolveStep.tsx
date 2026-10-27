@@ -29,11 +29,17 @@ const OUTCOMES: Record<ResolutionOutcome, { label: string; tone: "positive" | "c
 };
 const OUTCOME_ORDER: ResolutionOutcome[] = ["blocked", "warning", "ready"];
 
-interface CheckInputs {
+export interface CheckInputs {
   plan: ImportPlan;
   images: ImageMatchResult;
   dataset: string;
   projectId: string;
+}
+
+/** A finished check, and exactly what it checked. */
+export interface CompletedCheck {
+  result: ResolutionResult;
+  inputs: CheckInputs;
 }
 
 type Check =
@@ -49,6 +55,7 @@ export function ResolveStep({
   imagesChosen,
   imagesReading,
   workspaceDataset,
+  onCheck,
 }: {
   plan: ImportPlan | null;
   /** Image matching for the plan; matched against no files when none are chosen. */
@@ -57,6 +64,8 @@ export function ResolveStep({
   imagesReading: boolean;
   /** The Studio workspace's dataset, which the client must agree with. */
   workspaceDataset: string;
+  /** Told about each finished check, so the import step can use its result. */
+  onCheck?: (check: CompletedCheck) => void;
 }) {
   const client = useClient({ apiVersion });
   const { dataset = "", projectId = "" } = client.config();
@@ -84,7 +93,10 @@ export function ResolveStep({
     try {
       const index = await fetchSanityIndex(client);
       const result = resolveImport(inputs.plan, inputs.images, index);
-      if (id === request.current) setCheck({ status: "done", id, inputs, result, checkedAt: new Date() });
+      if (id === request.current) {
+        setCheck({ status: "done", id, inputs, result, checkedAt: new Date() });
+        onCheck?.({ result, inputs });
+      }
     } catch (error) {
       if (id !== request.current) return;
       if (!(error instanceof LookupError)) {

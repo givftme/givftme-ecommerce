@@ -5,30 +5,26 @@ import { useCurrentUser, useDataset } from "sanity";
 import { getImportAccess, type ImportAccess } from "./access";
 import { IMPORT_COLUMNS } from "./columns";
 import { ImageStep } from "./ImageStep";
+import { ImportStep } from "./ImportStep";
 import { emptyImageLibrary, type ImageLibrary } from "./images";
 import { IssueList, issueLocation } from "./IssueList";
 import { buildImportPlan } from "./mapping";
 import { matchImages } from "./matching";
 import { readSpreadsheet, SpreadsheetError } from "./parse";
-import { ResolveStep } from "./ResolveStep";
+import { ResolveStep, type CompletedCheck } from "./ResolveStep";
 import { buildTemplateCsv, TEMPLATE_FILENAME } from "./template";
 import type { ImportPlan } from "./types";
 
 // Steps that later phases wire up. Listed so editors can see the whole flow.
 const UPCOMING_STEPS = [
   {
-    title: "Choose draft or publish",
+    title: "Publish",
     description:
-      "Drafts by default. Publishing makes rows marked active visible on the storefront and asks for confirmation first.",
+      "Publishing imported drafts, which makes products marked active visible on the storefront. It will ask for confirmation first.",
   },
   {
-    title: "Import",
-    description:
-      "Images upload first, then each product is created on its own. Existing products are skipped, never changed.",
-  },
-  {
-    title: "Review results",
-    description: "Download a report of created, skipped and failed rows.",
+    title: "Download a report",
+    description: "A CSV of created, skipped and failed products.",
   },
 ];
 
@@ -80,6 +76,12 @@ export function BulkImportTool() {
     [plan, match]
   );
   const [imagesReading, setImagesReading] = useState(false);
+  // The import uses the last Studio check, only while it matches what's on screen.
+  const [lastCheck, setLastCheck] = useState<CompletedCheck | null>(null);
+  const preview =
+    lastCheck && !imagesReading && lastCheck.inputs.plan === plan && lastCheck.inputs.images === checkedImages
+      ? lastCheck
+      : null;
 
   const reset = () => {
     setFileName(null);
@@ -220,11 +222,26 @@ export function BulkImportTool() {
                 imagesChosen={library !== null}
                 imagesReading={imagesReading}
                 workspaceDataset={dataset}
+                onCheck={setLastCheck}
+              />
+            </Step>
+
+            <Step
+              number={5}
+              title="Import as drafts"
+              description="Creates the checked products as drafts in this dataset, uploading their images first. Existing products are never changed, and nothing is published."
+            >
+              <ImportStep
+                plan={plan}
+                images={checkedImages}
+                preview={preview}
+                workspaceDataset={dataset}
+                access={access}
               />
             </Step>
 
             {UPCOMING_STEPS.map((step, index) => (
-              <Step key={step.title} number={index + 5} title={step.title} description={step.description} upcoming />
+              <Step key={step.title} number={index + 6} title={step.title} description={step.description} upcoming />
             ))}
           </Stack>
         </Stack>
