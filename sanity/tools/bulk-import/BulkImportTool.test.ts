@@ -18,10 +18,13 @@ const studio = vi.hoisted(() => ({
   clientDataset: "development",
   roles: ["administrator"],
   permission: { granted: true, reason: "" },
+  /** When set, answers each permission check from the permission and the document. */
+  permissionFor: null as null | ((permission: string, document: { _id: string }) => { granted: boolean; reason: string }),
   useClient: vi.fn(),
   withConfig: vi.fn(),
   fetch: vi.fn(),
   create: vi.fn(),
+  action: vi.fn(),
   upload: vi.fn(),
   getDocument: vi.fn(),
   validate: vi.fn(),
@@ -36,14 +39,21 @@ vi.mock("sanity", async () => {
       studio.withConfig(config);
       return { fetch: studio.fetch };
     },
-    create: (document: unknown) => studio.create(document),
+    // Sanity's Actions API: each create action's draft goes through `studio.create`.
+    action: async (input: unknown) => {
+      studio.action(input);
+      for (const entry of [input].flat() as { actionType: string; attributes?: unknown }[]) {
+        if (entry.actionType === "sanity.action.document.create") await studio.create(entry.attributes);
+      }
+      return { transactionId: "tx" };
+    },
     getDocument: (id: string) => studio.getDocument(id),
     assets: { upload: (...args: unknown[]) => studio.upload(...args) },
   };
   const grants = {
-    checkDocumentPermission: () => ({
+    checkDocumentPermission: (permission: string, document: { _id: string }) => ({
       subscribe: (observer: { next: (value: unknown) => void }) => {
-        observer.next(studio.permission);
+        observer.next(studio.permissionFor ? studio.permissionFor(permission, document) : studio.permission);
         return { unsubscribe: () => undefined };
       },
     }),
@@ -93,6 +103,8 @@ beforeEach(() => {
   studio.fetch.mockResolvedValue({ products: [], collections: [], suppliers: [] });
   studio.roles = ["administrator"];
   studio.permission = { granted: true, reason: "" };
+  studio.permissionFor = null;
+  studio.action.mockReset();
   studio.create.mockReset();
   studio.create.mockImplementation(async (document: unknown) => document);
   studio.upload.mockReset();
@@ -771,5 +783,121 @@ describe("importing drafts", () => {
 
     expect(text()).toContain("This report is from an earlier check.");
     expect(text()).toContain("Run the Studio check in step 4 first.");
+  });
+});
+
+const modeRadio = (value: "draft" | "publish") =>
+  container.querySelector<HTMLInputElement>(`input[type="radio"][value="${value}"]`)!;
+const goLiveTick = () => container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+const actionTypes = () =>
+  studio.action.mock.calls.map(([actions]) => (actions as { actionType: string }[]).map((entry) => entry.actionType));
+
+async function choosePublish() {
+  await act(async () => modeRadio("publish").click());
+}
+
+describe("publishing", () => {
+  it("has drafts selected by default", async () => {
+    await readyToImport([bag()]);
+
+    expect(modeRadio("draft").checked).toBe(true);
+    expect(modeRadio("publish").checked).toBe(false);
+    expect(hasButton("Import 1 product as drafts")).toBe(true);
+  });
+
+  it("publishes only after the tick, when products would go live", async () => {
+    await readyToImport(
+      [bag({ status: "active", images: "front.jpg" }), bag({ handle: "belt", title: "Belt", status: "draft" })],
+      [imageFile("front.jpg")]
+    );
+    await choosePublish();
+    expect(text()).toContain('Creates and publishes 2 products in "development"');
+    expect(text()).toContain("1 will be live on the storefront (status active) · 1 will be published but stay hidden");
+
+    await click("Create and publish 2 products");
+    expect(text()).toContain('Create and publish 2 products in the "development" dataset (project test-project)?');
+    expect(text()).toContain("I understand 1 product will be visible on the storefront.");
+    expect((button("Publish 2 products") as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => button("Publish 2 products").click());
+    expect(studio.action).not.toHaveBeenCalled();
+
+    await act(async () => goLiveTick()!.click());
+    expect((button("Publish 2 products") as HTMLButtonElement).disabled).toBe(false);
+    await click("Publish 2 products");
+    await waitFor(() => expect(text()).toContain('2 products published in "development"'));
+
+    expect(actionTypes()).toEqual([
+      ["sanity.action.document.create", "sanity.action.document.publish"],
+      ["sanity.action.document.create", "sanity.action.document.publish"],
+    ]);
+    expect(importResults()).toEqual({ "Leather Bag": "published", Belt: "published" });
+    expect(text()).toContain("Existing products were not changed, and nothing was deleted.");
+  });
+
+  it("needs no tick when nothing would go live", async () => {
+    await readyToImport([bag({ status: "draft" })]);
+    await choosePublish();
+    await click("Create and publish 1 product");
+
+    expect(goLiveTick()).toBeNull();
+    expect((button("Publish 1 product") as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("lists the warnings before publishing", async () => {
+    await readyToImport([
+      bag({ status: "active" }),
+      { handle: "sock", title: "Sock", price: "500", status: "active", option1_name: "Size", option1_value: "S", variant_available: "no" },
+    ]);
+    await choosePublish();
+
+    expect(text()).toContain("Leather Bag: Active with no images: it will be live on the storefront without a photo.");
+    expect(text()).toContain("Sock: Every variant is unavailable: it will be live on the storefront but can't be bought.");
+  });
+
+  it("doesn't offer publishing to a role that can only create drafts", async () => {
+    studio.roles = ["contributor"];
+    await readyToImport([bag()]);
+
+    expect(modeRadio("publish").disabled).toBe(true);
+    expect(text()).toContain("Your role can create drafts but not publish them.");
+    expect(hasButton("Import 1 product as drafts")).toBe(true);
+  });
+
+  it("stops before writing when the grants don't allow publishing", async () => {
+    studio.permissionFor = (permission, document) =>
+      permission === "create" && !document._id.startsWith("drafts.")
+        ? { granted: false, reason: "No matching grants found" }
+        : { granted: true, reason: "Matching grant" };
+    await readyToImport([bag({ status: "draft", images: "front.jpg" })], [imageFile("front.jpg")]);
+    await choosePublish();
+
+    await click("Check permissions and schema (no changes)");
+    await waitFor(() => expect(text()).toContain("Preflight: 0 ready · 1 failed · 0 skipped"));
+    expect(text()).toContain(
+      "Leather Bag (failed): Your Sanity role can't create and publish this product. Can't create the published document: No matching grants found"
+    );
+
+    await click("Create and publish 1 product");
+    await click("Publish 1 product");
+    await waitFor(() => expect(text()).toContain("Your Sanity role can't publish products here, so nothing was uploaded or created."));
+    expect(studio.upload).not.toHaveBeenCalled();
+    expect(studio.action).not.toHaveBeenCalled();
+  });
+
+  it("retries an unclear publish as a publish, after reading it back", async () => {
+    studio.create.mockRejectedValueOnce(new Error("offline"));
+    await readyToImport([bag({ status: "draft" })]);
+    await choosePublish();
+    await click("Create and publish 1 product");
+    await click("Publish 1 product");
+    await waitFor(() => expect(importResults()).toEqual({ "Leather Bag": "uncertain" }));
+
+    await click("Retry 1 product");
+    await waitFor(() => expect(importResults()).toEqual({ "Leather Bag": "published" }));
+    expect(studio.getDocument.mock.calls.map(([id]) => id)).toEqual(["product-bag", "drafts.product-bag"]);
+    expect(actionTypes()).toEqual([
+      ["sanity.action.document.create", "sanity.action.document.publish"],
+      ["sanity.action.document.create", "sanity.action.document.publish"],
+    ]);
   });
 });

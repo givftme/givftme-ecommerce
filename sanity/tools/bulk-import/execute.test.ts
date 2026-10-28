@@ -29,8 +29,21 @@ import {
 
 type RowInput = Partial<Record<ColumnName, string>>;
 type Doc = { _id: string; _type: string; [field: string]: unknown };
+type FakeAction = { actionType: string; publishedId?: string; draftId?: string; ifExists?: string; attributes?: Doc };
 
-const WRITE_METHODS = ["patch", "delete", "createOrReplace", "createIfNotExists", "mutate", "transaction", "publish", "unpublish", "discardDraft"];
+// Only `client.action` (create, and create + publish) and `client.assets.upload` may write.
+const WRITE_METHODS = [
+  "create",
+  "patch",
+  "delete",
+  "createOrReplace",
+  "createIfNotExists",
+  "mutate",
+  "transaction",
+  "publish",
+  "unpublish",
+  "discardDraft",
+];
 const forbidden: string[] = [];
 afterEach(() => {
   expect(forbidden, "client methods that must never be used").toEqual([]);
@@ -62,12 +75,39 @@ function fakeStudio(initial: Doc[]) {
     const value = await evaluate(parse(query, { params }), { dataset: [...docs.values()], params });
     return value.get();
   });
-  const create = vi.fn(async (doc: Doc) => {
-    const failure = hooks.create?.(doc);
-    if (failure) throw failure;
-    if (docs.has(doc._id)) throw error(409, `Document by ID "${doc._id}" already exists`);
-    docs.set(doc._id, structuredClone(doc));
-    return doc;
+  // Every draft a create action tries to make, whether or not it's committed.
+  const create = vi.fn((doc: Doc) => doc);
+  // Sanity's Actions API: create refuses if the draft or the published document
+  // exists; publish moves the draft to its published ID; a list commits all or nothing.
+  const action = vi.fn(async (input: Record<string, unknown> | Record<string, unknown>[]) => {
+    const actions = [input].flat() as FakeAction[];
+    // A racing writer, or a lost answer, acts first: as if just before the request landed.
+    for (const entry of actions) {
+      if (entry.actionType !== "sanity.action.document.create") continue;
+      create(entry.attributes!);
+      const failure = hooks.create?.(entry.attributes!);
+      if (failure) throw failure;
+    }
+    const next = new Map(docs);
+    for (const entry of actions) {
+      if (entry.actionType === "sanity.action.document.create") {
+        if (entry.ifExists !== "fail") throw new Error("test: create must use ifExists: fail");
+        if (next.has(entry.publishedId!) || next.has(entry.attributes!._id)) {
+          throw error(409, `Document "${entry.publishedId}" already exists`);
+        }
+        next.set(entry.attributes!._id, structuredClone(entry.attributes!));
+      } else if (entry.actionType === "sanity.action.document.publish") {
+        const draft = next.get(entry.draftId!);
+        if (!draft) throw error(409, `No draft "${entry.draftId}" to publish`);
+        next.delete(entry.draftId!);
+        next.set(entry.publishedId!, { ...draft, _id: entry.publishedId! });
+      } else {
+        throw new Error(`test: unexpected action ${entry.actionType}`);
+      }
+    }
+    docs.clear();
+    for (const [id, doc] of next) docs.set(id, doc);
+    return { transactionId: `tx-${action.mock.calls.length}` };
   });
   const upload = vi.fn(async (_type: string, _blob: Blob, { filename }: { filename: string }) => {
     const failure = hooks.upload?.(filename);
@@ -95,13 +135,13 @@ function fakeStudio(initial: Doc[]) {
         return { fetch };
       },
       getDocument,
-      create,
+      action,
       assets: guard({ upload }, "client.assets"),
     },
     "client"
   ) as unknown as SanityClient;
 
-  return { client, docs, state, hooks, configs, fetch, create, upload, getDocument };
+  return { client, docs, state, hooks, configs, fetch, create, action, upload, getDocument };
 }
 
 const collectionDoc = (slug: string, status = "active"): Doc => ({
@@ -140,8 +180,8 @@ async function setup(rows: RowInput[], { docs = [] as Doc[], files = [] as File[
     checkPermission: vi.fn(async () => ({ granted: true, reason: "" })),
     validate: vi.fn(async () => []),
   };
-  const run = (overrides: Partial<DraftImportDeps> = {}, only?: ReadonlySet<string>) =>
-    runDraftImport({ plan, images, preview, session, only }, { ...deps, ...overrides });
+  const run = (overrides: Partial<DraftImportDeps> = {}, only?: ReadonlySet<string>, mode?: "draft" | "publish") =>
+    runDraftImport({ plan, images, preview, session, only, mode }, { ...deps, ...overrides });
   return { plan, images, preview, studio, session, deps, run };
 }
 
@@ -151,7 +191,7 @@ const createdIds = (studio: ReturnType<typeof fakeStudio>) => studio.create.mock
 const retryable = (run: ImportRun) => new Set(run.results.filter((result) => result.retryable).map((result) => result.documentId));
 
 describe("draft creation", () => {
-  it("creates every importable product as a draft with client.create, never a published document", async () => {
+  it("creates every importable product as a draft with one create action each, never a published document", async () => {
     const { run, studio } = await setup(
       [
         bag({ images: "front.jpg", collections: "bags", supplier: "Lagos Leather" }),
@@ -167,6 +207,16 @@ describe("draft creation", () => {
     expect(statuses(result)).toEqual({ bag: "created", shoe: "created", belt: "created" });
     expect(createdIds(studio)).toEqual(["drafts.product-bag", "drafts.product-shoe", "drafts.product-belt"]);
     expect([...studio.docs.keys()].filter((id) => id.startsWith("product-"))).toEqual([]);
+    expect(studio.action.mock.calls.map(([actions]) => actions)).toEqual(
+      ["product-bag", "product-shoe", "product-belt"].map((id) => [
+        {
+          actionType: "sanity.action.document.create",
+          publishedId: id,
+          attributes: expect.objectContaining({ _id: `drafts.${id}` }),
+          ifExists: "fail",
+        },
+      ])
+    );
     expect(result.uploads).toEqual({ uploaded: 1, reused: 0, failed: 0 });
 
     const draft = studio.docs.get("drafts.product-bag")!;
@@ -452,7 +502,7 @@ describe("conflicts after the preview", () => {
 
     expect(statuses(result)).toEqual({ bag: "failed" });
     expect(messageOf(result, "bag")).toBe(
-      "A document with the ID drafts.product-bag was created after the check. Nothing was changed."
+      "A document at product-bag or drafts.product-bag appeared after the check. Nothing was changed."
     );
     expect(studio.docs.get("drafts.product-bag")).toBe(theirs);
     expect(result.results[0].retryable).toBe(false);
@@ -563,7 +613,7 @@ describe("unclear and refused creates", () => {
     const retry = await run({}, retryable(first));
 
     expect(statuses(retry)).toEqual({ bag: "failed" });
-    expect(messageOf(retry, "bag")).toBe("A different draft now exists at drafts.product-bag. It was left unchanged.");
+    expect(messageOf(retry, "bag")).toBe("A different document now exists at drafts.product-bag. It was left unchanged.");
     expect(studio.docs.get("drafts.product-bag")!.title).toBe("Changed by someone");
   });
 
@@ -808,7 +858,7 @@ describe("reading back an unclear create", () => {
     const retry = await run({}, retryable(first));
 
     expect(statuses(retry)).toEqual({ shoe: "failed" });
-    expect(messageOf(retry, "shoe")).toBe("A different draft now exists at drafts.product-shoe. It was left unchanged.");
+    expect(messageOf(retry, "shoe")).toBe("A different document now exists at drafts.product-shoe. It was left unchanged.");
     expect(studio.docs.get("drafts.product-shoe")).toBe(stored);
     expect(studio.create).toHaveBeenCalledTimes(1);
   });
@@ -954,5 +1004,188 @@ describe("the proposed first live test", () => {
       expect(doc).not.toHaveProperty("supplier");
       expect(doc).not.toHaveProperty("collections");
     }
+  });
+});
+
+describe("publishing", () => {
+  const publish = "publish" as const;
+  const publishedIds = (studio: ReturnType<typeof fakeStudio>) =>
+    [...studio.docs.keys()].filter((id) => id.startsWith("product-")).sort();
+  const draftIds = (studio: ReturnType<typeof fakeStudio>) =>
+    [...studio.docs.keys()].filter((id) => id.startsWith("drafts.product-")).sort();
+
+  it("creates and publishes each new product in one all-or-nothing request, leaving no draft", async () => {
+    const { run, studio, deps } = await setup(
+      [bag({ status: "active", images: "front.jpg" }), belt({ status: "draft" })],
+      { files: [imageFile("front.jpg")] }
+    );
+    const result = await run({}, undefined, publish);
+
+    expect(result.stopped).toBeNull();
+    expect(statuses(result)).toEqual({ bag: "published", belt: "published" });
+    expect(messageOf(result, "bag")).toBe(
+      "Published as product-bag. Its status is active, so it's on the storefront within about a minute."
+    );
+    expect(messageOf(result, "belt")).toBe("Published as product-belt. Its status is draft, so it isn't on the storefront.");
+    expect(studio.action.mock.calls.map(([actions]) => actions)).toEqual(
+      ["product-bag", "product-belt"].map((id) => [
+        {
+          actionType: "sanity.action.document.create",
+          publishedId: id,
+          attributes: expect.objectContaining({ _id: `drafts.${id}` }),
+          ifExists: "fail",
+        },
+        { actionType: "sanity.action.document.publish", draftId: `drafts.${id}`, publishedId: id },
+      ])
+    );
+    expect(publishedIds(studio)).toEqual(["product-bag", "product-belt"]);
+    expect(draftIds(studio)).toEqual([]);
+    expect(studio.docs.get("product-bag")).toMatchObject({
+      title: "Leather Bag",
+      status: "active",
+      images: [{ asset: { _ref: "image-frontjpg-1x1-png" } }],
+    });
+    expect(vi.mocked(deps.checkPermission).mock.calls.map(([, mode]) => mode)).toEqual(["publish", "publish"]);
+  });
+
+  it("stays on drafts unless publishing is chosen", async () => {
+    const { run, studio, deps } = await setup([bag()]);
+    const result = await run();
+
+    expect(statuses(result)).toEqual({ bag: "created" });
+    expect(studio.action.mock.calls[0][0]).toHaveLength(1);
+    expect(vi.mocked(deps.checkPermission).mock.calls[0][1]).toBe("draft");
+    expect(publishedIds(studio)).toEqual([]);
+  });
+
+  it("refuses to publish into production, before reading anything", async () => {
+    const { studio, plan, images, preview, session, deps } = await setup([bag()]);
+    studio.state.dataset = "production";
+    const result = await runDraftImport(
+      { plan, images, preview, session, mode: publish },
+      { ...deps, workspace: { projectId: "proj", dataset: "production" } }
+    );
+
+    expect(result.stopped?.reason).toBe("target");
+    expect(studio.fetch).not.toHaveBeenCalled();
+    expect(studio.action).not.toHaveBeenCalled();
+  });
+
+  it("stops before uploading when the editor may not publish", async () => {
+    const { run, deps, studio } = await setup([bag({ images: "front.jpg" })], { files: [imageFile("front.jpg")] });
+    vi.mocked(deps.checkPermission).mockImplementation(async (_document, mode) =>
+      mode === "publish" ? { granted: false, reason: "Can't create the published document: No grant." } : { granted: true, reason: "" }
+    );
+    const result = await run({}, undefined, publish);
+
+    expect(result.stopped).toEqual({
+      reason: "permission",
+      message: "Your Sanity role can't publish products here, so nothing was uploaded or created.",
+    });
+    expect(messageOf(result, "bag")).toBe(
+      "Your Sanity role can't create and publish this product. Can't create the published document: No grant."
+    );
+    expect(studio.upload).not.toHaveBeenCalled();
+    expect(studio.action).not.toHaveBeenCalled();
+  });
+
+  it("never publishes an existing draft, such as one made by an earlier import", async () => {
+    const earlier = productDoc("drafts.product-bag", { title: "Leather Bag" });
+    const { run, studio } = await setup([bag(), belt()], { docs: [earlier] });
+    const result = await run({}, undefined, publish);
+
+    expect(statuses(result)).toEqual({ bag: "skipped", belt: "published" });
+    expect(messageOf(result, "bag")).toContain("Already in the Studio");
+    expect(studio.docs.get("drafts.product-bag")).toBe(earlier);
+    expect(studio.docs.has("product-bag")).toBe(false);
+  });
+
+  it("leaves a product published by someone else at that moment exactly as it was", async () => {
+    const { run, studio } = await setup([bag()]);
+    const theirs = productDoc("product-bag", { title: "Their bag" });
+    studio.hooks.create = () => {
+      studio.docs.set("product-bag", theirs);
+    };
+    const result = await run({}, undefined, publish);
+
+    expect(statuses(result)).toEqual({ bag: "failed" });
+    expect(messageOf(result, "bag")).toBe("A document at product-bag or drafts.product-bag appeared after the check. Nothing was changed.");
+    expect(studio.docs.get("product-bag")).toBe(theirs);
+    expect(draftIds(studio)).toEqual([]);
+  });
+
+  it("confirms an unclear publish by reading back the published product", async () => {
+    const { run, studio } = await setup([bag({ status: "active" })]);
+    studio.hooks.create = (doc) => {
+      const publishedId = doc._id.replace("drafts.", "");
+      studio.docs.set(publishedId, { ...structuredClone(doc), _id: publishedId, _rev: "r1", _createdAt: "2026-10-28T09:00:00Z" });
+      return error(504, "Gateway timeout");
+    };
+    const first = await run({}, undefined, publish);
+    expect(statuses(first)).toEqual({ bag: "uncertain" });
+    expect(messageOf(first, "bag")).toContain("The product may or may not have been published");
+
+    studio.hooks.create = undefined;
+    const retry = await run({}, retryable(first), publish);
+    expect(statuses(retry)).toEqual({ bag: "published" });
+    expect(messageOf(retry, "bag")).toBe("Published as product-bag by the earlier attempt; confirmed by reading it back.");
+    expect(studio.getDocument).toHaveBeenCalledWith("product-bag");
+    expect(studio.action).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes on retry when reading back finds nothing", async () => {
+    const { run, studio } = await setup([bag()]);
+    studio.hooks.create = () => new Error("fetch failed");
+    const first = await run({}, undefined, publish);
+    studio.hooks.create = undefined;
+    const retry = await run({}, retryable(first), publish);
+
+    expect(statuses(retry)).toEqual({ bag: "published" });
+    expect(studio.getDocument.mock.calls.map(([id]) => id)).toEqual(["product-bag", "drafts.product-bag"]);
+    expect(studio.action).toHaveBeenCalledTimes(2);
+  });
+
+  it("never counts someone else's published product as its own", async () => {
+    const { run, studio } = await setup([bag()]);
+    studio.hooks.create = (doc) => {
+      const publishedId = doc._id.replace("drafts.", "");
+      studio.docs.set(publishedId, { ...structuredClone(doc), _id: publishedId, title: "Their bag" });
+      return error(502, "Bad gateway");
+    };
+    const first = await run({}, undefined, publish);
+    const stored = studio.docs.get("product-bag");
+    studio.hooks.create = undefined;
+    const retry = await run({}, retryable(first), publish);
+
+    expect(statuses(retry)).toEqual({ bag: "failed" });
+    expect(messageOf(retry, "bag")).toBe("A different document now exists at product-bag. It was left unchanged.");
+    expect(studio.docs.get("product-bag")).toBe(stored);
+  });
+
+  it("reports a draft left behind without publishing it", async () => {
+    const { run, studio } = await setup([bag()]);
+    studio.hooks.create = (doc) => {
+      studio.docs.set(doc._id, structuredClone(doc));
+      return error(502, "Bad gateway");
+    };
+    const first = await run({}, undefined, publish);
+    const leftover = studio.docs.get("drafts.product-bag");
+    studio.hooks.create = undefined;
+    const retry = await run({}, retryable(first), publish);
+
+    expect(statuses(retry)).toEqual({ bag: "failed" });
+    expect(messageOf(retry, "bag")).toBe("A draft now exists at drafts.product-bag, but nothing was published. It was left unchanged.");
+    expect(studio.docs.get("drafts.product-bag")).toBe(leftover);
+    expect(studio.docs.has("product-bag")).toBe(false);
+  });
+
+  it("checks permission to publish in the preflight, without writing", async () => {
+    const { plan, images, preview, studio, deps } = await setup([bag()]);
+    const result = await runDraftPreflight({ plan, images, preview, mode: publish }, deps);
+
+    expect(result.products).toEqual([expect.objectContaining({ status: "ready", message: "Would be created and published." })]);
+    expect(vi.mocked(deps.checkPermission).mock.calls[0][1]).toBe("publish");
+    expect(studio.action).not.toHaveBeenCalled();
+    expect(studio.upload).not.toHaveBeenCalled();
   });
 });

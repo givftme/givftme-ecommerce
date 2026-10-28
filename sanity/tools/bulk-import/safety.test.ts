@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { describeError, isAuthError, isRefused, statusOf } from "@/sanity/tools/bulk-import/errors";
 import {
   assertWriteTarget,
+  PUBLISHABLE_DATASETS,
+  publishableDatasetProblem,
   WRITABLE_DATASETS,
   writableDatasetProblem,
   WriteTargetError,
@@ -50,6 +52,25 @@ describe("assertWriteTarget", () => {
   });
 });
 
+describe("publishing", () => {
+  it("is allowed in development only, on a list of its own", () => {
+    expect(PUBLISHABLE_DATASETS).toEqual(["development"]);
+    expect(publishableDatasetProblem("development")).toBeNull();
+    expect(publishableDatasetProblem("production")).toContain("Imports into production aren't switched on");
+    expect(publishableDatasetProblem("staging")).toContain('"staging"');
+  });
+
+  it("is checked by assertWriteTarget only when publishing", () => {
+    const development = client({ projectId: "proj", dataset: "development" });
+    expect(assertWriteTarget(development, workspace, "publish")).toEqual(workspace);
+    expect(assertWriteTarget(development, workspace)).toEqual(workspace);
+
+    const production = { projectId: "proj", dataset: "production" };
+    expect(() => assertWriteTarget(client(production), production, "publish")).toThrow(WriteTargetError);
+    expect(() => assertWriteTarget(client(production), workspace, "publish")).toThrow('uses dataset "production"');
+  });
+});
+
 describe("error handling", () => {
   const error = (statusCode?: number, description?: string) =>
     Object.assign(new Error("Request failed"), { statusCode, details: description ? { description } : undefined });
@@ -92,6 +113,6 @@ describe("no privileged credentials", () => {
       );
       expect(source, file).not.toMatch(/\b(client|assets)\s*\.\s*delete\b/);
     }
-    expect([...used].sort()).toEqual(["assets", "config", "create", "getDocument", "withConfig"]);
+    expect([...used].sort()).toEqual(["action", "assets", "config", "getDocument", "withConfig"]);
   });
 });

@@ -53,3 +53,29 @@ export function checkDraftCreate(grants: Pick<GrantsStore, "checkDocumentPermiss
   }
   return firstValue<PermissionAnswer>(grants.checkDocumentPermission("create", document));
 }
+
+/**
+ * Whether the editor may create this product and publish it in one go. The
+ * same grants the Studio's own Publish button needs (`getPairPermissions` for
+ * "publish"), plus creating the draft that the request makes first:
+ * - create the draft,
+ * - update the draft, which publishing deletes,
+ * - create the published document, with the draft's content.
+ * There's no published document yet, so updating one needs no grant.
+ */
+export async function checkPublishCreate(
+  grants: Pick<GrantsStore, "checkDocumentPermission">,
+  document: DraftProductDocument
+): Promise<PermissionAnswer> {
+  const draft = await checkDraftCreate(grants, document);
+  if (!draft.granted) return { granted: false, reason: `Can't create the draft: ${draft.reason}` };
+  const checks: [string, ReturnType<GrantsStore["checkDocumentPermission"]>][] = [
+    ["remove the draft when it's published", grants.checkDocumentPermission("update", document)],
+    ["create the published document", grants.checkDocumentPermission("create", { ...document, _id: document._id.slice("drafts.".length) })],
+  ];
+  for (const [label, check] of checks) {
+    const answer = await firstValue<PermissionAnswer>(check);
+    if (!answer.granted) return { granted: false, reason: `Can't ${label}: ${answer.reason}` };
+  }
+  return { granted: true, reason: "May create and publish" };
+}

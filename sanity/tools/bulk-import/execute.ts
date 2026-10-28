@@ -1,6 +1,7 @@
 import type { SanityClient } from "sanity";
 import { BULK_IMPORT_PRODUCT_CHECK_QUERY } from "@/lib/sanity/queries";
 import {
+  asPublished,
   buildDraftDocument,
   draftIdFor,
   fieldsAddedSince,
@@ -13,17 +14,22 @@ import type { LocalImage } from "./images";
 import type { ImageMatchResult, ProductImageMatch } from "./matching";
 import type { PermissionAnswer } from "./permissions";
 import { fetchSanityIndex, LookupError, resolveImport, type ProductResolution, type ResolutionResult, type SanityIndex } from "./resolve";
-import { assertWriteTarget, WriteTargetError, type WriteTarget } from "./safety";
+import { assertWriteTarget, WriteTargetError, type ImportMode, type WriteTarget } from "./safety";
 import type { ImportPlan, PlannedProduct } from "./types";
 import { uploadImages } from "./uploads";
 
-// Phase 5A: creates the previewed products as drafts. Writes are limited to
-// `client.assets.upload` and `client.create` with a `drafts.` ID; nothing is
-// patched, replaced, deleted or published.
+// Creates the previewed products as drafts, or (when chosen) creates and
+// publishes them. Writes are limited to `client.assets.upload` and Sanity's
+// Actions API: each product is one `client.action` request, either [create]
+// for a draft or [create, publish] to publish it. The create action is refused
+// if the draft or the published document already exists, and the request
+// applies all of its actions or none, so nothing is ever overwritten and no
+// stray draft is left behind. Nothing is patched, replaced or deleted
+// (publishing removes only the draft that the same request just created).
 //
-// 1. The write target is checked (allowlisted dataset, same project and
-//    dataset as the workspace). It's checked again before every upload and
-//    every create.
+// 1. The write target is checked (allowlisted dataset, publishable too when
+//    publishing, same project and dataset as the workspace). It's checked
+//    again before every upload and every product.
 // 2. Drafts whose create got no clear answer last time are read back first;
 //    only a draft holding exactly what was sent counts as created.
 // 3. The dataset is read again and every product rechecked with the Phase 4
@@ -36,13 +42,12 @@ import { uploadImages } from "./uploads";
 //    a failure. The finished draft, with its image assets, is validated
 //    against the schema again (which also confirms every reference, assets
 //    included, points at an existing document), and the dataset rechecked.
-//    `create` refuses an ID that exists, so nothing is overwritten.
 //
 // Slugs and SKUs can't be reserved: Sanity has no uniqueness constraint for
 // them, so another editor can still take one between the last check and the
 // create. The final read keeps that window to one request.
 
-export type ProductImportStatus = "created" | "skipped" | "failed" | "uncertain" | "not-attempted";
+export type ProductImportStatus = "created" | "published" | "skipped" | "failed" | "uncertain" | "not-attempted";
 
 export interface ProductImportResult {
   handle: string;
@@ -69,10 +74,10 @@ export interface ImportRun {
 export interface ImportSession {
   /** Assets uploaded in this session, by local file. */
   assets: Map<LocalImage, string>;
-  /** Drafts created (or confirmed) in this session: document ID → draft ID. */
+  /** Products created or published (or confirmed) in this session: document ID → the ID written. */
   created: Map<string, string>;
-  /** Creates that got no clear answer, with the document that was sent. */
-  uncertain: Map<string, DraftProductDocument>;
+  /** Writes that got no clear answer, with the draft that was sent and how. */
+  uncertain: Map<string, { document: DraftProductDocument; mode: ImportMode }>;
 }
 
 export const createImportSession = (): ImportSession => ({ assets: new Map(), created: new Map(), uncertain: new Map() });
@@ -90,6 +95,8 @@ export interface DraftImportRequest {
   /** Limits the run to these document IDs, for a retry. */
   only?: ReadonlySet<string>;
   session: ImportSession;
+  /** Drafts unless publishing was chosen. */
+  mode?: ImportMode;
 }
 
 export interface ValidationProblem {
@@ -105,7 +112,8 @@ export interface DraftImportDeps {
   /** The editor's own Studio client; never one with a server token. */
   client: SanityClient;
   workspace: WriteTarget;
-  checkPermission: (document: DraftProductDocument) => Promise<PermissionAnswer>;
+  /** For "publish", this must check publishing too, not just creating the draft. */
+  checkPermission: (document: DraftProductDocument, mode: ImportMode) => Promise<PermissionAnswer>;
   /** Sanity's schema validation; `getDocumentExists` replaces its reference lookups when given. */
   validate: (document: DraftProductDocument, options?: ValidateOptions) => Promise<ValidationProblem[]>;
   shouldStop?: () => boolean;
@@ -134,7 +142,24 @@ function previewMatches(plan: ImportPlan, preview: ResolutionResult) {
   );
 }
 
-/** One read for one product, as close to its create as possible, judged by the Phase 4 rules. */
+/**
+ * The one request that writes a product: its draft, or its draft and then its
+ * publication. Sanity applies all of the actions or none.
+ */
+export function writeActions(document: DraftProductDocument, mode: ImportMode) {
+  const publishedId = asPublished(document)._id;
+  const create = {
+    actionType: "sanity.action.document.create" as const,
+    publishedId,
+    attributes: document,
+    ifExists: "fail" as const,
+  };
+  return mode === "publish"
+    ? [create, { actionType: "sanity.action.document.publish" as const, draftId: document._id, publishedId }]
+    : [create];
+}
+
+/** One read for one product, as close to its write as possible, judged by the Phase 4 rules. */
 async function recheckProduct(
   client: SanityClient,
   plan: ImportPlan,
@@ -169,7 +194,7 @@ async function recheckProduct(
 }
 
 export async function runDraftImport(request: DraftImportRequest, deps: DraftImportDeps): Promise<ImportRun> {
-  const { plan, images, preview, only, session } = request;
+  const { plan, images, preview, only, session, mode = "draft" } = request;
   const { client } = deps;
   const shouldStop = deps.shouldStop ?? (() => false);
   const progress = deps.onProgress ?? (() => undefined);
@@ -218,7 +243,7 @@ export async function runDraftImport(request: DraftImportRequest, deps: DraftImp
   }
 
   try {
-    target = assertWriteTarget(client, deps.workspace);
+    target = assertWriteTarget(client, deps.workspace, mode);
   } catch (error) {
     stop("target", error instanceof Error ? error.message : "The dataset couldn't be checked.");
     return finish();
@@ -227,42 +252,53 @@ export async function runDraftImport(request: DraftImportRequest, deps: DraftImp
     stop("check", "The Studio check doesn't match this spreadsheet. Run it again.");
     return finish();
   }
-  const recheckTarget = () => assertWriteTarget(client, target);
+  const recheckTarget = () => assertWriteTarget(client, target, mode);
+  const noun = mode === "publish" ? "product" : "draft";
 
   try {
     progress({ phase: "checking" });
 
-    // Earlier creates with no clear answer: read the draft back before trying again.
+    // Earlier writes with no clear answer: read them back before trying again.
     const queue: PlannedProduct[] = [];
     for (const product of considered) {
-      const attempted = session.uncertain.get(product.documentId);
-      if (attempted) {
+      const pending = session.uncertain.get(product.documentId);
+      if (pending) {
+        const { document: attempted, mode: attemptedMode } = pending;
+        // A publish leaves the published document behind; a draft import leaves the draft.
+        const expected = attemptedMode === "publish" ? asPublished(attempted) : attempted;
         let existing: Record<string, unknown> | undefined;
+        let leftover: Record<string, unknown> | undefined;
         try {
-          existing = await client.getDocument(attempted._id);
+          existing = await client.getDocument(expected._id);
+          if (!existing && attemptedMode === "publish") leftover = await client.getDocument(attempted._id);
         } catch (error) {
           if (isAuthError(error)) {
             stop("permission", describeError(error));
             return finish();
           }
-          record(product, "uncertain", `Still couldn't tell whether the draft was created. ${describeError(error)}`, true);
+          record(product, "uncertain", `Still couldn't tell whether it was written. ${describeError(error)}`, true);
           continue;
         }
         session.uncertain.delete(product.documentId);
-        if (existing && matchesAttempt(existing, attempted)) {
-          session.created.set(product.documentId, attempted._id);
-          const added = fieldsAddedSince(existing, attempted);
+        if (existing && matchesAttempt(existing, expected)) {
+          const published = attemptedMode === "publish";
+          session.created.set(product.documentId, expected._id);
+          const added = fieldsAddedSince(existing, expected);
           record(
             product,
-            "created",
-            `Created as ${attempted._id} by the earlier attempt; confirmed by reading it back.${
+            published ? "published" : "created",
+            `${published ? "Published" : "Created"} as ${expected._id} by the earlier attempt; confirmed by reading it back.${
               added.length ? ` It has since been edited (${added.join(", ")}).` : ""
             }`
           );
           continue;
         }
         if (existing) {
-          record(product, "failed", `A different draft now exists at ${attempted._id}. It was left unchanged.`);
+          record(product, "failed", `A different document now exists at ${expected._id}. It was left unchanged.`);
+          continue;
+        }
+        if (leftover) {
+          record(product, "failed", `A draft now exists at ${attempted._id}, but nothing was published. It was left unchanged.`);
           continue;
         }
       }
@@ -303,14 +339,20 @@ export async function runDraftImport(request: DraftImportRequest, deps: DraftImp
 
       let permission: PermissionAnswer;
       try {
-        permission = await deps.checkPermission(document);
+        permission = await deps.checkPermission(document, mode);
       } catch {
         stop("permission", "Couldn't check your Sanity permissions, so nothing was uploaded or created.");
         return finish();
       }
       if (!permission.granted) {
-        record(product, "failed", `Your Sanity role can't create this draft. ${permission.reason}`.trim(), true);
-        stop("permission", "Your Sanity role can't create product drafts here, so nothing was uploaded or created.");
+        const action = mode === "publish" ? "create and publish this product" : "create this draft";
+        record(product, "failed", `Your Sanity role can't ${action}. ${permission.reason}`.trim(), true);
+        stop(
+          "permission",
+          mode === "publish"
+            ? "Your Sanity role can't publish products here, so nothing was uploaded or created."
+            : "Your Sanity role can't create product drafts here, so nothing was uploaded or created."
+        );
         return finish();
       }
 
@@ -427,9 +469,23 @@ export async function runDraftImport(request: DraftImportRequest, deps: DraftImp
       }
 
       try {
-        await client.create(document);
-        session.created.set(product.documentId, document._id);
-        record(product, "created", `Created as ${document._id}.`);
+        await client.action(writeActions(document, mode));
+        if (mode === "publish") {
+          const publishedId = asPublished(document)._id;
+          session.created.set(product.documentId, publishedId);
+          record(
+            product,
+            "published",
+            `Published as ${publishedId}. ${
+              product.fields.status === "active"
+                ? "Its status is active, so it's on the storefront within about a minute."
+                : `Its status is ${product.fields.status}, so it isn't on the storefront.`
+            }`
+          );
+        } else {
+          session.created.set(product.documentId, document._id);
+          record(product, "created", `Created as ${document._id}.`);
+        }
       } catch (error) {
         if (isAuthError(error)) {
           record(product, "failed", describeError(error), true);
@@ -437,13 +493,22 @@ export async function runDraftImport(request: DraftImportRequest, deps: DraftImp
           break;
         }
         if (statusOf(error) === 409) {
-          record(product, "failed", `A document with the ID ${document._id} was created after the check. Nothing was changed.`);
+          record(
+            product,
+            "failed",
+            `A document at ${asPublished(document)._id} or ${document._id} appeared after the check. Nothing was changed.`
+          );
         } else if (isRefused(error)) {
-          record(product, "failed", `Sanity refused the draft. ${describeError(error)}`, statusOf(error) === 429);
+          record(product, "failed", `Sanity refused the ${noun}. ${describeError(error)}`, statusOf(error) === 429);
         } else {
-          // The draft may exist. A retry reads it back before creating anything.
-          session.uncertain.set(product.documentId, document);
-          record(product, "uncertain", `${describeError(error)} The draft may or may not have been created; a retry checks first.`, true);
+          // It may have been written. A retry reads it back before writing anything.
+          session.uncertain.set(product.documentId, { document, mode });
+          record(
+            product,
+            "uncertain",
+            `${describeError(error)} The ${noun} may or may not have been ${mode === "publish" ? "published" : "created"}; a retry checks first.`,
+            true
+          );
         }
       }
     }
@@ -479,12 +544,12 @@ export async function runDraftPreflight(
   request: Omit<DraftImportRequest, "only" | "session">,
   deps: Pick<DraftImportDeps, "client" | "workspace" | "checkPermission" | "validate">
 ): Promise<PreflightResult> {
-  const { plan, images, preview } = request;
+  const { plan, images, preview, mode = "draft" } = request;
   const { client } = deps;
   const result: PreflightResult = { target: deps.workspace, stopped: null, products: [], uploads: { images: 0, bytes: 0 } };
 
   try {
-    result.target = assertWriteTarget(client, deps.workspace);
+    result.target = assertWriteTarget(client, deps.workspace, mode);
   } catch (error) {
     result.stopped = { reason: "target", message: error instanceof Error ? error.message : "The dataset couldn't be checked." };
     return result;
@@ -521,9 +586,10 @@ export async function runDraftPreflight(
     const match = matches.get(product.documentId);
     try {
       const document = buildDraftDocument(product, now, match ?? null, () => PLACEHOLDER_ASSET_ID);
-      const permission = await deps.checkPermission(document);
+      const permission = await deps.checkPermission(document, mode);
       if (!permission.granted) {
-        result.products.push({ ...entry, status: "failed", message: `Your Sanity role can't create this draft. ${permission.reason}`.trim() });
+        const action = mode === "publish" ? "create and publish this product" : "create this draft";
+        result.products.push({ ...entry, status: "failed", message: `Your Sanity role can't ${action}. ${permission.reason}`.trim() });
         continue;
       }
       const problems = (await deps.validate(document, { getDocumentExists })).filter((problem) => problem.level === "error");
@@ -540,7 +606,11 @@ export async function runDraftPreflight(
       continue;
     }
     for (const image of imagesOf(match)) uploads.set(image, image.size);
-    result.products.push({ ...entry, status: "ready", message: "Would be created as a draft." });
+    result.products.push({
+      ...entry,
+      status: "ready",
+      message: mode === "publish" ? "Would be created and published." : "Would be created as a draft.",
+    });
   }
 
   result.uploads = { images: uploads.size, bytes: [...uploads.values()].reduce((total, size) => total + size, 0) };

@@ -71,6 +71,11 @@ export function draftIdFor(documentId: string): `drafts.${string}` {
   return `drafts.${documentId}`;
 }
 
+/** The same content under its published ID, as publishing the draft would leave it. */
+export function asPublished(document: DraftProductDocument) {
+  return { ...document, _id: document._id.slice("drafts.".length) };
+}
+
 const reference = (id: string) => ({ _type: "reference", _ref: id });
 const imageOf = (assetId: string) => ({ _type: "image", asset: reference(assetId) });
 
@@ -150,12 +155,12 @@ export function buildDraftDocument(
  * `_createdAt` and `_updatedAt`, and a later edit may add fields. A changed
  * or missing value means it isn't ours.
  */
-export function matchesAttempt(existing: unknown, attempted: DraftProductDocument) {
+export function matchesAttempt(existing: unknown, attempted: { _id: string; _type: string }) {
   return holds(existing, attempted);
 }
 
 /** Product fields on the stored draft that the importer didn't write. */
-export function fieldsAddedSince(existing: Record<string, unknown>, attempted: DraftProductDocument) {
+export function fieldsAddedSince(existing: Record<string, unknown>, attempted: object) {
   return (PRODUCT_FIELDS as readonly string[]).filter((field) => field in existing && !(field in attempted));
 }
 

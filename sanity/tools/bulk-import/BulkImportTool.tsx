@@ -18,11 +18,6 @@ import type { ImportPlan } from "./types";
 // Steps that later phases wire up. Listed so editors can see the whole flow.
 const UPCOMING_STEPS = [
   {
-    title: "Publish",
-    description:
-      "Publishing imported drafts, which makes products marked active visible on the storefront. It will ask for confirmation first.",
-  },
-  {
     title: "Download a report",
     description: "A CSV of created, skipped and failed products.",
   },
@@ -228,8 +223,8 @@ export function BulkImportTool() {
 
             <Step
               number={5}
-              title="Import as drafts"
-              description="Creates the checked products as drafts in this dataset, uploading their images first. Existing products are never changed, and nothing is published."
+              title="Import"
+              description="Creates the checked products as drafts in this dataset, uploading their images first. Publishing them instead is a separate choice that asks for confirmation. Existing products are never changed."
             >
               <ImportStep
                 plan={plan}
