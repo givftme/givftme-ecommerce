@@ -133,17 +133,22 @@ function listNames(names: string[]) {
   return names.length > 5 ? `${shown} and ${names.length - 5} more` : shown;
 }
 
-export async function buildImageLibrary(
-  files: readonly File[],
-  { maxImageBytes = MAX_IMAGE_BYTES, zipLimits = ZIP_LIMITS }: { maxImageBytes?: number; zipLimits?: ZipLimits } = {}
-): Promise<ImageLibrary> {
-  const library: ImageLibrary = {
+/** A library with no files, for matching before any images are chosen. */
+export function emptyImageLibrary(): ImageLibrary {
+  return {
     images: new Map(),
     conflicts: new Map(),
     rejected: new Map(),
     issues: [],
     stats: { files: 0, archives: 0, images: 0, skipped: 0 },
   };
+}
+
+export async function buildImageLibrary(
+  files: readonly File[],
+  { maxImageBytes = MAX_IMAGE_BYTES, zipLimits = ZIP_LIMITS }: { maxImageBytes?: number; zipLimits?: ZipLimits } = {}
+): Promise<ImageLibrary> {
+  const library = emptyImageLibrary();
   const candidates: Candidate[] = [];
   let capped = false;
   const room = () => {

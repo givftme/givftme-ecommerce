@@ -28,21 +28,35 @@ export function ImageStep({
   library,
   match,
   onLibraryChange,
+  onReadingChange,
 }: {
   plan: ImportPlan | null;
   library: ImageLibrary | null;
   /** Matching for the current plan; computed by the parent so later steps share it. */
   match: ImageMatchResult | null;
   onLibraryChange: (library: ImageLibrary | null) => void;
+  /** Told when reading starts and stops, so later steps wait for the new images. */
+  onReadingChange?: (reading: boolean) => void;
 }) {
   const filesInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const request = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
-  const [reading, setReading] = useState(false);
+  const [reading, setReadingState] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
   const [shownProducts, setShownProducts] = useState(PREVIEW_PAGE);
   const setLibrary = onLibraryChange;
+  const setReading = (value: boolean) => {
+    setReadingState(value);
+    onReadingChange?.(value);
+  };
+
+  // A new spreadsheet starts its previews from the first page again.
+  const [pagedPlan, setPagedPlan] = useState(plan);
+  if (pagedPlan !== plan) {
+    setPagedPlan(plan);
+    setShownProducts(PREVIEW_PAGE);
+  }
 
   const load = async (next: File[]) => {
     const id = ++request.current;
@@ -81,15 +95,28 @@ export function ImageStep({
   };
 
   if (!plan) {
+    // Chosen images are kept for the next spreadsheet, so they can still be cleared here.
     return (
-      <Text size={1} muted>
-        Choose a spreadsheet first, so images can be matched to its products.
-      </Text>
+      <Stack space={3}>
+        <Text size={1} muted>
+          Choose a spreadsheet first, so images can be matched to its products.
+        </Text>
+        {files.length > 0 && (
+          <Flex align="center" gap={2} wrap="wrap">
+            <Text size={1} muted>
+              {files.length} file{files.length === 1 ? " is" : "s are"} still chosen and will be matched to the next
+              spreadsheet.
+            </Text>
+            <Button icon={CloseIcon} mode="bleed" text="Clear images" disabled={reading} onClick={clear} />
+          </Flex>
+        )}
+      </Stack>
     );
   }
 
   // Products that need attention first, then the rest in spreadsheet order.
   const products = match ? [...match.products].sort((a, b) => Number(a.ok) - Number(b.ok)) : [];
+  const noProducts = match?.summary.products === 0;
 
   return (
     <Stack space={4}>
@@ -141,12 +168,18 @@ export function ImageStep({
 
       {match && library && !reading && (
         <Stack space={3}>
-          <Card padding={3} radius={2} tone={match.summary.productsBlocked ? "critical" : "positive"}>
+          <Card
+            padding={3}
+            radius={2}
+            tone={noProducts ? "caution" : match.summary.productsBlocked ? "critical" : "positive"}
+          >
             <Stack space={2}>
               <Text size={1} weight="semibold">
-                {match.summary.productsBlocked
-                  ? `${match.summary.productsBlocked} product${match.summary.productsBlocked === 1 ? " needs" : "s need"} image fixes`
-                  : "Every listed image was found"}
+                {noProducts
+                  ? "No products passed spreadsheet validation, so there's nothing to match images to yet"
+                  : match.summary.productsBlocked
+                    ? `${match.summary.productsBlocked} product${match.summary.productsBlocked === 1 ? " needs" : "s need"} image fixes`
+                    : "Every listed image was found"}
               </Text>
               <Text size={1}>
                 {library.stats.images} usable image{library.stats.images === 1 ? "" : "s"} from {library.stats.files} file

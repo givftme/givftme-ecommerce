@@ -5,33 +5,21 @@ import { useCurrentUser, useDataset } from "sanity";
 import { getImportAccess, type ImportAccess } from "./access";
 import { IMPORT_COLUMNS } from "./columns";
 import { ImageStep } from "./ImageStep";
-import type { ImageLibrary } from "./images";
+import { ImportStep } from "./ImportStep";
+import { emptyImageLibrary, type ImageLibrary } from "./images";
 import { IssueList, issueLocation } from "./IssueList";
 import { buildImportPlan } from "./mapping";
 import { matchImages } from "./matching";
 import { readSpreadsheet, SpreadsheetError } from "./parse";
+import { ResolveStep, type CompletedCheck } from "./ResolveStep";
 import { buildTemplateCsv, TEMPLATE_FILENAME } from "./template";
 import type { ImportPlan } from "./types";
 
 // Steps that later phases wire up. Listed so editors can see the whole flow.
 const UPCOMING_STEPS = [
   {
-    title: "Check against the Studio",
-    description: "Products that already exist are flagged and skipped; collections and suppliers are looked up.",
-  },
-  {
-    title: "Choose draft or publish",
-    description:
-      "Drafts by default. Publishing makes rows marked active visible on the storefront and asks for confirmation first.",
-  },
-  {
-    title: "Import",
-    description:
-      "Images upload first, then each product is created on its own. Existing products are skipped, never changed.",
-  },
-  {
-    title: "Review results",
-    description: "Download a report of created, skipped and failed rows.",
+    title: "Download a report",
+    description: "A CSV of created, skipped and failed products.",
   },
 ];
 
@@ -76,6 +64,19 @@ export function BulkImportTool() {
   // against them again. The match is derived, so it never refers to an old plan.
   const [library, setLibrary] = useState<ImageLibrary | null>(null);
   const match = useMemo(() => (plan && library ? matchImages(plan, library) : null), [plan, library]);
+  // The Studio check matches against no files when none are chosen, so each
+  // product is judged by the images it actually needs.
+  const checkedImages = useMemo(
+    () => (plan ? (match ?? matchImages(plan, emptyImageLibrary())) : null),
+    [plan, match]
+  );
+  const [imagesReading, setImagesReading] = useState(false);
+  // The import uses the last Studio check, only while it matches what's on screen.
+  const [lastCheck, setLastCheck] = useState<CompletedCheck | null>(null);
+  const preview =
+    lastCheck && !imagesReading && lastCheck.inputs.plan === plan && lastCheck.inputs.images === checkedImages
+      ? lastCheck
+      : null;
 
   const reset = () => {
     setFileName(null);
@@ -196,11 +197,46 @@ export function BulkImportTool() {
               title="Choose images"
               description="Pick image files, a folder or ZIPs from this device. They're matched to products by the filenames in the spreadsheet, or by SKU when a product lists none."
             >
-              <ImageStep plan={plan} library={library} match={match} onLibraryChange={setLibrary} />
+              <ImageStep
+                plan={plan}
+                library={library}
+                match={match}
+                onLibraryChange={setLibrary}
+                onReadingChange={setImagesReading}
+              />
+            </Step>
+
+            <Step
+              number={4}
+              title="Check against the Studio"
+              description="Reads this dataset to flag products that already exist, slugs and SKUs already in use, and to look up collections and suppliers. Nothing is saved."
+            >
+              <ResolveStep
+                plan={plan}
+                images={checkedImages}
+                imagesChosen={library !== null}
+                imagesReading={imagesReading}
+                workspaceDataset={dataset}
+                onCheck={setLastCheck}
+              />
+            </Step>
+
+            <Step
+              number={5}
+              title="Import"
+              description="Creates the checked products as drafts in this dataset, uploading their images first. Publishing them instead is a separate choice that asks for confirmation. Existing products are never changed."
+            >
+              <ImportStep
+                plan={plan}
+                images={checkedImages}
+                preview={preview}
+                workspaceDataset={dataset}
+                access={access}
+              />
             </Step>
 
             {UPCOMING_STEPS.map((step, index) => (
-              <Step key={step.title} number={index + 4} title={step.title} description={step.description} upcoming />
+              <Step key={step.title} number={index + 6} title={step.title} description={step.description} upcoming />
             ))}
           </Stack>
         </Stack>

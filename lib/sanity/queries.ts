@@ -332,3 +332,29 @@ export const BULK_IMPORT_INDEX_QUERY = defineQuery(/* groq */ `
     "suppliers": *[_type == "supplier"] { _id, name }
   }
 `);
+
+// Studio bulk import: rechecks one product just before its draft is created.
+// Only the products that could clash (same ID in any state, same slug, or a
+// shared SKU), plus the collections and suppliers it may reference. Same
+// shape as BULK_IMPORT_INDEX_QUERY, so the same rules apply. Raw perspective.
+export const BULK_IMPORT_PRODUCT_CHECK_QUERY = defineQuery(/* groq */ `
+  {
+    "products": *[_type == "product" && (
+      _id in [$id, $draftId] ||
+      _id in path($versionPath) ||
+      lower(slug.current) == $slug ||
+      lower(baseSku) in $skus ||
+      count(variants[lower(sku) in $skus]) > 0
+    )] {
+      _id,
+      title,
+      "slug": slug.current,
+      baseSku,
+      "variantSkus": variants[].sku
+    },
+    "collections": *[_type == "collection" && lower(slug.current) in $collectionSlugs] {
+      _id, title, "slug": slug.current, status
+    },
+    "suppliers": *[_type == "supplier"] { _id, name }
+  }
+`);
